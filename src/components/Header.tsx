@@ -37,7 +37,7 @@ export default function Header({ slug, mode, isSaving, isLoading, markdownText, 
     <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50">
       <header className="flex items-center gap-2 sm:gap-3 bg-white/80 backdrop-blur-md border border-gray-200/60 shadow-lg shadow-black/5 rounded-full px-3 sm:px-4 py-2 dark:bg-gray-900/80 dark:border-gray-700/60">
         <h1 className="flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
-          <img src="/logo.png" alt="" className="h-6 w-6" />
+          <img src="/mreader/logo.png" alt="" className="h-6 w-6" />
           Markdown Reader
         </h1>
         <div className="w-px h-4 bg-gray-200 dark:bg-gray-700" />
