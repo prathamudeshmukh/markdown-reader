@@ -19,10 +19,8 @@ export default {
 
     // Validate required secrets are bound
     if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
-      return new Response(
-        JSON.stringify({ error: `Missing env: ${!env.SUPABASE_URL ? 'SUPABASE_URL' : 'SUPABASE_ANON_KEY'}` }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } },
-      );
+      console.error({ error: `Missing env: ${!env.SUPABASE_URL ? 'SUPABASE_URL' : 'SUPABASE_ANON_KEY'}` })
+        
     }
 
     // API routes — checked before asset fallback
