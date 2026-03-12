@@ -11,6 +11,7 @@ interface HeaderProps {
   recentDocs: RecentDoc[];
   onToggle: () => void;
   onSave: () => void;
+  onNewDoc: () => void;
 }
 
 function Spinner() {
@@ -22,7 +23,7 @@ function Spinner() {
   );
 }
 
-export default function Header({ slug, mode, isSaving, isLoading, markdownText, recentDocs, onToggle, onSave }: HeaderProps) {
+export default function Header({ slug, mode, isSaving, isLoading, markdownText, recentDocs, onToggle, onSave, onNewDoc }: HeaderProps) {
   const [copied, setCopied] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
 
@@ -64,7 +65,8 @@ export default function Header({ slug, mode, isSaving, isLoading, markdownText, 
           <button
             onClick={copyLink}
             title="Copy link"
-            className="flex items-center justify-center w-8 h-8 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800"
+            disabled={slug === null}
+            className="flex items-center justify-center w-8 h-8 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-500 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800 dark:disabled:hover:bg-transparent dark:disabled:hover:text-gray-400"
           >
             {copied ? (
               // Checkmark icon
@@ -100,6 +102,17 @@ export default function Header({ slug, mode, isSaving, isLoading, markdownText, 
                 />
               )}
             </div>
+          <button
+              onClick={onNewDoc}
+              title="New doc"
+              disabled={slug === null && markdownText.length === 0}
+              className="flex items-center justify-center w-8 h-8 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-500 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800 dark:disabled:hover:bg-transparent dark:disabled:hover:text-gray-400"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </button>
           <button
             onClick={onToggle}
             title={mode === 'editor' ? 'Show Preview' : 'Show Editor'}

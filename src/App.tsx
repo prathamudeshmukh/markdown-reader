@@ -21,6 +21,7 @@ export default function App() {
         recentDocs={recentDocs}
         onToggle={toggleMode}
         onSave={onSave}
+        onNewDoc={() => { window.location.href = '/mreader/'; }}
       />
 
       {error && (

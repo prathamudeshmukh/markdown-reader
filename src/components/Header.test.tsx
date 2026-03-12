@@ -18,6 +18,7 @@ const defaults = {
   recentDocs: [] as RecentDoc[],
   onToggle: vi.fn(),
   onSave: vi.fn(),
+  onNewDoc: vi.fn(),
 };
 
 describe('Header', () => {
@@ -85,6 +86,50 @@ describe('Header', () => {
       fireEvent.click(btn);
       fireEvent.click(btn);
       expect(screen.queryByText('abc1234')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('copy link button', () => {
+    it('is disabled when no slug (unsaved doc)', () => {
+      render(<Header {...defaults} slug={null} />);
+      expect(screen.getByRole('button', { name: 'Copy link' })).toBeDisabled();
+    });
+
+    it('is enabled when slug exists (saved doc)', () => {
+      render(<Header {...defaults} slug="abc1234" />);
+      expect(screen.getByRole('button', { name: 'Copy link' })).not.toBeDisabled();
+    });
+
+    it('copies current URL to clipboard when clicked', async () => {
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      Object.assign(navigator, { clipboard: { writeText } });
+      render(<Header {...defaults} slug="abc1234" />);
+      fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
+      expect(writeText).toHaveBeenCalledWith(window.location.href);
+    });
+  });
+
+  describe('new doc button', () => {
+    it('is disabled when no slug and text is empty', () => {
+      render(<Header {...defaults} slug={null} markdownText="" />);
+      expect(screen.getByRole('button', { name: 'New doc' })).toBeDisabled();
+    });
+
+    it('is enabled when text is non-empty (unsaved)', () => {
+      render(<Header {...defaults} slug={null} markdownText="# Hello" />);
+      expect(screen.getByRole('button', { name: 'New doc' })).not.toBeDisabled();
+    });
+
+    it('is enabled when a slug exists', () => {
+      render(<Header {...defaults} slug="abc1234" markdownText="" />);
+      expect(screen.getByRole('button', { name: 'New doc' })).not.toBeDisabled();
+    });
+
+    it('calls onNewDoc when clicked', () => {
+      const onNewDoc = vi.fn();
+      render(<Header {...defaults} slug="abc1234" onNewDoc={onNewDoc} />);
+      fireEvent.click(screen.getByRole('button', { name: 'New doc' }));
+      expect(onNewDoc).toHaveBeenCalledOnce();
     });
   });
 
