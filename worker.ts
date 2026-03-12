@@ -17,6 +17,14 @@ export default {
       return new Response('Not Found', { status: 404 });
     }
 
+    // Validate required secrets are bound
+    if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+      return new Response(
+        JSON.stringify({ error: `Missing env: ${!env.SUPABASE_URL ? 'SUPABASE_URL' : 'SUPABASE_ANON_KEY'}` }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+
     // API routes — checked before asset fallback
     const apiResponse = await handleDocsRequest(request, env);
     if (apiResponse) return apiResponse;
