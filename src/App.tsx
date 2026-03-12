@@ -2,10 +2,13 @@ import { useMarkdownState } from './hooks/useMarkdownState';
 import Header from './components/Header';
 import Editor from './components/Editor';
 import Preview from './components/Preview';
+import { readRecentDocs } from './utils/recentDocs';
 
 export default function App() {
   const { markdownText, slug, mode, isLoading, isSaving, error, setMarkdownText, toggleMode, onSave } =
     useMarkdownState();
+
+  const recentDocs = readRecentDocs();
 
   return (
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900 pt-16">
@@ -15,6 +18,7 @@ export default function App() {
         isSaving={isSaving}
         isLoading={isLoading}
         markdownText={markdownText}
+        recentDocs={recentDocs}
         onToggle={toggleMode}
         onSave={onSave}
       />

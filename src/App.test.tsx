@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('./hooks/useMarkdownState');
+vi.mock('./utils/recentDocs', () => ({ readRecentDocs: vi.fn(() => []) }));
 
 import App from './App';
 import { useMarkdownState } from './hooks/useMarkdownState';

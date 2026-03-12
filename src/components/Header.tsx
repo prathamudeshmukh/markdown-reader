@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import RecentDocsDropdown from './RecentDocsDropdown';
+import type { RecentDoc } from '../utils/recentDocs';
 
 interface HeaderProps {
   slug: string | null;
@@ -6,6 +8,7 @@ interface HeaderProps {
   isSaving: boolean;
   isLoading: boolean;
   markdownText: string;
+  recentDocs: RecentDoc[];
   onToggle: () => void;
   onSave: () => void;
 }
@@ -19,8 +22,9 @@ function Spinner() {
   );
 }
 
-export default function Header({ slug, mode, isSaving, isLoading, markdownText, onToggle, onSave }: HeaderProps) {
+export default function Header({ slug, mode, isSaving, isLoading, markdownText, recentDocs, onToggle, onSave }: HeaderProps) {
   const [copied, setCopied] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   function copyLink() {
     navigator.clipboard.writeText(window.location.href);
@@ -75,6 +79,27 @@ export default function Header({ slug, mode, isSaving, isLoading, markdownText, 
               </svg>
             )}
           </button>
+          <div className="relative">
+              <button
+                onClick={() => recentDocs.length > 0 && setHistoryOpen((prev) => !prev)}
+                title="Recent docs"
+                aria-label="Recent docs"
+                disabled={recentDocs.length === 0}
+                className="flex items-center justify-center w-8 h-8 rounded-full transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800 disabled:hover:bg-transparent disabled:hover:text-gray-500 dark:disabled:hover:bg-transparent dark:disabled:hover:text-gray-400"
+              >
+                {/* Clock icon */}
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+              </button>
+              {historyOpen && (
+                <RecentDocsDropdown
+                  docs={recentDocs}
+                  onClose={() => setHistoryOpen(false)}
+                />
+              )}
+            </div>
           <button
             onClick={onToggle}
             title={mode === 'editor' ? 'Show Preview' : 'Show Editor'}

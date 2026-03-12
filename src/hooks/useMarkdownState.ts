@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { getSlugFromPath } from '../utils/route';
 import { fetchDoc, saveDoc, updateDoc } from '../api/docsApi';
+import { addRecentDoc } from '../utils/recentDocs';
 
 type Mode = 'editor' | 'preview';
 
@@ -33,9 +34,10 @@ export function useMarkdownState() {
     if (!slug) return;
 
     fetchDoc(slug)
-      .then(({ content }) =>
-        setState((prev) => ({ ...prev, markdownText: content, isLoading: false })),
-      )
+      .then(({ content }) => {
+        addRecentDoc(slug);
+        setState((prev) => ({ ...prev, markdownText: content, isLoading: false }));
+      })
       .catch((err: Error) =>
         setState((prev) => ({ ...prev, isLoading: false, error: err.message })),
       );
@@ -73,6 +75,7 @@ export function useMarkdownState() {
     setState((prev) => ({ ...prev, isSaving: true }));
     try {
       const { slug: newSlug } = await saveDoc(state.markdownText);
+      addRecentDoc(newSlug);
       window.location.replace(`/mreader/d/${newSlug}`);
     } catch (err) {
       setState((prev) => ({ ...prev, isSaving: false, error: (err as Error).message }));

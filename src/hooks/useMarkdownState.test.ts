@@ -7,10 +7,12 @@ vi.mock('../api/docsApi', () => ({
   saveDoc: vi.fn(),
   updateDoc: vi.fn(),
 }));
+vi.mock('../utils/recentDocs', () => ({ addRecentDoc: vi.fn() }));
 
 import { useMarkdownState } from './useMarkdownState';
 import { getSlugFromPath } from '../utils/route';
 import { fetchDoc, saveDoc, updateDoc } from '../api/docsApi';
+import { addRecentDoc } from '../utils/recentDocs';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -65,6 +67,7 @@ describe('useMarkdownState', () => {
       await act(() => result.current.onSave());
 
       expect(saveDoc).toHaveBeenCalledWith('# Hello');
+      expect(addRecentDoc).toHaveBeenCalledWith('new1234');
       expect(window.location.replace).toHaveBeenCalledWith('/mreader/d/new1234');
     });
 
@@ -111,6 +114,7 @@ describe('useMarkdownState', () => {
 
       expect(result.current.markdownText).toBe('# Hello');
       expect(fetchDoc).toHaveBeenCalledWith('abc1234');
+      expect(addRecentDoc).toHaveBeenCalledWith('abc1234');
     });
 
     it('sets error when fetch fails', async () => {

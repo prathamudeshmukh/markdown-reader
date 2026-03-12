@@ -2,12 +2,20 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import Header from './Header';
 
+import type { RecentDoc } from '../utils/recentDocs';
+
+const sampleDocs: RecentDoc[] = [
+  { slug: 'abc1234', savedAt: '2026-03-12T15:40:00.000Z' },
+  { slug: 'xyz9999', savedAt: '2026-03-11T09:12:00.000Z' },
+];
+
 const defaults = {
   slug: null as string | null,
   mode: 'editor' as const,
   isSaving: false,
   isLoading: false,
   markdownText: '',
+  recentDocs: [] as RecentDoc[],
   onToggle: vi.fn(),
   onSave: vi.fn(),
 };
@@ -51,6 +59,32 @@ describe('Header', () => {
     it('shows "Saving…" when saving', () => {
       render(<Header {...defaults} slug="abc1234" isSaving={true} />);
       expect(screen.getByText('Saving…')).toBeInTheDocument();
+    });
+  });
+
+  describe('recent docs history', () => {
+    it('shows history button in disabled state when recentDocs is empty', () => {
+      render(<Header {...defaults} recentDocs={[]} />);
+      expect(screen.getByRole('button', { name: 'Recent docs' })).toBeDisabled();
+    });
+
+    it('shows history button when recentDocs has entries', () => {
+      render(<Header {...defaults} recentDocs={sampleDocs} />);
+      expect(screen.getByRole('button', { name: 'Recent docs' })).toBeInTheDocument();
+    });
+
+    it('opens dropdown when history button is clicked', () => {
+      render(<Header {...defaults} recentDocs={sampleDocs} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Recent docs' }));
+      expect(screen.getByText('abc1234')).toBeInTheDocument();
+    });
+
+    it('closes dropdown when history button is clicked again', () => {
+      render(<Header {...defaults} recentDocs={sampleDocs} />);
+      const btn = screen.getByRole('button', { name: 'Recent docs' });
+      fireEvent.click(btn);
+      fireEvent.click(btn);
+      expect(screen.queryByText('abc1234')).not.toBeInTheDocument();
     });
   });
 
