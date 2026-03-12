@@ -2,10 +2,10 @@ name = "markdown-reader"
 main = "worker.ts"
 compatibility_date = "2025-01-01"
 
-[assets]
-directory = "./dist"
-binding = "ASSETS"
-
 routes = [
   { pattern = "apps.prathamesh.cloud/mreader*", zone_name = "prathamesh.cloud" }
 ]
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
