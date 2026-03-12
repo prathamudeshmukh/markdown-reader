@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 interface HeaderProps {
   slug: string | null;
   mode: 'editor' | 'preview';
@@ -18,6 +20,14 @@ function Spinner() {
 }
 
 export default function Header({ slug, mode, isSaving, isLoading, markdownText, onToggle, onSave }: HeaderProps) {
+  const [copied, setCopied] = useState(false);
+
+  function copyLink() {
+    navigator.clipboard.writeText(window.location.href);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
   return (
     <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50">
       <header className="flex items-center gap-3 bg-white/80 backdrop-blur-md border border-gray-200/60 shadow-lg shadow-black/5 rounded-full px-4 py-2 dark:bg-gray-900/80 dark:border-gray-700/60">
@@ -48,9 +58,27 @@ export default function Header({ slug, mode, isSaving, isLoading, markdownText, 
             )}
           </div>
           <button
+            onClick={copyLink}
+            title="Copy link"
+            className="flex items-center justify-center w-8 h-8 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800"
+          >
+            {copied ? (
+              // Checkmark icon
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            ) : (
+              // Link icon
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+              </svg>
+            )}
+          </button>
+          <button
             onClick={onToggle}
             title={mode === 'editor' ? 'Show Preview' : 'Show Editor'}
-            className="flex items-center justify-center w-8 h-8 bg-gray-900 text-white hover:bg-gray-700 rounded-full transition-colors dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-300"
+            className="flex items-center justify-center w-8 h-8 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800"
           >
             {mode === 'editor' ? (
               // Eye icon — switch to preview
