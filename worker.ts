@@ -30,7 +30,7 @@ export default {
     // SPA rewrite: serve index.html for all /mreader/d/:slug paths
     if (url.pathname.startsWith(DOC_PATH_PREFIX)) {
       const indexUrl = new URL(request.url);
-      indexUrl.pathname = '/index.html';
+      indexUrl.pathname = '/';
       return env.ASSETS.fetch(new Request(indexUrl, request));
     }
 

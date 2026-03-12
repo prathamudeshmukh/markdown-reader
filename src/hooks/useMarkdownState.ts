@@ -21,7 +21,7 @@ export function useMarkdownState() {
   const [state, setState] = useState<MarkdownState>({
     markdownText: '',
     slug,
-    mode: 'editor',
+    mode: slug !== null ? 'preview' : 'editor',
     isLoading: slug !== null,
     isSaving: false,
     error: null,
