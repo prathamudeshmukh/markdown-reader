@@ -9,3 +9,8 @@ routes = [
 [assets]
 directory = "./dist"
 binding = "ASSETS"
+
+[observability]
+[observability.logs]
+enabled = false
+invocation_logs = true
