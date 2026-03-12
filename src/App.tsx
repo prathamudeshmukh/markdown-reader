@@ -4,22 +4,29 @@ import Editor from './components/Editor';
 import Preview from './components/Preview';
 
 export default function App() {
-  const { markdownText, mode, decodeError, isContentLarge, setMarkdownText, toggleMode } =
+  const { markdownText, slug, mode, isLoading, isSaving, error, setMarkdownText, toggleMode, onSave } =
     useMarkdownState();
 
   return (
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900 pt-16">
-      <Header mode={mode} onToggle={toggleMode} />
+      <Header
+        slug={slug}
+        mode={mode}
+        isSaving={isSaving}
+        markdownText={markdownText}
+        onToggle={toggleMode}
+        onSave={onSave}
+      />
 
-      {decodeError && (
-        <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-2 text-sm text-yellow-800 dark:bg-yellow-900/30 dark:border-yellow-700 dark:text-yellow-300">
-          Invalid content found in URL. Opened in editor mode.
+      {isLoading && (
+        <div className="bg-blue-50 border-b border-blue-200 px-4 py-2 text-sm text-blue-800 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300">
+          Loading document…
         </div>
       )}
 
-      {isContentLarge && (
-        <div className="bg-orange-50 border-b border-orange-200 px-4 py-2 text-sm text-orange-800 dark:bg-orange-900/30 dark:border-orange-700 dark:text-orange-300">
-          Content may be too large for reliable URL sharing.
+      {error && (
+        <div className="bg-red-50 border-b border-red-200 px-4 py-2 text-sm text-red-800 dark:bg-red-900/30 dark:border-red-700 dark:text-red-300">
+          {error}
         </div>
       )}
 

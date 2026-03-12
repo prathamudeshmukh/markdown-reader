@@ -1,0 +1,59 @@
+import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.mock('./hooks/useMarkdownState');
+
+import App from './App';
+import { useMarkdownState } from './hooks/useMarkdownState';
+
+const baseState = {
+  markdownText: '',
+  slug: null as string | null,
+  mode: 'editor' as const,
+  isLoading: false,
+  isSaving: false,
+  error: null as string | null,
+  setMarkdownText: vi.fn(),
+  toggleMode: vi.fn(),
+  onSave: vi.fn(),
+};
+
+describe('App', () => {
+  beforeEach(() => {
+    vi.mocked(useMarkdownState).mockReturnValue(baseState);
+  });
+
+  it('renders the editor in editor mode', () => {
+    render(<App />);
+    expect(screen.getByRole('textbox')).toBeInTheDocument();
+  });
+
+  it('shows loading banner when isLoading is true', () => {
+    vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, isLoading: true });
+    render(<App />);
+    expect(screen.getByText(/Loading document/)).toBeInTheDocument();
+  });
+
+  it('shows error banner when error is set', () => {
+    vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, error: 'Not found' });
+    render(<App />);
+    expect(screen.getByText('Not found')).toBeInTheDocument();
+  });
+
+  it('shows no banners in a clean state', () => {
+    render(<App />);
+    expect(screen.queryByText(/Loading/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Not found/)).not.toBeInTheDocument();
+  });
+
+  it('renders preview when mode is preview', () => {
+    vi.mocked(useMarkdownState).mockReturnValue({
+      ...baseState,
+      mode: 'preview',
+      markdownText: '# Hello',
+    });
+    render(<App />);
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Hello' })).toBeInTheDocument();
+  });
+});

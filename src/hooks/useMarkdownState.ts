@@ -1,48 +1,64 @@
-import { useState, useCallback, useRef } from 'react';
-import { encodeMarkdown, decodeMarkdown } from '../utils/encoding';
-import { readHash, writeHash } from '../utils/url';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { getSlugFromPath } from '../utils/route';
+import { fetchDoc, saveDoc, updateDoc } from '../api/docsApi';
 
 type Mode = 'editor' | 'preview';
 
 interface MarkdownState {
   markdownText: string;
+  slug: string | null;
   mode: Mode;
-  decodeError: boolean;
+  isLoading: boolean;
+  isSaving: boolean;
+  error: string | null;
 }
 
-// Warn when encoded content approaches practical URL limits (~8KB is safe across browsers)
-const URL_SIZE_WARNING_BYTES = 8_000;
 const DEBOUNCE_MS = 250;
 
-function initializeState(): MarkdownState {
-  const hash = readHash();
-  if (!hash) {
-    return { markdownText: '', mode: 'editor', decodeError: false };
-  }
-  try {
-    const markdownText = decodeMarkdown(hash);
-    return { markdownText, mode: 'preview', decodeError: false };
-  } catch {
-    return { markdownText: '', mode: 'editor', decodeError: true };
-  }
-}
-
 export function useMarkdownState() {
-  const [state, setState] = useState<MarkdownState>(initializeState);
+  const slug = getSlugFromPath();
+
+  const [state, setState] = useState<MarkdownState>({
+    markdownText: '',
+    slug,
+    mode: 'editor',
+    isLoading: slug !== null,
+    isSaving: false,
+    error: null,
+  });
+
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const setMarkdownText = useCallback((text: string) => {
-    setState((prev) => ({ ...prev, markdownText: text }));
+  useEffect(() => {
+    if (!slug) return;
 
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      if (text.length === 0) {
-        writeHash('');
-      } else {
-        writeHash(encodeMarkdown(text));
-      }
-    }, DEBOUNCE_MS);
-  }, []);
+    fetchDoc(slug)
+      .then(({ content }) =>
+        setState((prev) => ({ ...prev, markdownText: content, isLoading: false })),
+      )
+      .catch((err: Error) =>
+        setState((prev) => ({ ...prev, isLoading: false, error: err.message })),
+      );
+  }, [slug]);
+
+  const setMarkdownText = useCallback(
+    (text: string) => {
+      setState((prev) => ({ ...prev, markdownText: text }));
+
+      if (!slug) return;
+
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        setState((prev) => ({ ...prev, isSaving: true }));
+        updateDoc(slug, text)
+          .then(() => setState((prev) => ({ ...prev, isSaving: false })))
+          .catch((err: Error) =>
+            setState((prev) => ({ ...prev, isSaving: false, error: err.message })),
+          );
+      }, DEBOUNCE_MS);
+    },
+    [slug],
+  );
 
   const toggleMode = useCallback(() => {
     setState((prev) => ({
@@ -51,8 +67,17 @@ export function useMarkdownState() {
     }));
   }, []);
 
-  const isContentLarge =
-    new TextEncoder().encode(state.markdownText).length > URL_SIZE_WARNING_BYTES;
+  const onSave = useCallback(async () => {
+    if (state.markdownText.length === 0) return;
 
-  return { ...state, setMarkdownText, toggleMode, isContentLarge };
+    setState((prev) => ({ ...prev, isSaving: true }));
+    try {
+      const { slug: newSlug } = await saveDoc(state.markdownText);
+      window.location.replace(`/mreader/d/${newSlug}`);
+    } catch (err) {
+      setState((prev) => ({ ...prev, isSaving: false, error: (err as Error).message }));
+    }
+  }, [state.markdownText]);
+
+  return { ...state, setMarkdownText, toggleMode, onSave };
 }
