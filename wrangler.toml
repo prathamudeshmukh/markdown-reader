@@ -3,7 +3,7 @@ main = "worker.ts"
 compatibility_date = "2025-01-01"
 
 routes = [
-  { pattern = "apps.prathamesh.cloud/mreader*", zone_name = "prathamesh.cloud" }
+  { pattern = "app.prathamesh.cloud/mreader*", zone_name = "prathamesh.cloud" }
 ]
 
 [assets]
