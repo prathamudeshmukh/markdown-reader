@@ -6,6 +6,7 @@ const defaults = {
   slug: null as string | null,
   mode: 'editor' as const,
   isSaving: false,
+  isLoading: false,
   markdownText: '',
   onToggle: vi.fn(),
   onSave: vi.fn(),

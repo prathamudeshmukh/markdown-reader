@@ -13,16 +13,11 @@ export default function App() {
         slug={slug}
         mode={mode}
         isSaving={isSaving}
+        isLoading={isLoading}
         markdownText={markdownText}
         onToggle={toggleMode}
         onSave={onSave}
       />
-
-      {isLoading && (
-        <div className="bg-blue-50 border-b border-blue-200 px-4 py-2 text-sm text-blue-800 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300">
-          Loading document…
-        </div>
-      )}
 
       {error && (
         <div className="bg-red-50 border-b border-red-200 px-4 py-2 text-sm text-red-800 dark:bg-red-900/30 dark:border-red-700 dark:text-red-300">
