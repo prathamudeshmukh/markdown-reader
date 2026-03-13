@@ -5,7 +5,7 @@ import Preview from './components/Preview';
 import { readRecentDocs } from './utils/recentDocs';
 
 export default function App() {
-  const { markdownText, slug, mode, isLoading, isSaving, error, setMarkdownText, toggleMode, onSave } =
+  const { markdownText, slug, mode, isLoading, isSaving, error, presenceCount, setMarkdownText, toggleMode, onSave } =
     useMarkdownState();
 
   const recentDocs = readRecentDocs();
@@ -19,6 +19,7 @@ export default function App() {
         isLoading={isLoading}
         markdownText={markdownText}
         recentDocs={recentDocs}
+        presenceCount={presenceCount}
         onToggle={toggleMode}
         onSave={onSave}
         onNewDoc={() => { window.location.href = '/mreader/'; }}

@@ -14,6 +14,7 @@ const baseState = {
   isLoading: false,
   isSaving: false,
   error: null as string | null,
+  presenceCount: 1,
   setMarkdownText: vi.fn(),
   toggleMode: vi.fn(),
   onSave: vi.fn(),

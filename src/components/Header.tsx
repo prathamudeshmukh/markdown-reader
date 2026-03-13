@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import RecentDocsDropdown from './RecentDocsDropdown';
+import PresenceIndicator from './PresenceIndicator';
 import type { RecentDoc } from '../utils/recentDocs';
 
 interface HeaderProps {
@@ -9,6 +10,7 @@ interface HeaderProps {
   isLoading: boolean;
   markdownText: string;
   recentDocs: RecentDoc[];
+  presenceCount: number;
   onToggle: () => void;
   onSave: () => void;
   onNewDoc: () => void;
@@ -23,7 +25,7 @@ function Spinner() {
   );
 }
 
-export default function Header({ slug, mode, isSaving, isLoading, markdownText, recentDocs, onToggle, onSave, onNewDoc }: HeaderProps) {
+export default function Header({ slug, mode, isSaving, isLoading, markdownText, recentDocs, presenceCount, onToggle, onSave, onNewDoc }: HeaderProps) {
   const [copied, setCopied] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
 
@@ -41,6 +43,7 @@ export default function Header({ slug, mode, isSaving, isLoading, markdownText, 
           Markdown Reader
         </h1>
         <div className="w-px h-4 bg-gray-200 dark:bg-gray-700" />
+        {slug && presenceCount > 1 && <PresenceIndicator count={presenceCount} />}
         <div className="flex items-center gap-0.5 sm:gap-1.5">
           <div className="w-20 flex justify-center">
             {isLoading ? (

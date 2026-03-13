@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { getSlugFromPath } from '../utils/route';
 import { fetchDoc, saveDoc, updateDoc } from '../api/docsApi';
 import { addRecentDoc } from '../utils/recentDocs';
+import { useDocChannel } from '../realtime/useDocChannel';
 
 type Mode = 'editor' | 'preview';
 
@@ -12,6 +13,7 @@ interface MarkdownState {
   isLoading: boolean;
   isSaving: boolean;
   error: string | null;
+  presenceCount: number;
 }
 
 const DEBOUNCE_MS = 250;
@@ -26,6 +28,15 @@ export function useMarkdownState() {
     isLoading: slug !== null,
     isSaving: false,
     error: null,
+    presenceCount: 0,
+  });
+
+  const handleRemoteContent = useCallback((content: string) => {
+    setState((prev) => ({ ...prev, markdownText: content }));
+  }, []);
+
+  const { broadcastContent, presenceCount } = useDocChannel(slug, {
+    onRemoteContent: handleRemoteContent,
   });
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -46,6 +57,7 @@ export function useMarkdownState() {
   const setMarkdownText = useCallback(
     (text: string) => {
       setState((prev) => ({ ...prev, markdownText: text }));
+      broadcastContent(text);
 
       if (!slug) return;
 
@@ -59,7 +71,7 @@ export function useMarkdownState() {
           );
       }, DEBOUNCE_MS);
     },
-    [slug],
+    [slug, broadcastContent],
   );
 
   const toggleMode = useCallback(() => {
@@ -82,5 +94,5 @@ export function useMarkdownState() {
     }
   }, [state.markdownText]);
 
-  return { ...state, setMarkdownText, toggleMode, onSave };
+  return { ...state, presenceCount, setMarkdownText, toggleMode, onSave };
 }

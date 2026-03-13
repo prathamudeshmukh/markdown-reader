@@ -16,6 +16,7 @@ const defaults = {
   isLoading: false,
   markdownText: '',
   recentDocs: [] as RecentDoc[],
+  presenceCount: 1,
   onToggle: vi.fn(),
   onSave: vi.fn(),
   onNewDoc: vi.fn(),

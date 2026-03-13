@@ -1,0 +1,50 @@
+# Markdown Reader
+
+A frontend-only markdown editor and previewer. Write markdown in the editor, get a shareable link — no backend, no sign-up required.
+
+## How it works
+
+The entire document is stored in the URL hash as Base64-encoded markdown. Share the URL to share your document.
+
+## Prerequisites
+
+- Node.js 18+
+- npm
+
+## Setup
+
+```bash
+# Install dependencies
+npm install
+
+# Start dev server
+npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173).
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start dev server |
+| `npm run wrangler:dev` | Full stack server start |
+| `npm run build` | Type-check + build for production |
+| `npm run preview` | Preview production build |
+| `npm run test` | Run tests in watch mode |
+| `npm run test:run` | Run tests once |
+| `npm run lint` | Lint TypeScript files |
+
+Run a single test file:
+
+```bash
+npx vitest run src/utils/encoding.test.ts
+```
+
+## Tech stack
+
+- React 18 + TypeScript
+- Vite
+- Tailwind CSS
+- `react-markdown` + `rehype-sanitize` for safe markdown rendering
+- Vitest + Testing Library
