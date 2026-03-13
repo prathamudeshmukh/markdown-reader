@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /mreader/
+
+Sitemap: https://mreader.app/mreader/sitemap.xml
