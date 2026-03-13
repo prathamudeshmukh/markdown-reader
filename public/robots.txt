@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /mreader/
 
-Sitemap: https://mreader.app/mreader/sitemap.xml
+Sitemap: https://app.prathamesh.cloud/mreader/sitemap.xml
