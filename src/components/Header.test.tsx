@@ -20,6 +20,7 @@ const defaults = {
   onToggle: vi.fn(),
   onSave: vi.fn(),
   onNewDoc: vi.fn(),
+  onExportPdf: vi.fn(),
 };
 
 describe('Header', () => {
@@ -131,6 +132,25 @@ describe('Header', () => {
       render(<Header {...defaults} slug="abc1234" onNewDoc={onNewDoc} />);
       fireEvent.click(screen.getByRole('button', { name: 'New doc' }));
       expect(onNewDoc).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe('export PDF button', () => {
+    it('is disabled when markdownText is empty', () => {
+      render(<Header {...defaults} markdownText="" />);
+      expect(screen.getByRole('button', { name: 'Export as PDF' })).toBeDisabled();
+    });
+
+    it('is enabled when markdownText is non-empty', () => {
+      render(<Header {...defaults} markdownText="# Hello" />);
+      expect(screen.getByRole('button', { name: 'Export as PDF' })).not.toBeDisabled();
+    });
+
+    it('calls onExportPdf when clicked', () => {
+      const onExportPdf = vi.fn();
+      render(<Header {...defaults} markdownText="# Hello" onExportPdf={onExportPdf} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Export as PDF' }));
+      expect(onExportPdf).toHaveBeenCalledOnce();
     });
   });
 

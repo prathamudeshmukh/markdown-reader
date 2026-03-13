@@ -8,6 +8,16 @@ export default function App() {
   const { markdownText, slug, mode, isLoading, isSaving, error, presenceCount, setMarkdownText, toggleMode, onSave } =
     useMarkdownState();
 
+  function handleExportPdf() {
+    if (mode === 'editor') {
+      toggleMode();
+      // Wait for re-render before printing
+      setTimeout(() => window.print(), 100);
+    } else {
+      window.print();
+    }
+  }
+
   const recentDocs = readRecentDocs();
 
   return (
@@ -23,6 +33,7 @@ export default function App() {
         onToggle={toggleMode}
         onSave={onSave}
         onNewDoc={() => { window.location.href = '/mreader/'; }}
+        onExportPdf={handleExportPdf}
       />
 
       {error && (

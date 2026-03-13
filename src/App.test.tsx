@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('./hooks/useMarkdownState');
@@ -57,5 +57,40 @@ describe('App', () => {
     render(<App />);
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Hello' })).toBeInTheDocument();
+  });
+
+  describe('export PDF', () => {
+    it('calls window.print directly when already in preview mode', () => {
+      const print = vi.fn();
+      vi.stubGlobal('print', print);
+      vi.mocked(useMarkdownState).mockReturnValue({
+        ...baseState,
+        mode: 'preview',
+        markdownText: '# Hello',
+      });
+      render(<App />);
+      fireEvent.click(screen.getByRole('button', { name: 'Export as PDF' }));
+      expect(print).toHaveBeenCalledOnce();
+    });
+
+    it('switches to preview then calls window.print when in editor mode', async () => {
+      vi.useFakeTimers();
+      const print = vi.fn();
+      vi.stubGlobal('print', print);
+      const toggleMode = vi.fn();
+      vi.mocked(useMarkdownState).mockReturnValue({
+        ...baseState,
+        mode: 'editor',
+        markdownText: '# Hello',
+        toggleMode,
+      });
+      render(<App />);
+      fireEvent.click(screen.getByRole('button', { name: 'Export as PDF' }));
+      expect(toggleMode).toHaveBeenCalledOnce();
+      expect(print).not.toHaveBeenCalled();
+      vi.runAllTimers();
+      expect(print).toHaveBeenCalledOnce();
+      vi.useRealTimers();
+    });
   });
 });

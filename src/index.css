@@ -8,6 +8,40 @@ body,
   height: 100%;
 }
 
+@media print {
+  /* Hide all UI chrome */
+  header,
+  [data-no-print] {
+    display: none !important;
+  }
+
+  /* Reset layout so preview fills the page */
+  html, body, #root {
+    height: auto;
+    background: white;
+  }
+
+  .pt-16 {
+    padding-top: 0 !important;
+  }
+
+  /* Let overflow content flow naturally */
+  .overflow-auto,
+  .overflow-hidden {
+    overflow: visible !important;
+  }
+
+  /* Force light mode for print */
+  .dark\:bg-gray-900 {
+    background: white !important;
+  }
+
+  /* Darker text for print readability, but preserve syntax highlight colors */
+  *:not([class*="hljs"]) {
+    color: #000 !important;
+  }
+}
+
 /* Dark mode overrides for highlight.js (github-dark palette) */
 .dark .hljs {
   color: #c9d1d9;

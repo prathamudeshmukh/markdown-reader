@@ -14,6 +14,7 @@ interface HeaderProps {
   onToggle: () => void;
   onSave: () => void;
   onNewDoc: () => void;
+  onExportPdf: () => void;
 }
 
 function Spinner() {
@@ -25,7 +26,7 @@ function Spinner() {
   );
 }
 
-export default function Header({ slug, mode, isSaving, isLoading, markdownText, recentDocs, presenceCount, onToggle, onSave, onNewDoc }: HeaderProps) {
+export default function Header({ slug, mode, isSaving, isLoading, markdownText, recentDocs, presenceCount, onToggle, onSave, onNewDoc, onExportPdf }: HeaderProps) {
   const [copied, setCopied] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
 
@@ -106,6 +107,19 @@ export default function Header({ slug, mode, isSaving, isLoading, markdownText, 
                 />
               )}
             </div>
+          <button
+            onClick={onExportPdf}
+            title="Export as PDF"
+            disabled={markdownText.length === 0}
+            className="flex items-center justify-center w-8 h-8 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-500 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800 dark:disabled:hover:bg-transparent dark:disabled:hover:text-gray-400"
+          >
+            {/* Download/PDF icon */}
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+          </button>
           <button
               onClick={onNewDoc}
               title="New doc"
