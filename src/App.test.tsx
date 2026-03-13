@@ -2,6 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('./hooks/useMarkdownState');
+vi.mock('./hooks/useKeyboardShortcuts', () => ({ useKeyboardShortcuts: vi.fn() }));
 vi.mock('./utils/recentDocs', () => ({ readRecentDocs: vi.fn(() => []) }));
 
 import App from './App';

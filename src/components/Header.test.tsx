@@ -17,10 +17,12 @@ const defaults = {
   markdownText: '',
   recentDocs: [] as RecentDoc[],
   presenceCount: 1,
+  copied: false,
   onToggle: vi.fn(),
   onSave: vi.fn(),
   onNewDoc: vi.fn(),
   onExportPdf: vi.fn(),
+  onCopyLink: vi.fn(),
 };
 
 describe('Header', () => {
@@ -102,12 +104,11 @@ describe('Header', () => {
       expect(screen.getByRole('button', { name: 'Copy link' })).not.toBeDisabled();
     });
 
-    it('copies current URL to clipboard when clicked', async () => {
-      const writeText = vi.fn().mockResolvedValue(undefined);
-      Object.assign(navigator, { clipboard: { writeText } });
-      render(<Header {...defaults} slug="abc1234" />);
+    it('calls onCopyLink when clicked', () => {
+      const onCopyLink = vi.fn();
+      render(<Header {...defaults} slug="abc1234" onCopyLink={onCopyLink} />);
       fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
-      expect(writeText).toHaveBeenCalledWith(window.location.href);
+      expect(onCopyLink).toHaveBeenCalledOnce();
     });
   });
 

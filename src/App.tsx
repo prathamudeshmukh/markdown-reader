@@ -1,4 +1,6 @@
+import { useState, useCallback } from 'react';
 import { useMarkdownState } from './hooks/useMarkdownState';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import Header from './components/Header';
 import Editor from './components/Editor';
 import Preview from './components/Preview';
@@ -7,6 +9,16 @@ import { readRecentDocs } from './utils/recentDocs';
 export default function App() {
   const { markdownText, slug, mode, isLoading, isSaving, error, presenceCount, setMarkdownText, toggleMode, onSave } =
     useMarkdownState();
+
+  const [copied, setCopied] = useState(false);
+
+  const copyLink = useCallback(() => {
+    navigator.clipboard.writeText(window.location.href);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, []);
+
+  useKeyboardShortcuts({ onSave, onToggleMode: toggleMode, onCopyLink: copyLink });
 
   function handleExportPdf() {
     if (mode === 'editor') {
@@ -30,6 +42,8 @@ export default function App() {
         markdownText={markdownText}
         recentDocs={recentDocs}
         presenceCount={presenceCount}
+        copied={copied}
+        onCopyLink={copyLink}
         onToggle={toggleMode}
         onSave={onSave}
         onNewDoc={() => { window.location.href = '/mreader/'; }}

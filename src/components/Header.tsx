@@ -11,10 +11,12 @@ interface HeaderProps {
   markdownText: string;
   recentDocs: RecentDoc[];
   presenceCount: number;
+  copied: boolean;
   onToggle: () => void;
   onSave: () => void;
   onNewDoc: () => void;
   onExportPdf: () => void;
+  onCopyLink: () => void;
 }
 
 function Spinner() {
@@ -26,15 +28,8 @@ function Spinner() {
   );
 }
 
-export default function Header({ slug, mode, isSaving, isLoading, markdownText, recentDocs, presenceCount, onToggle, onSave, onNewDoc, onExportPdf }: HeaderProps) {
-  const [copied, setCopied] = useState(false);
+export default function Header({ slug, mode, isSaving, isLoading, markdownText, recentDocs, presenceCount, copied, onToggle, onSave, onNewDoc, onExportPdf, onCopyLink }: HeaderProps) {
   const [historyOpen, setHistoryOpen] = useState(false);
-
-  function copyLink() {
-    navigator.clipboard.writeText(window.location.href);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
 
   return (
     <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50">
@@ -68,7 +63,7 @@ export default function Header({ slug, mode, isSaving, isLoading, markdownText, 
             )}
           </div>
           <button
-            onClick={copyLink}
+            onClick={onCopyLink}
             title="Copy link"
             disabled={slug === null}
             className="flex items-center justify-center w-8 h-8 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-500 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800 dark:disabled:hover:bg-transparent dark:disabled:hover:text-gray-400"
