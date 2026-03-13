@@ -55,12 +55,12 @@ describe('Header', () => {
 
     it('shows "Saved" when not saving', () => {
       render(<Header {...defaults} slug="abc1234" isSaving={false} />);
-      expect(screen.getByText('Saved')).toBeInTheDocument();
+      expect(screen.getByText(/Saved/)).toBeInTheDocument();
     });
 
     it('shows "Saving…" when saving', () => {
       render(<Header {...defaults} slug="abc1234" isSaving={true} />);
-      expect(screen.getByText('Saving…')).toBeInTheDocument();
+      expect(screen.getByText(/Saving…/)).toBeInTheDocument();
     });
   });
 

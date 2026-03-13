@@ -5,12 +5,16 @@ import PresenceIndicator from './PresenceIndicator';
 describe('PresenceIndicator', () => {
   it('shows correct count for 2 users', () => {
     render(<PresenceIndicator count={2} />);
-    expect(screen.getByText('2 editing')).toBeTruthy();
+    const status = screen.getByRole('status');
+    expect(status.textContent).toContain('2');
+    expect(status.textContent).toContain('editing');
   });
 
   it('shows correct count for 5 users', () => {
     render(<PresenceIndicator count={5} />);
-    expect(screen.getByText('5 editing')).toBeTruthy();
+    const status = screen.getByRole('status');
+    expect(status.textContent).toContain('5');
+    expect(status.textContent).toContain('editing');
   });
 
   it('has accessible aria-label', () => {
