@@ -4,6 +4,7 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import Header from './components/Header';
 import Editor from './components/Editor';
 import Preview from './components/Preview';
+import RecentDocsSidebar from './components/RecentDocsSidebar';
 import { readRecentDocs } from './utils/recentDocs';
 
 export default function App() {
@@ -11,6 +12,7 @@ export default function App() {
     useMarkdownState();
 
   const [copied, setCopied] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const copyLink = useCallback(() => {
     navigator.clipboard.writeText(window.location.href);
@@ -40,14 +42,15 @@ export default function App() {
         isSaving={isSaving}
         isLoading={isLoading}
         markdownText={markdownText}
-        recentDocs={recentDocs}
         presenceCount={presenceCount}
         copied={copied}
+        sidebarOpen={sidebarOpen}
         onCopyLink={copyLink}
         onToggle={toggleMode}
         onSave={onSave}
         onNewDoc={() => { window.location.href = '/mreader/'; }}
         onExportPdf={handleExportPdf}
+        onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
       />
 
       {error && (
@@ -55,6 +58,8 @@ export default function App() {
           {error}
         </div>
       )}
+
+      <RecentDocsSidebar docs={recentDocs} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <main className="flex-1 flex flex-col overflow-hidden">
         {mode === 'editor' ? (

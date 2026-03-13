@@ -110,7 +110,7 @@ describe('addRecentDoc', () => {
     expect(savedAt).toBeLessThanOrEqual(after);
   });
 
-  it('caps the list at 20 entries', () => {
+  it('keeps all entries with no cap', () => {
     const existing = Array.from({ length: 20 }, (_, i) => ({
       slug: `slug${i.toString().padStart(4, '0')}`,
       savedAt: '2026-03-10T00:00:00.000Z',
@@ -118,10 +118,10 @@ describe('addRecentDoc', () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
 
     const result = addRecentDoc('newest01');
-    expect(result).toHaveLength(20);
+    expect(result).toHaveLength(21);
     expect(result[0].slug).toBe('newest01');
-    // oldest entry dropped
-    expect(result.find((d) => d.slug === 'slug0019')).toBeUndefined();
+    // all existing entries preserved
+    expect(result.find((d) => d.slug === 'slug0019')).toBeDefined();
   });
 
   it('does not mutate the previously read array', () => {

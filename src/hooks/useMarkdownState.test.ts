@@ -8,6 +8,9 @@ vi.mock('../api/docsApi', () => ({
   updateDoc: vi.fn(),
 }));
 vi.mock('../utils/recentDocs', () => ({ addRecentDoc: vi.fn() }));
+vi.mock('../realtime/useDocChannel', () => ({
+  useDocChannel: vi.fn(() => ({ broadcastContent: vi.fn(), presenceCount: 1 })),
+}));
 
 import { useMarkdownState } from './useMarkdownState';
 import { getSlugFromPath } from '../utils/route';
