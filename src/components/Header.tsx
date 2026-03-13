@@ -38,23 +38,23 @@ export default function Header({ slug, mode, isSaving, isLoading, markdownText, 
   return (
     <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50">
       <header className="flex items-center gap-2 sm:gap-3 bg-white/80 backdrop-blur-md border border-gray-200/60 shadow-lg shadow-black/5 rounded-full px-3 sm:px-4 py-2 dark:bg-gray-900/80 dark:border-gray-700/60">
-        <h1 className="flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
+        <h1 className="hidden sm:flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
           <img src="/mreader/logo.png" alt="" className="h-6 w-6" />
           Markdown Reader
         </h1>
-        <div className="w-px h-4 bg-gray-200 dark:bg-gray-700" />
+        <div className="hidden sm:block w-px h-4 bg-gray-200 dark:bg-gray-700" />
         {slug && presenceCount > 1 && <PresenceIndicator count={presenceCount} />}
         <div className="flex items-center gap-0.5 sm:gap-1.5">
-          <div className="w-20 flex justify-center">
+          <div className="flex justify-center">
             {isLoading ? (
-              <span className="flex items-center gap-1.5 px-3 py-1 text-xs text-blue-600 dark:text-blue-400">
+              <span className="flex items-center gap-1.5 px-2 sm:px-3 py-1 text-xs text-blue-600 dark:text-blue-400">
                 <Spinner />
-                Loading…
+                <span className="hidden sm:inline">Loading…</span>
               </span>
             ) : slug ? (
-              <span className="flex items-center gap-1.5 px-3 py-1 text-xs text-gray-400 dark:text-gray-500">
+              <span className="flex items-center gap-1.5 px-2 sm:px-3 py-1 text-xs text-gray-400 dark:text-gray-500">
                 {isSaving && <Spinner />}
-                {isSaving ? 'Saving…' : 'Saved'}
+                <span className="hidden sm:inline">{isSaving ? 'Saving…' : 'Saved'}</span>
               </span>
             ) : (
               <button
