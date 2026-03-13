@@ -12,7 +12,7 @@ export default function App() {
     useMarkdownState();
 
   const [copied, setCopied] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const copyLink = useCallback(() => {
     navigator.clipboard.writeText(window.location.href);

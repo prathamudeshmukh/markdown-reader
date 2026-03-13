@@ -36,7 +36,7 @@ export default function Header({ slug, mode, isSaving, isLoading, markdownText, 
         </h1>
         <div className="hidden sm:block w-px h-4 bg-gray-200 dark:bg-gray-700" />
         {slug && presenceCount > 1 && <PresenceIndicator count={presenceCount} />}
-        <div className="flex items-center gap-0.5 sm:gap-1.5">
+        <div className="flex items-center gap-1.5">
           {/* Sidebar toggle */}
           <button
             onClick={onToggleSidebar}
@@ -44,21 +44,21 @@ export default function Header({ slug, mode, isSaving, isLoading, markdownText, 
             aria-label={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
             className="flex items-center justify-center w-8 h-8 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800"
           >
-            {/* Panel-left icon */}
+            {/* Recent docs / history icon */}
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2" />
-              <line x1="9" y1="3" x2="9" y2="21" />
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
             </svg>
           </button>
 
           <div className="flex justify-center">
             {isLoading ? (
-              <span className="flex items-center gap-1.5 px-2 sm:px-3 py-1 text-xs text-blue-600 dark:text-blue-400">
+              <span className="flex items-center gap-1.5 sm:px-3 py-1 text-xs text-blue-600 dark:text-blue-400">
                 <Spinner />
                 <span className="hidden sm:inline">Loading…</span>
               </span>
             ) : slug ? (
-              <span className="flex items-center gap-1.5 px-2 sm:px-3 py-1 text-xs text-gray-400 dark:text-gray-500">
+              <span className="flex items-center gap-1.5 sm:px-3 py-1 text-xs text-gray-400 dark:text-gray-500">
                 {isSaving && <Spinner />}
                 <span className="hidden sm:inline">{isSaving ? 'Saving…' : 'Saved'}</span>
               </span>
