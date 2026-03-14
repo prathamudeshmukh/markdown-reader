@@ -13,6 +13,7 @@ export default function App() {
     useMarkdownState();
 
   const [copied, setCopied] = useState(false);
+  const [copiedMarkdown, setCopiedMarkdown] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
 
@@ -23,6 +24,12 @@ export default function App() {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }, []);
+
+  const copyMarkdown = useCallback(() => {
+    navigator.clipboard.writeText(markdownText);
+    setCopiedMarkdown(true);
+    setTimeout(() => setCopiedMarkdown(false), 2000);
+  }, [markdownText]);
 
   useKeyboardShortcuts({ onSave, onToggleMode: toggleMode, onCopyLink: copyLink });
 
@@ -48,8 +55,10 @@ export default function App() {
         markdownText={markdownText}
         presenceCount={presenceCount}
         copied={copied}
+        copiedMarkdown={copiedMarkdown}
         sidebarOpen={sidebarOpen}
         onCopyLink={copyLink}
+        onCopyMarkdown={copyMarkdown}
         onToggle={toggleMode}
         onSave={onSave}
         onNewDoc={() => { window.location.href = '/mreader/'; }}
