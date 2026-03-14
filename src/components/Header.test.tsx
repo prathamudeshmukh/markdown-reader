@@ -17,6 +17,7 @@ const defaults = {
   onExportPdf: vi.fn(),
   onCopyLink: vi.fn(),
   onToggleSidebar: vi.fn(),
+  onShowQr: vi.fn(),
 };
 
 describe('Header', () => {
@@ -120,6 +121,25 @@ describe('Header', () => {
       render(<Header {...defaults} markdownText="# Hello" onExportPdf={onExportPdf} />);
       fireEvent.click(screen.getByRole('button', { name: 'Export as PDF' }));
       expect(onExportPdf).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe('QR code button', () => {
+    it('is disabled when no slug', () => {
+      render(<Header {...defaults} slug={null} />);
+      expect(screen.getByRole('button', { name: 'Show QR code' })).toBeDisabled();
+    });
+
+    it('is enabled when slug exists', () => {
+      render(<Header {...defaults} slug="abc1234" />);
+      expect(screen.getByRole('button', { name: 'Show QR code' })).not.toBeDisabled();
+    });
+
+    it('calls onShowQr when clicked', () => {
+      const onShowQr = vi.fn();
+      render(<Header {...defaults} slug="abc1234" onShowQr={onShowQr} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Show QR code' }));
+      expect(onShowQr).toHaveBeenCalledOnce();
     });
   });
 

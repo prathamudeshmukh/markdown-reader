@@ -4,6 +4,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('./hooks/useMarkdownState');
 vi.mock('./hooks/useKeyboardShortcuts', () => ({ useKeyboardShortcuts: vi.fn() }));
 vi.mock('./utils/recentDocs', () => ({ readRecentDocs: vi.fn(() => []) }));
+vi.mock('./components/QrModal', () => ({
+  default: ({ onClose }: { onClose: () => void }) => (
+    <div data-testid="qr-modal"><button onClick={onClose}>close-qr</button></div>
+  ),
+}));
 
 import App from './App';
 import { useMarkdownState } from './hooks/useMarkdownState';
@@ -58,6 +63,28 @@ describe('App', () => {
     render(<App />);
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Hello' })).toBeInTheDocument();
+  });
+
+  describe('QR modal', () => {
+    it('is not shown initially', () => {
+      render(<App />);
+      expect(screen.queryByTestId('qr-modal')).not.toBeInTheDocument();
+    });
+
+    it('opens when Show QR code button is clicked', () => {
+      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, slug: 'abc1234' });
+      render(<App />);
+      fireEvent.click(screen.getByRole('button', { name: 'Show QR code' }));
+      expect(screen.getByTestId('qr-modal')).toBeInTheDocument();
+    });
+
+    it('closes when onClose is called from within the modal', () => {
+      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, slug: 'abc1234' });
+      render(<App />);
+      fireEvent.click(screen.getByRole('button', { name: 'Show QR code' }));
+      fireEvent.click(screen.getByRole('button', { name: 'close-qr' }));
+      expect(screen.queryByTestId('qr-modal')).not.toBeInTheDocument();
+    });
   });
 
   describe('export PDF', () => {

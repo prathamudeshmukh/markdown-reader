@@ -15,6 +15,7 @@ interface HeaderProps {
   onExportPdf: () => void;
   onCopyLink: () => void;
   onToggleSidebar: () => void;
+  onShowQr: () => void;
 }
 
 function Spinner() {
@@ -26,7 +27,7 @@ function Spinner() {
   );
 }
 
-export default function Header({ slug, mode, isSaving, isLoading, markdownText, presenceCount, copied, sidebarOpen, onToggle, onSave, onNewDoc, onExportPdf, onCopyLink, onToggleSidebar }: HeaderProps) {
+export default function Header({ slug, mode, isSaving, isLoading, markdownText, presenceCount, copied, sidebarOpen, onToggle, onSave, onNewDoc, onExportPdf, onCopyLink, onToggleSidebar, onShowQr }: HeaderProps) {
   return (
     <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50">
       <header className="flex items-center gap-2 sm:gap-3 bg-white/80 backdrop-blur-md border border-gray-200/60 shadow-lg shadow-black/5 rounded-full px-3 sm:px-4 py-2 dark:bg-gray-900/80 dark:border-gray-700/60">
@@ -89,6 +90,31 @@ export default function Header({ slug, mode, isSaving, isLoading, markdownText, 
                 <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
               </svg>
             )}
+          </button>
+          <button
+            onClick={onShowQr}
+            title="Show QR code"
+            aria-label="Show QR code"
+            disabled={slug === null}
+            className="flex items-center justify-center w-8 h-8 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-500 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800 dark:disabled:hover:bg-transparent dark:disabled:hover:text-gray-400"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1" />
+              <rect x="14" y="3" width="7" height="7" rx="1" />
+              <rect x="3" y="14" width="7" height="7" rx="1" />
+              <rect x="5" y="5" width="3" height="3" fill="currentColor" stroke="none" />
+              <rect x="16" y="5" width="3" height="3" fill="currentColor" stroke="none" />
+              <rect x="5" y="16" width="3" height="3" fill="currentColor" stroke="none" />
+              <line x1="14" y1="14" x2="14.01" y2="14" strokeWidth="2.5" />
+              <line x1="17" y1="14" x2="17.01" y2="14" strokeWidth="2.5" />
+              <line x1="20" y1="14" x2="20.01" y2="14" strokeWidth="2.5" />
+              <line x1="14" y1="17" x2="14.01" y2="17" strokeWidth="2.5" />
+              <line x1="17" y1="17" x2="20" y2="17" />
+              <line x1="20" y1="17" x2="20.01" y2="17" strokeWidth="2.5" />
+              <line x1="14" y1="20" x2="14.01" y2="20" strokeWidth="2.5" />
+              <line x1="17" y1="20" x2="17.01" y2="20" strokeWidth="2.5" />
+              <line x1="20" y1="20" x2="20.01" y2="20" strokeWidth="2.5" />
+            </svg>
           </button>
           <button
             onClick={onExportPdf}

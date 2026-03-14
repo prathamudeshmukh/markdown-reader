@@ -5,6 +5,7 @@ import Header from './components/Header';
 import Editor from './components/Editor';
 import Preview from './components/Preview';
 import RecentDocsSidebar from './components/RecentDocsSidebar';
+import QrModal from './components/QrModal';
 import { readRecentDocs } from './utils/recentDocs';
 
 export default function App() {
@@ -13,6 +14,9 @@ export default function App() {
 
   const [copied, setCopied] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
+
+  const openQr = useCallback(() => setQrOpen(true), []);
 
   const copyLink = useCallback(() => {
     navigator.clipboard.writeText(window.location.href);
@@ -51,6 +55,7 @@ export default function App() {
         onNewDoc={() => { window.location.href = '/mreader/'; }}
         onExportPdf={handleExportPdf}
         onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
+        onShowQr={openQr}
       />
 
       {error && (
@@ -60,6 +65,7 @@ export default function App() {
       )}
 
       <RecentDocsSidebar docs={recentDocs} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      {qrOpen && <QrModal url={window.location.href} onClose={() => setQrOpen(false)} />}
 
       <main className="flex-1 flex flex-col overflow-hidden">
         {mode === 'editor' ? (
