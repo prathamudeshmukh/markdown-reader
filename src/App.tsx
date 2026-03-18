@@ -22,12 +22,19 @@ export default function App() {
   const [qrOpen, setQrOpen] = useState(false);
   const [isPdfImporting, setIsPdfImporting] = useState(false);
   const [pdfImportError, setPdfImportError] = useState<string | null>(null);
+  const [pdfImportWarning, setPdfImportWarning] = useState(false);
 
   useEffect(() => {
     if (!pdfImportError) return;
     const id = setTimeout(() => setPdfImportError(null), 5000);
     return () => clearTimeout(id);
   }, [pdfImportError]);
+
+  useEffect(() => {
+    if (!pdfImportWarning) return;
+    const id = setTimeout(() => setPdfImportWarning(false), 8000);
+    return () => clearTimeout(id);
+  }, [pdfImportWarning]);
 
   const handleImportPdf = useCallback(
     async (file: File) => {
@@ -37,6 +44,7 @@ export default function App() {
         const result = await pdfToMarkdown(file);
         setMarkdownText(result.markdown);
         if (mode !== 'editor') toggleMode('button');
+        setPdfImportWarning(true);
         track('pdf_imported', {
           page_count: result.pageCount,
           content_length_bucket: getContentLengthBucket(result.markdown),
@@ -129,6 +137,11 @@ export default function App() {
       {pdfImportError && (
         <div className="bg-red-50 border-b border-red-200 px-4 py-2 text-sm text-red-800 dark:bg-red-900/30 dark:border-red-700 dark:text-red-300">
           {pdfImportError}
+        </div>
+      )}
+      {pdfImportWarning && (
+        <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-2 text-sm text-yellow-800 dark:bg-yellow-900/30 dark:border-yellow-700 dark:text-yellow-300">
+          PDF imported. Tables may not have converted correctly — please review.
         </div>
       )}
 

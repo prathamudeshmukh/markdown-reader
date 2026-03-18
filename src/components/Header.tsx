@@ -168,8 +168,7 @@ export default function Header({ document: { slug, markdownText, presenceCount }
             tabIndex={-1}
             onChange={handleFileChange}
           />
-          <div className="relative group">
-            <button
+          <button
               onClick={() => fileInputRef.current?.click()}
               aria-label="Import PDF"
               disabled={isPdfImporting}
@@ -185,14 +184,6 @@ export default function Header({ document: { slug, markdownText, presenceCount }
                 </svg>
               )}
             </button>
-            <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 w-48">
-              <div className="bg-gray-900 text-white text-xs rounded-lg px-3 py-2 text-center leading-snug dark:bg-gray-700">
-                Import PDF
-                <p className="mt-1 text-gray-400 dark:text-gray-300">Tables may not convert correctly</p>
-              </div>
-              <div className="mx-auto mt-0.5 w-2 h-2 bg-gray-900 dark:bg-gray-700 rotate-45 -translate-y-1" />
-            </div>
-          </div>
           <button
             onClick={onExportPdf}
             title="Export as PDF"
