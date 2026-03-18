@@ -11,7 +11,9 @@ const sanitizeSchema = {
     ...defaultSchema.attributes,
     code: [['className', 'hljs', /^language-/]],
     span: [['className', /^hljs-/]],
+    input: ['checked', 'disabled', 'type'],
   },
+  tagNames: [...(defaultSchema.tagNames ?? []), 'input'],
 };
 
 interface PreviewProps {
