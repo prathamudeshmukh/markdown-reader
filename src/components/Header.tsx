@@ -1,17 +1,23 @@
 import { useRef } from 'react';
 import PresenceIndicator from './PresenceIndicator';
 
-interface HeaderProps {
+export interface DocumentState {
   slug: string | null;
+  markdownText: string;
+  presenceCount: number;
+}
+
+export interface UiState {
   mode: 'editor' | 'preview';
   isSaving: boolean;
   isLoading: boolean;
-  markdownText: string;
-  presenceCount: number;
   copied: boolean;
   copiedMarkdown: boolean;
   sidebarOpen: boolean;
   isPdfImporting: boolean;
+}
+
+export interface HeaderActions {
   onToggle: () => void;
   onSave: () => void;
   onNewDoc: () => void;
@@ -23,6 +29,12 @@ interface HeaderProps {
   onImportPdf: (file: File) => void;
 }
 
+interface HeaderProps {
+  document: DocumentState;
+  ui: UiState;
+  actions: HeaderActions;
+}
+
 function Spinner() {
   return (
     <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none">
@@ -32,7 +44,7 @@ function Spinner() {
   );
 }
 
-export default function Header({ slug, mode, isSaving, isLoading, markdownText, presenceCount, copied, copiedMarkdown, sidebarOpen, isPdfImporting, onToggle, onSave, onNewDoc, onExportPdf, onCopyLink, onCopyMarkdown, onToggleSidebar, onShowQr, onImportPdf }: HeaderProps) {
+export default function Header({ document: { slug, markdownText, presenceCount }, ui: { mode, isSaving, isLoading, copied, copiedMarkdown, sidebarOpen, isPdfImporting }, actions: { onToggle, onSave, onNewDoc, onExportPdf, onCopyLink, onCopyMarkdown, onToggleSidebar, onShowQr, onImportPdf } }: HeaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {

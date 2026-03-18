@@ -106,31 +106,19 @@ export default function App() {
   return (
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900 pt-16">
       <Header
-        slug={slug}
-        mode={mode}
-        isSaving={isSaving}
-        isLoading={isLoading}
-        markdownText={markdownText}
-        presenceCount={presenceCount}
-        copied={copied}
-        copiedMarkdown={copiedMarkdown}
-        sidebarOpen={sidebarOpen}
-        onCopyLink={() => {
-          void copyLink('button');
+        document={{ slug, markdownText, presenceCount }}
+        ui={{ mode, isSaving, isLoading, copied, copiedMarkdown, sidebarOpen, isPdfImporting }}
+        actions={{
+          onToggle: () => toggleMode('button'),
+          onSave: () => { void onSave('button'); },
+          onNewDoc: () => { window.location.href = '/mreader/'; },
+          onExportPdf: handleExportPdf,
+          onCopyLink: () => { void copyLink('button'); },
+          onCopyMarkdown: () => { void copyMarkdown(); },
+          onToggleSidebar: () => setSidebarOpen((prev) => !prev),
+          onShowQr: openQr,
+          onImportPdf: handleImportPdf,
         }}
-        onCopyMarkdown={() => {
-          void copyMarkdown();
-        }}
-        onToggle={() => toggleMode('button')}
-        onSave={() => {
-          void onSave('button');
-        }}
-        onNewDoc={() => { window.location.href = '/mreader/'; }}
-        onExportPdf={handleExportPdf}
-        onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
-        onShowQr={openQr}
-        isPdfImporting={isPdfImporting}
-        onImportPdf={handleImportPdf}
       />
 
       {error && (
