@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useMarkdownState } from './hooks/useMarkdownState';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import Header from './components/Header';
@@ -8,6 +8,9 @@ import RecentDocsSidebar from './components/RecentDocsSidebar';
 import QrModal from './components/QrModal';
 import { readRecentDocs } from './utils/recentDocs';
 import { getContentLengthBucket, track, type InteractionSource } from './telemetry';
+import { pdfToMarkdown, PdfImportError } from './utils/pdfToMarkdown';
+
+const PDF_IMPORT_UNKNOWN_ERROR = 'Failed to import PDF. Please try again.';
 
 export default function App() {
   const { markdownText, slug, mode, isLoading, isSaving, error, presenceCount, setMarkdownText, toggleMode, onSave } =
@@ -17,6 +20,36 @@ export default function App() {
   const [copiedMarkdown, setCopiedMarkdown] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
+  const [isPdfImporting, setIsPdfImporting] = useState(false);
+  const [pdfImportError, setPdfImportError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!pdfImportError) return;
+    const id = setTimeout(() => setPdfImportError(null), 5000);
+    return () => clearTimeout(id);
+  }, [pdfImportError]);
+
+  const handleImportPdf = useCallback(
+    async (file: File) => {
+      setIsPdfImporting(true);
+      setPdfImportError(null);
+      try {
+        const result = await pdfToMarkdown(file);
+        setMarkdownText(result.markdown);
+        if (mode !== 'editor') toggleMode('button');
+        track('pdf_imported', {
+          page_count: result.pageCount,
+          content_length_bucket: getContentLengthBucket(result.markdown),
+        });
+      } catch (err) {
+        const message = err instanceof PdfImportError ? err.userMessage : PDF_IMPORT_UNKNOWN_ERROR;
+        setPdfImportError(message);
+      } finally {
+        setIsPdfImporting(false);
+      }
+    },
+    [setMarkdownText, mode, toggleMode],
+  );
 
   const openQr = useCallback(() => {
     track('qr_opened', { has_slug: slug !== null });
@@ -96,11 +129,18 @@ export default function App() {
         onExportPdf={handleExportPdf}
         onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
         onShowQr={openQr}
+        isPdfImporting={isPdfImporting}
+        onImportPdf={handleImportPdf}
       />
 
       {error && (
         <div className="bg-red-50 border-b border-red-200 px-4 py-2 text-sm text-red-800 dark:bg-red-900/30 dark:border-red-700 dark:text-red-300">
           {error}
+        </div>
+      )}
+      {pdfImportError && (
+        <div className="bg-red-50 border-b border-red-200 px-4 py-2 text-sm text-red-800 dark:bg-red-900/30 dark:border-red-700 dark:text-red-300">
+          {pdfImportError}
         </div>
       )}
 

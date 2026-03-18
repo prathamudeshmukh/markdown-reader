@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import PresenceIndicator from './PresenceIndicator';
 
 interface HeaderProps {
@@ -10,6 +11,7 @@ interface HeaderProps {
   copied: boolean;
   copiedMarkdown: boolean;
   sidebarOpen: boolean;
+  isPdfImporting: boolean;
   onToggle: () => void;
   onSave: () => void;
   onNewDoc: () => void;
@@ -18,6 +20,7 @@ interface HeaderProps {
   onCopyMarkdown: () => void;
   onToggleSidebar: () => void;
   onShowQr: () => void;
+  onImportPdf: (file: File) => void;
 }
 
 function Spinner() {
@@ -29,7 +32,15 @@ function Spinner() {
   );
 }
 
-export default function Header({ slug, mode, isSaving, isLoading, markdownText, presenceCount, copied, copiedMarkdown, sidebarOpen, onToggle, onSave, onNewDoc, onExportPdf, onCopyLink, onCopyMarkdown, onToggleSidebar, onShowQr }: HeaderProps) {
+export default function Header({ slug, mode, isSaving, isLoading, markdownText, presenceCount, copied, copiedMarkdown, sidebarOpen, isPdfImporting, onToggle, onSave, onNewDoc, onExportPdf, onCopyLink, onCopyMarkdown, onToggleSidebar, onShowQr, onImportPdf }: HeaderProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) onImportPdf(file);
+    e.target.value = '';
+  }
+
   return (
     <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50">
       <header className="flex items-center gap-2 sm:gap-3 bg-white/80 backdrop-blur-md border border-gray-200/60 shadow-lg shadow-black/5 rounded-full px-3 sm:px-4 py-2 dark:bg-gray-900/80 dark:border-gray-700/60">
@@ -136,6 +147,40 @@ export default function Header({ slug, mode, isSaving, isLoading, markdownText, 
               <line x1="20" y1="20" x2="20.01" y2="20" strokeWidth="2.5" />
             </svg>
           </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,application/pdf"
+            className="sr-only"
+            aria-hidden="true"
+            tabIndex={-1}
+            onChange={handleFileChange}
+          />
+          <div className="relative group">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              aria-label="Import PDF"
+              disabled={isPdfImporting}
+              className="flex items-center justify-center w-8 h-8 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800"
+            >
+              {isPdfImporting ? (
+                <Spinner />
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+              )}
+            </button>
+            <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 w-48">
+              <div className="bg-gray-900 text-white text-xs rounded-lg px-3 py-2 text-center leading-snug dark:bg-gray-700">
+                Import PDF
+                <p className="mt-1 text-gray-400 dark:text-gray-300">Tables may not convert correctly</p>
+              </div>
+              <div className="mx-auto mt-0.5 w-2 h-2 bg-gray-900 dark:bg-gray-700 rotate-45 -translate-y-1" />
+            </div>
+          </div>
           <button
             onClick={onExportPdf}
             title="Export as PDF"

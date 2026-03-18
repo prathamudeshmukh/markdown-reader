@@ -12,6 +12,7 @@ const defaults = {
   copied: false,
   copiedMarkdown: false,
   sidebarOpen: false,
+  isPdfImporting: false,
   onToggle: vi.fn(),
   onSave: vi.fn(),
   onNewDoc: vi.fn(),
@@ -20,6 +21,7 @@ const defaults = {
   onCopyMarkdown: vi.fn(),
   onToggleSidebar: vi.fn(),
   onShowQr: vi.fn(),
+  onImportPdf: vi.fn(),
 };
 
 describe('Header', () => {
@@ -142,6 +144,36 @@ describe('Header', () => {
       render(<Header {...defaults} slug="abc1234" onShowQr={onShowQr} />);
       fireEvent.click(screen.getByRole('button', { name: 'Show QR code' }));
       expect(onShowQr).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe('import PDF button', () => {
+    it('renders an Import PDF button', () => {
+      render(<Header {...defaults} />);
+      expect(screen.getByRole('button', { name: 'Import PDF' })).toBeInTheDocument();
+    });
+
+    it('is disabled and shows spinner when isPdfImporting is true', () => {
+      render(<Header {...defaults} isPdfImporting={true} />);
+      expect(screen.getByRole('button', { name: 'Import PDF' })).toBeDisabled();
+    });
+
+    it('calls onImportPdf with the selected File when a file is chosen', () => {
+      const onImportPdf = vi.fn();
+      render(<Header {...defaults} onImportPdf={onImportPdf} />);
+      const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const file = new File(['%PDF'], 'test.pdf', { type: 'application/pdf' });
+      fireEvent.change(input, { target: { files: [file] } });
+      expect(onImportPdf).toHaveBeenCalledWith(file);
+    });
+
+    it('allows the same file to be re-selected (input value reset after change)', () => {
+      const onImportPdf = vi.fn();
+      render(<Header {...defaults} onImportPdf={onImportPdf} />);
+      const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const file = new File(['%PDF'], 'test.pdf', { type: 'application/pdf' });
+      fireEvent.change(input, { target: { files: [file] } });
+      expect(input.value).toBe('');
     });
   });
 

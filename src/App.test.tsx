@@ -8,6 +8,12 @@ vi.mock('./telemetry', () => ({
   track: vi.fn(),
   getContentLengthBucket: vi.fn(() => 'xs'),
 }));
+
+const { mockPdfToMarkdown } = vi.hoisted(() => ({ mockPdfToMarkdown: vi.fn() }));
+vi.mock('./utils/pdfToMarkdown', async (importOriginal) => {
+  const original = await importOriginal<typeof import('./utils/pdfToMarkdown')>();
+  return { ...original, pdfToMarkdown: mockPdfToMarkdown };
+});
 vi.mock('./components/QrModal', () => ({
   default: ({ onClose }: { onClose: () => void }) => (
     <div data-testid="qr-modal"><button onClick={onClose}>close-qr</button></div>
@@ -18,6 +24,7 @@ import App from './App';
 import { useMarkdownState } from './hooks/useMarkdownState';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { track } from './telemetry';
+import { PdfImportError } from './utils/pdfToMarkdown';
 
 const baseState = {
   markdownText: '',
@@ -171,6 +178,46 @@ describe('App', () => {
       vi.runAllTimers();
       expect(print).toHaveBeenCalledOnce();
       vi.useRealTimers();
+    });
+  });
+
+  describe('import PDF', () => {
+    function makeFile() {
+      const file = new File(['%PDF'], 'test.pdf', { type: 'application/pdf' });
+      Object.assign(file, { arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)) });
+      return file;
+    }
+
+    it('populates editor with extracted markdown on success', async () => {
+      const setMarkdownText = vi.fn();
+      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, setMarkdownText });
+      mockPdfToMarkdown.mockResolvedValue({ markdown: '# Hello from PDF', pageCount: 1 });
+
+      render(<App />);
+      const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+      fireEvent.change(input, { target: { files: [makeFile()] } });
+
+      await vi.waitFor(() => expect(setMarkdownText).toHaveBeenCalledWith('# Hello from PDF'));
+    });
+
+    it('shows an error banner when PdfImportError is thrown', async () => {
+      mockPdfToMarkdown.mockRejectedValue(new PdfImportError('EMPTY_PDF'));
+
+      render(<App />);
+      const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+      fireEvent.change(input, { target: { files: [makeFile()] } });
+
+      await screen.findByText(/no text/i);
+    });
+
+    it('shows a generic error banner for unknown errors', async () => {
+      mockPdfToMarkdown.mockRejectedValue(new Error('Something went wrong'));
+
+      render(<App />);
+      const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+      fireEvent.change(input, { target: { files: [makeFile()] } });
+
+      await screen.findByText(/failed to import/i);
     });
   });
 
