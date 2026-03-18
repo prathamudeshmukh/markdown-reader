@@ -4,6 +4,7 @@ import type { RecentDoc } from '../utils/recentDocs';
 interface RecentDocsDropdownProps {
   docs: RecentDoc[];
   onClose: () => void;
+  onDocOpen?: () => void;
 }
 
 function formatDate(iso: string): string {
@@ -15,7 +16,7 @@ function formatDate(iso: string): string {
   }).format(new Date(iso));
 }
 
-export default function RecentDocsDropdown({ docs, onClose }: RecentDocsDropdownProps) {
+export default function RecentDocsDropdown({ docs, onClose, onDocOpen }: RecentDocsDropdownProps) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -45,6 +46,7 @@ export default function RecentDocsDropdown({ docs, onClose }: RecentDocsDropdown
           <button
             key={doc.slug}
             onClick={() => {
+              onDocOpen?.();
               window.location.href = `/mreader/d/${doc.slug}`;
             }}
             className="w-full flex items-center justify-between gap-2 px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"

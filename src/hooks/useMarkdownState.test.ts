@@ -11,11 +11,17 @@ vi.mock('../utils/recentDocs', () => ({ addRecentDoc: vi.fn() }));
 vi.mock('../realtime/useDocChannel', () => ({
   useDocChannel: vi.fn(() => ({ broadcastContent: vi.fn(), presenceCount: 1 })),
 }));
+vi.mock('../telemetry', () => ({
+  track: vi.fn(),
+  getContentLengthBucket: vi.fn(() => 'xs'),
+  getErrorType: vi.fn(() => 'unknown'),
+}));
 
 import { useMarkdownState } from './useMarkdownState';
 import { getSlugFromPath } from '../utils/route';
 import { fetchDoc, saveDoc, updateDoc } from '../api/docsApi';
 import { addRecentDoc } from '../utils/recentDocs';
+import { track } from '../telemetry';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -71,6 +77,11 @@ describe('useMarkdownState', () => {
 
       expect(saveDoc).toHaveBeenCalledWith('# Hello');
       expect(addRecentDoc).toHaveBeenCalledWith('new1234');
+      expect(track).toHaveBeenCalledWith(
+        'doc_save_clicked',
+        expect.objectContaining({ source: 'button' }),
+      );
+      expect(track).toHaveBeenCalledWith('doc_save_succeeded', { slug_created: true });
       expect(window.location.replace).toHaveBeenCalledWith('/mreader/d/new1234');
     });
 
@@ -82,6 +93,10 @@ describe('useMarkdownState', () => {
       await act(() => result.current.onSave());
 
       expect(result.current.error).toBe('Network error');
+      expect(track).toHaveBeenCalledWith(
+        'doc_save_failed',
+        expect.objectContaining({ error_type: expect.any(String) }),
+      );
       expect(result.current.isSaving).toBe(false);
     });
 
@@ -91,6 +106,10 @@ describe('useMarkdownState', () => {
 
       act(() => result.current.toggleMode());
       expect(result.current.mode).toBe('preview');
+      expect(track).toHaveBeenCalledWith(
+        'mode_toggled',
+        expect.objectContaining({ from_mode: 'editor', to_mode: 'preview', source: 'button' }),
+      );
 
       act(() => result.current.toggleMode());
       expect(result.current.mode).toBe('editor');

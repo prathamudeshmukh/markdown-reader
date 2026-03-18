@@ -1,9 +1,13 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('./hooks/useMarkdownState');
 vi.mock('./hooks/useKeyboardShortcuts', () => ({ useKeyboardShortcuts: vi.fn() }));
 vi.mock('./utils/recentDocs', () => ({ readRecentDocs: vi.fn(() => []) }));
+vi.mock('./telemetry', () => ({
+  track: vi.fn(),
+  getContentLengthBucket: vi.fn(() => 'xs'),
+}));
 vi.mock('./components/QrModal', () => ({
   default: ({ onClose }: { onClose: () => void }) => (
     <div data-testid="qr-modal"><button onClick={onClose}>close-qr</button></div>
@@ -12,6 +16,8 @@ vi.mock('./components/QrModal', () => ({
 
 import App from './App';
 import { useMarkdownState } from './hooks/useMarkdownState';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import { track } from './telemetry';
 
 const baseState = {
   markdownText: '',
@@ -27,7 +33,17 @@ const baseState = {
 };
 
 describe('App', () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   beforeEach(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      value: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+      configurable: true,
+    });
     vi.mocked(useMarkdownState).mockReturnValue(baseState);
   });
 
@@ -75,6 +91,7 @@ describe('App', () => {
       vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, slug: 'abc1234' });
       render(<App />);
       fireEvent.click(screen.getByRole('button', { name: 'Show QR code' }));
+      expect(track).toHaveBeenCalledWith('qr_opened', { has_slug: true });
       expect(screen.getByTestId('qr-modal')).toBeInTheDocument();
     });
 
@@ -84,6 +101,39 @@ describe('App', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Show QR code' }));
       fireEvent.click(screen.getByRole('button', { name: 'close-qr' }));
       expect(screen.queryByTestId('qr-modal')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('copy actions', () => {
+    it('tracks link copy once', async () => {
+      vi.mocked(useMarkdownState).mockReturnValue({
+        ...baseState,
+        slug: 'abc1234',
+        markdownText: '# Hello',
+      });
+      render(<App />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
+
+      await Promise.resolve();
+      expect(track).toHaveBeenCalledWith('link_copied', { has_slug: true, source: 'button' });
+    });
+
+    it('tracks markdown copy once', async () => {
+      vi.mocked(useMarkdownState).mockReturnValue({
+        ...baseState,
+        slug: 'abc1234',
+        markdownText: '# Hello',
+      });
+      render(<App />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Copy markdown' }));
+
+      await Promise.resolve();
+      expect(track).toHaveBeenCalledWith(
+        'markdown_copied',
+        expect.objectContaining({ content_length_bucket: expect.any(String) }),
+      );
     });
   });
 
@@ -98,6 +148,7 @@ describe('App', () => {
       });
       render(<App />);
       fireEvent.click(screen.getByRole('button', { name: 'Export as PDF' }));
+      expect(track).toHaveBeenCalledWith('pdf_exported', { mode_at_export: 'preview' });
       expect(print).toHaveBeenCalledOnce();
     });
 
@@ -114,11 +165,46 @@ describe('App', () => {
       });
       render(<App />);
       fireEvent.click(screen.getByRole('button', { name: 'Export as PDF' }));
+      expect(track).toHaveBeenCalledWith('pdf_exported', { mode_at_export: 'editor' });
       expect(toggleMode).toHaveBeenCalledOnce();
       expect(print).not.toHaveBeenCalled();
       vi.runAllTimers();
       expect(print).toHaveBeenCalledOnce();
       vi.useRealTimers();
+    });
+  });
+
+  describe('keyboard shortcut sources', () => {
+    it('marks save source as shortcut', () => {
+      const onSave = vi.fn();
+      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, onSave });
+      render(<App />);
+
+      const handlers = vi.mocked(useKeyboardShortcuts).mock.calls[0]?.[0];
+      handlers?.onSave();
+
+      expect(onSave).toHaveBeenCalledWith('shortcut');
+    });
+
+    it('marks toggle source as shortcut', () => {
+      const toggleMode = vi.fn();
+      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, toggleMode });
+      render(<App />);
+
+      const handlers = vi.mocked(useKeyboardShortcuts).mock.calls[0]?.[0];
+      handlers?.onToggleMode();
+
+      expect(toggleMode).toHaveBeenCalledWith('shortcut');
+    });
+
+    it('marks copy-link source as shortcut', async () => {
+      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, slug: 'abc1234' });
+      render(<App />);
+
+      const handlers = vi.mocked(useKeyboardShortcuts).mock.calls[0]?.[0];
+      await handlers?.onCopyLink();
+
+      expect(track).toHaveBeenCalledWith('link_copied', { has_slug: true, source: 'shortcut' });
     });
   });
 });

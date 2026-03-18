@@ -7,6 +7,7 @@ import Preview from './components/Preview';
 import RecentDocsSidebar from './components/RecentDocsSidebar';
 import QrModal from './components/QrModal';
 import { readRecentDocs } from './utils/recentDocs';
+import { getContentLengthBucket, track, type InteractionSource } from './telemetry';
 
 export default function App() {
   const { markdownText, slug, mode, isLoading, isSaving, error, presenceCount, setMarkdownText, toggleMode, onSave } =
@@ -17,25 +18,49 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
 
-  const openQr = useCallback(() => setQrOpen(true), []);
+  const openQr = useCallback(() => {
+    track('qr_opened', { has_slug: slug !== null });
+    setQrOpen(true);
+  }, [slug]);
 
-  const copyLink = useCallback(() => {
-    navigator.clipboard.writeText(window.location.href);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }, []);
+  const copyLink = useCallback(async (source: InteractionSource = 'button') => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      track('link_copied', { has_slug: slug !== null, source });
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Ignore clipboard failures (e.g. unsupported browsers).
+    }
+  }, [slug]);
 
-  const copyMarkdown = useCallback(() => {
-    navigator.clipboard.writeText(markdownText);
-    setCopiedMarkdown(true);
-    setTimeout(() => setCopiedMarkdown(false), 2000);
+  const copyMarkdown = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(markdownText);
+      track('markdown_copied', {
+        content_length_bucket: getContentLengthBucket(markdownText),
+      });
+      setCopiedMarkdown(true);
+      setTimeout(() => setCopiedMarkdown(false), 2000);
+    } catch {
+      // Ignore clipboard failures (e.g. unsupported browsers).
+    }
   }, [markdownText]);
 
-  useKeyboardShortcuts({ onSave, onToggleMode: toggleMode, onCopyLink: copyLink });
+  useKeyboardShortcuts({
+    onSave: () => {
+      void onSave('shortcut');
+    },
+    onToggleMode: () => toggleMode('shortcut'),
+    onCopyLink: () => {
+      void copyLink('shortcut');
+    },
+  });
 
   function handleExportPdf() {
+    track('pdf_exported', { mode_at_export: mode });
     if (mode === 'editor') {
-      toggleMode();
+      toggleMode('button');
       // Wait for re-render before printing
       setTimeout(() => window.print(), 100);
     } else {
@@ -57,10 +82,16 @@ export default function App() {
         copied={copied}
         copiedMarkdown={copiedMarkdown}
         sidebarOpen={sidebarOpen}
-        onCopyLink={copyLink}
-        onCopyMarkdown={copyMarkdown}
-        onToggle={toggleMode}
-        onSave={onSave}
+        onCopyLink={() => {
+          void copyLink('button');
+        }}
+        onCopyMarkdown={() => {
+          void copyMarkdown();
+        }}
+        onToggle={() => toggleMode('button')}
+        onSave={() => {
+          void onSave('button');
+        }}
         onNewDoc={() => { window.location.href = '/mreader/'; }}
         onExportPdf={handleExportPdf}
         onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
@@ -73,7 +104,12 @@ export default function App() {
         </div>
       )}
 
-      <RecentDocsSidebar docs={recentDocs} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <RecentDocsSidebar
+        docs={recentDocs}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        onDocOpen={() => track('recent_doc_opened', { source: 'sidebar' })}
+      />
       {qrOpen && <QrModal url={window.location.href} onClose={() => setQrOpen(false)} />}
 
       <main className="flex-1 flex flex-col overflow-hidden">

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import RecentDocsSidebar from './RecentDocsSidebar';
 import type { RecentDoc } from '../utils/recentDocs';
@@ -35,5 +35,14 @@ describe('RecentDocsSidebar', () => {
   it('hides mobile backdrop when closed', () => {
     render(<RecentDocsSidebar docs={[]} isOpen={false} onClose={onClose} />);
     expect(document.querySelector('[aria-hidden="true"]')).not.toBeInTheDocument();
+  });
+
+  it('calls onDocOpen when a doc is opened', () => {
+    const onDocOpen = vi.fn();
+    render(
+      <RecentDocsSidebar docs={sampleDocs} isOpen={true} onClose={onClose} onDocOpen={onDocOpen} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /abc1234/i }));
+    expect(onDocOpen).toHaveBeenCalledOnce();
   });
 });

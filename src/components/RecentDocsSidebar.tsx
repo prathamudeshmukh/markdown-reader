@@ -4,6 +4,7 @@ interface RecentDocsSidebarProps {
   docs: RecentDoc[];
   isOpen: boolean;
   onClose: () => void;
+  onDocOpen?: () => void;
 }
 
 function formatDate(iso: string): string {
@@ -15,7 +16,7 @@ function formatDate(iso: string): string {
   }).format(new Date(iso));
 }
 
-export default function RecentDocsSidebar({ docs, isOpen, onClose }: RecentDocsSidebarProps) {
+export default function RecentDocsSidebar({ docs, isOpen, onClose, onDocOpen }: RecentDocsSidebarProps) {
   return (
     <>
       {/* Backdrop — dismisses sidebar on click */}
@@ -63,7 +64,10 @@ export default function RecentDocsSidebar({ docs, isOpen, onClose }: RecentDocsS
             {docs.map((doc) => (
               <li key={doc.slug}>
                 <button
-                  onClick={() => { window.location.href = `/mreader/d/${doc.slug}`; }}
+                  onClick={() => {
+                    onDocOpen?.();
+                    window.location.href = `/mreader/d/${doc.slug}`;
+                  }}
                   className="w-full flex flex-col gap-0.5 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left"
                 >
                   <span className="font-mono text-xs text-gray-800 dark:text-gray-200 truncate w-full">

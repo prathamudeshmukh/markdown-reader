@@ -48,3 +48,31 @@ npx vitest run src/utils/encoding.test.ts
 - Tailwind CSS
 - `react-markdown` + `rehype-sanitize` for safe markdown rendering
 - Vitest + Testing Library
+
+## Telemetry (PostHog)
+
+The app supports lightweight, anonymous funnel telemetry via PostHog Cloud.
+
+Set these env vars in `.env.local`:
+
+```bash
+VITE_POSTHOG_KEY=phc_your_project_key
+VITE_POSTHOG_HOST=https://us.i.posthog.com
+VITE_APP_VERSION=1.0.0
+```
+
+Optional for tests:
+
+```bash
+VITE_TELEMETRY_ENABLE_IN_TESTS=true
+```
+
+Notes:
+- Telemetry is disabled when `VITE_POSTHOG_KEY` is missing.
+- Telemetry is disabled when browser Do Not Track is enabled.
+- No markdown content, full URL, or clipboard payload is sent.
+
+Quick verification:
+1. Start dev server with the env vars above.
+2. Open app, save a doc, then copy link or open QR modal.
+3. Confirm events in PostHog live events (`app_opened`, `doc_save_succeeded`, `link_copied`, etc.).

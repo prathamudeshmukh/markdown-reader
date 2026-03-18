@@ -3,9 +3,12 @@ import { createRoot } from 'react-dom/client';
 import 'highlight.js/styles/github.css';
 import './index.css';
 import App from './App';
+import { initTelemetry } from './telemetry';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Root element not found');
+
+initTelemetry();
 
 createRoot(root).render(
   <StrictMode>
