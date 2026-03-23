@@ -68,13 +68,6 @@ async function handleConvert(request: Request, env: PdfRouterEnv): Promise<Respo
   try {
     const putResult = await env.PDF_BUCKET.put(key, file, { httpMetadata: { contentType: 'application/pdf' } });
     console.info('[pdf-router] PDF uploaded to R2', { key, sizeBytes: file.size, putResult });
-
-    const verify = await env.PDF_BUCKET.get(key);
-    if (!verify) {
-      console.error('[pdf-router] R2 read-back failed — file not found after put', { key });
-      return json({ error: 'Failed to store PDF for conversion' }, 500);
-    }
-    console.info('[pdf-router] R2 read-back confirmed file exists', { key });
   } catch (err) {
     console.error('[pdf-router] R2 upload failed', { key, error: err });
     return json({ error: 'Failed to store PDF for conversion' }, 500);
@@ -102,9 +95,9 @@ async function handleConvert(request: Request, env: PdfRouterEnv): Promise<Respo
     console.info('[pdf-router] PDF conversion succeeded', { pagesProcessed: data.pages_processed, model: data.model_used });
     return json({ markdown: data.markdown, pageCount: data.pages_processed });
   } finally {
-    // await env.PDF_BUCKET.delete(key)
-    //   .then(() => console.info('[pdf-router] Deleted R2 temp file', { key }))
-    //   .catch((err: unknown) => console.error('[pdf-router] Failed to delete R2 temp file', { key, error: err }));
+    await env.PDF_BUCKET.delete(key)
+      .then(() => console.info('[pdf-router] Deleted R2 temp file', { key }))
+      .catch((err: unknown) => console.error('[pdf-router] Failed to delete R2 temp file', { key, error: err }));
   }
 }
 
