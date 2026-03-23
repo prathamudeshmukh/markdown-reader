@@ -23,15 +23,18 @@ interface PreviewProps {
 export default function Preview({ content }: PreviewProps) {
   if (!content.trim()) {
     return (
-      <div className="flex-1 flex items-center justify-center text-gray-400 text-sm dark:text-gray-600">
-        Nothing to preview. Switch to editor mode to add content.
+      <div
+        className="flex-1 flex items-center justify-center text-sm animate-fade-in"
+        style={{ color: 'var(--text-muted)', backgroundColor: 'var(--bg-primary)' }}
+      >
+        Nothing to preview — switch to editor mode to add content.
       </div>
     );
   }
 
   return (
-    <div className="flex-1 overflow-auto dark:bg-gray-900">
-      <div className="max-w-3xl mx-auto px-6 py-8 prose prose-gray prose-headings:font-semibold dark:prose-invert">
+    <div className="flex-1 overflow-auto animate-mode-enter" style={{ backgroundColor: 'var(--bg-primary)' }}>
+      <div className="max-w-2xl mx-auto px-6 sm:px-10 py-10 prose prose-headings:font-display">
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           rehypePlugins={[rehypeHighlight, [rehypeSanitize, sanitizeSchema]]}

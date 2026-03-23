@@ -5,13 +5,22 @@ interface EditorProps {
 
 export default function Editor({ value, onChange }: EditorProps) {
   return (
-    <textarea
-      className="flex-1 w-full p-6 font-mono text-sm text-gray-800 bg-white resize-none outline-none leading-relaxed dark:bg-gray-900 dark:text-gray-200 dark:placeholder-gray-600"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder="Start typing markdown..."
-      spellCheck={false}
-      autoFocus
-    />
+    <div className="flex-1 flex flex-col items-center overflow-hidden animate-mode-enter"
+      style={{ backgroundColor: 'var(--bg-primary)' }}
+    >
+      <textarea
+        className="editor-textarea flex-1 w-full max-w-2xl px-8 sm:px-12 pt-10 pb-24 font-mono text-sm resize-none outline-none leading-8 tracking-wide"
+        style={{
+          backgroundColor: 'transparent',
+          color: 'var(--text-primary)',
+          fontFamily: '"IBM Plex Mono", "Courier New", monospace',
+        }}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Start writing…"
+        spellCheck={false}
+        autoFocus
+      />
+    </div>
   );
 }

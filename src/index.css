@@ -1,21 +1,161 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-html,
-body,
-#root {
+/* ── Design tokens ─────────────────────────────────────────── */
+:root {
+  --bg-primary:    #f9f4ea;
+  --bg-secondary:  #f2ead8;
+  --bg-elevated:   #fffef9;
+  --text-primary:  #2b2118;
+  --text-secondary:#6b5640;
+  --text-muted:    #9c8070;
+  --accent:        #9c6130;
+  --accent-hover:  #7e4d24;
+  --border:        #e0d5c5;
+  --border-light:  #ede7db;
+  --selection-bg:  rgba(196, 160, 74, 0.28);
+
+  /* Semi-transparent surfaces for header/toasts */
+  --surface-glass: rgba(249, 244, 234, 0.96);
+  --toast-glass:   rgba(249, 244, 234, 0.94);
+}
+
+.dark {
+  --bg-primary:    #181310;
+  --bg-secondary:  #211c14;
+  --bg-elevated:   #231e16;
+  --text-primary:  #e8dcc8;
+  --text-secondary:#a8927a;
+  --text-muted:    #6a5948;
+  --accent:        #d4904a;
+  --accent-hover:  #e8a85e;
+  --border:        #332a20;
+  --border-light:  #2b2318;
+  --selection-bg:  rgba(212, 144, 74, 0.22);
+
+  --surface-glass: rgba(24, 19, 16, 0.96);
+  --toast-glass:   rgba(24, 19, 16, 0.94);
+}
+
+/* ── Base ─────────────────────────────────────────────────── */
+html, body, #root {
   height: 100%;
 }
 
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background-color: var(--selection-bg);
+}
+
+/* ── Reusable surface utilities ──────────────────────────── */
+.surface-glass {
+  background-color: var(--surface-glass);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.toast-glass {
+  background-color: var(--toast-glass);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* ── Prose / typography overrides ────────────────────────── */
+.prose {
+  font-family: 'Lora', Georgia, serif;
+  color: var(--text-primary);
+  line-height: 1.8;
+}
+
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6 {
+  font-family: 'Playfair Display', Georgia, serif;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.prose h1 { letter-spacing: -0.02em; }
+.prose h2 { letter-spacing: -0.015em; }
+
+.prose code,
+.prose pre {
+  font-family: 'IBM Plex Mono', 'Courier New', monospace;
+}
+
+.prose pre {
+  background-color: var(--bg-secondary) !important;
+  border: 1px solid var(--border);
+}
+
+.prose blockquote {
+  border-left-color: var(--accent);
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.prose a {
+  color: var(--accent);
+  text-decoration-color: var(--border);
+  text-underline-offset: 3px;
+}
+.prose a:hover {
+  color: var(--accent-hover);
+  text-decoration-color: var(--accent-hover);
+}
+
+.prose hr {
+  border-color: var(--border);
+}
+
+.prose thead {
+  border-bottom-color: var(--border);
+}
+
+.prose tbody tr {
+  border-bottom-color: var(--border-light);
+}
+
+/* ── Scrollbar ────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--border-light);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* ── Editor caret ─────────────────────────────────────────── */
+.editor-textarea {
+  caret-color: var(--accent);
+}
+
+/* ── Print ────────────────────────────────────────────────── */
 @media print {
-  /* Hide all UI chrome */
   header,
   [data-no-print] {
     display: none !important;
   }
 
-  /* Reset layout so preview fills the page */
   html, body, #root {
     height: auto;
     background: white;
@@ -25,24 +165,17 @@ body,
     padding-top: 0 !important;
   }
 
-  /* Let overflow content flow naturally */
   .overflow-auto,
   .overflow-hidden {
     overflow: visible !important;
   }
 
-  /* Force light mode for print */
-  .dark\:bg-gray-900 {
-    background: white !important;
-  }
-
-  /* Darker text for print readability, but preserve syntax highlight colors */
   *:not([class*="hljs"]) {
     color: #000 !important;
   }
 }
 
-/* Dark mode overrides for highlight.js (github-dark palette) */
+/* ── highlight.js dark overrides (github-dark palette) ────── */
 .dark .hljs {
   color: #c9d1d9;
   background: #0d1117;

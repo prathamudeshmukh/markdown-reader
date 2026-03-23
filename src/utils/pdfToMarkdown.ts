@@ -191,7 +191,12 @@ export interface PdfImportResult {
   pageCount: number;
 }
 
-export async function pdfToMarkdown(file: File): Promise<PdfImportResult> {
+export interface PdfImportOptions {
+  /** Called after each page is processed. `current` is 1-indexed, `total` is the page count. */
+  onProgress?: (current: number, total: number) => void;
+}
+
+export async function pdfToMarkdown(file: File, options: PdfImportOptions = {}): Promise<PdfImportResult> {
   validatePdfFile(file);
   initPdfWorker();
 
@@ -205,6 +210,7 @@ export async function pdfToMarkdown(file: File): Promise<PdfImportResult> {
     for (let p = 1; p <= pageCount; p++) {
       const page = await doc.getPage(p);
       const items = await extractPageText(page);
+      options.onProgress?.(p, pageCount);
       if (items.length === 0) continue;
 
       const lineData = textItemsToLines(items);

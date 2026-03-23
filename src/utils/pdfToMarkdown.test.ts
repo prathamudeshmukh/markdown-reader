@@ -201,6 +201,29 @@ describe('pdfToMarkdown', () => {
     expect(mockGetDocument).not.toHaveBeenCalled();
   });
 
+  it('calls onProgress once per page with correct current and total', async () => {
+    const mockPage = {
+      getTextContent: vi.fn().mockResolvedValue({
+        items: [item('Page content', 50, 700)],
+      }),
+    };
+    mockGetDocument.mockReturnValue({
+      promise: Promise.resolve({
+        numPages: 3,
+        getPage: vi.fn().mockResolvedValue(mockPage),
+        destroy: vi.fn(),
+      }),
+    });
+
+    const onProgress = vi.fn();
+    await pdfToMarkdown(makeFile('multi.pdf', 'application/pdf'), { onProgress });
+
+    expect(onProgress).toHaveBeenCalledTimes(3);
+    expect(onProgress).toHaveBeenNthCalledWith(1, 1, 3);
+    expect(onProgress).toHaveBeenNthCalledWith(2, 2, 3);
+    expect(onProgress).toHaveBeenNthCalledWith(3, 3, 3);
+  });
+
   it('joins multiple pages with a horizontal rule separator', async () => {
     const mockPage = {
       getTextContent: vi.fn().mockResolvedValue({

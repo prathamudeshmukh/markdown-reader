@@ -19,36 +19,55 @@ function formatDate(iso: string): string {
 export default function RecentDocsSidebar({ docs, isOpen, onClose, onDocOpen }: RecentDocsSidebarProps) {
   return (
     <>
-      {/* Backdrop — dismisses sidebar on click */}
+      {/* Backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black/20"
+          className="fixed inset-0 z-30"
+          style={{ backgroundColor: 'rgba(0,0,0,0.18)' }}
           onClick={onClose}
           aria-hidden="true"
         />
       )}
 
-      {/* Sidebar panel — always fixed, slides over content on all screen sizes */}
+      {/* Sidebar panel */}
       <aside
         className={[
           'fixed inset-y-0 left-0 z-40 w-56 pt-16',
-          'flex flex-col border-r border-gray-200 dark:border-gray-700',
-          'bg-white dark:bg-gray-900 overflow-y-auto',
+          'flex flex-col overflow-y-auto',
           'transition-transform duration-200 ease-in-out',
           isOpen ? 'translate-x-0' : '-translate-x-full',
         ].join(' ')}
+        style={{
+          backgroundColor: 'var(--bg-secondary)',
+          borderRight: '1px solid var(--border)',
+        }}
         aria-label="Recent docs"
       >
-        <div className="px-3 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-          <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+        <div
+          className="px-4 py-3 flex items-center justify-between"
+          style={{ borderBottom: '1px solid var(--border-light)' }}
+        >
+          <p
+            className="text-[10px] font-semibold uppercase tracking-widest font-display"
+            style={{ color: 'var(--text-muted)' }}
+          >
             Recent Docs
           </p>
           <button
             onClick={onClose}
-            className="flex items-center justify-center w-6 h-6 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            className="flex items-center justify-center w-6 h-6 rounded transition-colors"
+            style={{ color: 'var(--text-muted)' }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)';
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--border-light)';
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)';
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+            }}
             aria-label="Close sidebar"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" />
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
@@ -56,7 +75,10 @@ export default function RecentDocsSidebar({ docs, isOpen, onClose, onDocOpen }: 
         </div>
 
         {docs.length === 0 ? (
-          <p className="px-3 py-4 text-xs text-gray-400 dark:text-gray-500 text-center">
+          <p
+            className="px-4 py-5 text-xs text-center"
+            style={{ color: 'var(--text-muted)' }}
+          >
             No saved docs yet
           </p>
         ) : (
@@ -68,14 +90,25 @@ export default function RecentDocsSidebar({ docs, isOpen, onClose, onDocOpen }: 
                     onDocOpen?.();
                     window.location.href = `/mreader/d/${doc.slug}`;
                   }}
-                  className="w-full flex flex-col gap-0.5 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left"
+                  className="w-full flex flex-col gap-0.5 px-4 py-2.5 text-left transition-colors"
+                  style={{ color: 'var(--text-primary)' }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--border-light)';
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+                  }}
                 >
-                  <span className="font-mono text-xs text-gray-800 dark:text-gray-200 truncate w-full">
+                  <span
+                    className="font-mono text-xs truncate w-full"
+                    style={{ fontFamily: '"IBM Plex Mono", monospace' }}
+                  >
                     {doc.slug}
                   </span>
                   <time
                     dateTime={doc.savedAt}
-                    className="text-[10px] text-gray-400 dark:text-gray-500"
+                    className="text-[10px]"
+                    style={{ color: 'var(--text-muted)' }}
                   >
                     {formatDate(doc.savedAt)}
                   </time>

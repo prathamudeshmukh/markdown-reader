@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import PresenceIndicator from './PresenceIndicator';
 
 export interface DocumentState {
@@ -37,15 +37,69 @@ interface HeaderProps {
 
 function Spinner() {
   return (
-    <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none">
+    <svg className="animate-spin h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none">
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
     </svg>
   );
 }
 
-export default function Header({ document: { slug, markdownText, presenceCount }, ui: { mode, isSaving, isLoading, copied, copiedMarkdown, sidebarOpen, isPdfImporting }, actions: { onToggle, onSave, onNewDoc, onExportPdf, onCopyLink, onCopyMarkdown, onToggleSidebar, onShowQr, onImportPdf } }: HeaderProps) {
+const TOOL_BTN =
+  'flex items-center justify-center w-8 h-8 rounded-md transition-all duration-150 ' +
+  'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]';
+
+const TOOL_BTN_DISABLED =
+  'disabled:opacity-30 disabled:cursor-not-allowed ' +
+  'disabled:hover:bg-transparent disabled:hover:text-[var(--text-muted)]';
+
+// Row in the mobile overflow dropdown
+function MenuItem({
+  onClick,
+  disabled = false,
+  children,
+}: {
+  onClick: () => void;
+  disabled?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="w-full flex items-center gap-3 px-3 py-2 text-sm text-left rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+      style={{ color: 'var(--text-primary)' }}
+      onMouseEnter={e => {
+        if (!disabled) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--bg-secondary)';
+      }}
+      onMouseLeave={e => {
+        (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+export default function Header({
+  document: { slug, markdownText, presenceCount },
+  ui: { mode, isSaving, isLoading, copied, copiedMarkdown, sidebarOpen, isPdfImporting },
+  actions: { onToggle, onSave, onNewDoc, onExportPdf, onCopyLink, onCopyMarkdown, onToggleSidebar, onShowQr, onImportPdf },
+}: HeaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const moreRef = useRef<HTMLDivElement>(null);
+  const [moreOpen, setMoreOpen] = useState(false);
+
+  // Close overflow menu on outside click
+  useEffect(() => {
+    if (!moreOpen) return;
+    function handleClick(e: MouseEvent) {
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) {
+        setMoreOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [moreOpen]);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -53,182 +107,272 @@ export default function Header({ document: { slug, markdownText, presenceCount }
     e.target.value = '';
   }
 
-  return (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50">
-      <header className="flex items-center gap-2 sm:gap-3 bg-white/80 backdrop-blur-md border border-gray-200/60 shadow-lg shadow-black/5 rounded-full px-3 sm:px-4 py-2 dark:bg-gray-900/80 dark:border-gray-700/60">
-        <h1 className="hidden sm:flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
-          <img src="/mreader/logo.png" alt="" className="h-6 w-6" />
-          Markdown Reader
-        </h1>
-        <div className="hidden sm:block w-px h-4 bg-gray-200 dark:bg-gray-700" />
-        {slug && presenceCount > 1 && <PresenceIndicator count={presenceCount} />}
-        <div className="flex items-center gap-1.5">
-          {/* Sidebar toggle */}
-          <button
-            onClick={onToggleSidebar}
-            title={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
-            aria-label={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
-            className="flex items-center justify-center w-8 h-8 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800"
-          >
-            {/* Recent docs / history icon */}
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
-            </svg>
-          </button>
+  function handleMenuAction(fn: () => void) {
+    setMoreOpen(false);
+    fn();
+  }
 
-          <div className="flex justify-center">
-            {isLoading ? (
-              <span className="flex items-center gap-1.5 sm:px-3 py-1 text-xs text-blue-600 dark:text-blue-400">
-                <Spinner />
-                <span className="hidden sm:inline">Loading…</span>
-              </span>
-            ) : slug ? (
-              <span className="flex items-center gap-1.5 sm:px-3 py-1 text-xs text-gray-400 dark:text-gray-500">
-                {isSaving && <Spinner />}
-                <span className="hidden sm:inline">{isSaving ? 'Saving…' : 'Saved'}</span>
-              </span>
-            ) : (
-              <button
-                onClick={onSave}
-                disabled={markdownText.length === 0 || isSaving}
-                className="px-3 py-1 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800"
-              >
-                Save
-              </button>
-            )}
-          </div>
-          <button
-            onClick={onCopyLink}
-            title="Copy link"
-            aria-label="Copy link"
-            disabled={slug === null}
-            className="flex items-center justify-center w-8 h-8 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-500 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800 dark:disabled:hover:bg-transparent dark:disabled:hover:text-gray-400"
+  return (
+    <div className="fixed top-0 left-0 right-0 z-50">
+      <header
+        className="surface-glass flex items-center h-16 px-4 sm:px-6"
+        style={{ borderBottom: '1px solid var(--border)' }}
+      >
+        {/* Brand */}
+        <div className="flex items-center shrink-0">
+          <h1
+            className="text-[17px] font-semibold tracking-wide font-display italic"
+            style={{ color: 'var(--text-primary)' }}
           >
-            {copied ? (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-              </svg>
-            )}
-          </button>
-          <button
-            onClick={onCopyMarkdown}
-            title="Copy markdown"
-            aria-label="Copy markdown"
-            disabled={markdownText.length === 0}
-            className="flex items-center justify-center w-8 h-8 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-500 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800 dark:disabled:hover:bg-transparent dark:disabled:hover:text-gray-400"
-          >
-            {copiedMarkdown ? (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-              </svg>
-            )}
-          </button>
-          <button
-            onClick={onShowQr}
-            title="Show QR code"
-            aria-label="Show QR code"
-            disabled={slug === null}
-            className="flex items-center justify-center w-8 h-8 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-500 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800 dark:disabled:hover:bg-transparent dark:disabled:hover:text-gray-400"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="7" height="7" rx="1" />
-              <rect x="14" y="3" width="7" height="7" rx="1" />
-              <rect x="3" y="14" width="7" height="7" rx="1" />
-              <rect x="5" y="5" width="3" height="3" fill="currentColor" stroke="none" />
-              <rect x="16" y="5" width="3" height="3" fill="currentColor" stroke="none" />
-              <rect x="5" y="16" width="3" height="3" fill="currentColor" stroke="none" />
-              <line x1="14" y1="14" x2="14.01" y2="14" strokeWidth="2.5" />
-              <line x1="17" y1="14" x2="17.01" y2="14" strokeWidth="2.5" />
-              <line x1="20" y1="14" x2="20.01" y2="14" strokeWidth="2.5" />
-              <line x1="14" y1="17" x2="14.01" y2="17" strokeWidth="2.5" />
-              <line x1="17" y1="17" x2="20" y2="17" />
-              <line x1="20" y1="17" x2="20.01" y2="17" strokeWidth="2.5" />
-              <line x1="14" y1="20" x2="14.01" y2="20" strokeWidth="2.5" />
-              <line x1="17" y1="20" x2="17.01" y2="20" strokeWidth="2.5" />
-              <line x1="20" y1="20" x2="20.01" y2="20" strokeWidth="2.5" />
-            </svg>
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".pdf,application/pdf"
-            className="sr-only"
-            aria-hidden="true"
-            tabIndex={-1}
-            onChange={handleFileChange}
-          />
-          <button
-              onClick={() => fileInputRef.current?.click()}
-              aria-label="Import PDF"
-              disabled={isPdfImporting}
-              className="flex items-center justify-center w-8 h-8 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800"
+            Scriptorium
+          </h1>
+        </div>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Tools */}
+        <div className="flex items-center gap-0.5 shrink-0">
+          {/* Presence */}
+          {slug && presenceCount > 1 && <PresenceIndicator count={presenceCount} />}
+
+          {/* Save / status */}
+          {isLoading ? (
+            <span className="hidden sm:flex items-center gap-1.5 text-xs mr-1 px-2" style={{ color: 'var(--accent)' }}>
+              <Spinner />
+              Loading…
+            </span>
+          ) : slug ? (
+            <span className="hidden sm:flex items-center gap-1.5 text-xs mr-1 px-2" style={{ color: 'var(--text-muted)' }}>
+              {isSaving && <Spinner />}
+              {isSaving ? 'Saving…' : 'Saved'}
+            </span>
+          ) : (
+            <button
+              onClick={onSave}
+              disabled={markdownText.length === 0 || isSaving}
+              className="flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md border transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed mr-1"
+              style={{
+                color: 'var(--accent)',
+                borderColor: 'color-mix(in srgb, var(--accent) 40%, transparent)',
+              }}
             >
-              {isPdfImporting ? (
-                <Spinner />
+              {isSaving ? <Spinner /> : 'Save'}
+            </button>
+          )}
+
+          {/* ── Desktop-only tools ─────────────────────── */}
+          <div className="hidden sm:flex items-center gap-0.5">
+            <div className="w-px h-4 mx-1" style={{ backgroundColor: 'var(--border)' }} />
+
+            {/* Sidebar */}
+            <button
+              onClick={onToggleSidebar}
+              title={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
+              aria-label={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
+              className={`${TOOL_BTN} ${sidebarOpen ? '!text-[var(--accent)] !bg-[var(--bg-secondary)]' : ''}`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+            </button>
+
+            {/* Copy link */}
+            <button onClick={onCopyLink} title="Copy link" aria-label="Copy link" disabled={slug === null} className={`${TOOL_BTN} ${TOOL_BTN_DISABLED}`}>
+              {copied ? (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-emerald-600 dark:text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
               ) : (
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="17 8 12 3 7 8" />
-                  <line x1="12" y1="3" x2="12" y2="15" />
+                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
                 </svg>
               )}
             </button>
-          <button
-            onClick={onExportPdf}
-            title="Export as PDF"
-            aria-label="Export as PDF"
-            disabled={markdownText.length === 0}
-            className="flex items-center justify-center w-8 h-8 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-500 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800 dark:disabled:hover:bg-transparent dark:disabled:hover:text-gray-400"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
-          </button>
-          <button
-            onClick={onNewDoc}
-            title="New doc"
-            aria-label="New doc"
-            disabled={slug === null && markdownText.length === 0}
-            className="flex items-center justify-center w-8 h-8 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-500 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800 dark:disabled:hover:bg-transparent dark:disabled:hover:text-gray-400"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-          </button>
+
+            {/* Copy markdown */}
+            <button onClick={onCopyMarkdown} title="Copy markdown" aria-label="Copy markdown" disabled={markdownText.length === 0} className={`${TOOL_BTN} ${TOOL_BTN_DISABLED}`}>
+              {copiedMarkdown ? (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-emerald-600 dark:text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                </svg>
+              )}
+            </button>
+
+            {/* QR code */}
+            <button onClick={onShowQr} title="Show QR code" aria-label="Show QR code" disabled={slug === null} className={`${TOOL_BTN} ${TOOL_BTN_DISABLED}`}>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" />
+                <rect x="5" y="5" width="3" height="3" fill="currentColor" stroke="none" /><rect x="16" y="5" width="3" height="3" fill="currentColor" stroke="none" /><rect x="5" y="16" width="3" height="3" fill="currentColor" stroke="none" />
+                <line x1="14" y1="14" x2="14.01" y2="14" strokeWidth="2.5" /><line x1="17" y1="14" x2="17.01" y2="14" strokeWidth="2.5" /><line x1="20" y1="14" x2="20.01" y2="14" strokeWidth="2.5" />
+                <line x1="14" y1="17" x2="14.01" y2="17" strokeWidth="2.5" /><line x1="17" y1="17" x2="20" y2="17" /><line x1="20" y1="17" x2="20.01" y2="17" strokeWidth="2.5" />
+                <line x1="14" y1="20" x2="14.01" y2="20" strokeWidth="2.5" /><line x1="17" y1="20" x2="17.01" y2="20" strokeWidth="2.5" /><line x1="20" y1="20" x2="20.01" y2="20" strokeWidth="2.5" />
+              </svg>
+            </button>
+
+            {/* Import PDF */}
+            <button onClick={() => fileInputRef.current?.click()} aria-label="Import PDF" title="Import PDF" disabled={isPdfImporting} className={`${TOOL_BTN} disabled:opacity-40 disabled:cursor-not-allowed`}>
+              {isPdfImporting ? <Spinner /> : (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+              )}
+            </button>
+
+            {/* Export PDF */}
+            <button onClick={onExportPdf} title="Export as PDF" aria-label="Export as PDF" disabled={markdownText.length === 0} className={`${TOOL_BTN} ${TOOL_BTN_DISABLED}`}>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            </button>
+
+            {/* New doc */}
+            <button onClick={onNewDoc} title="New doc" aria-label="New doc" disabled={slug === null && markdownText.length === 0} className={`${TOOL_BTN} ${TOOL_BTN_DISABLED}`}>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </button>
+          </div>
+
+          {/* ── Mobile overflow menu ────────────────────── */}
+          <div ref={moreRef} className="relative sm:hidden">
+            <button
+              onClick={() => setMoreOpen((v) => !v)}
+              aria-label="More actions"
+              className={`${TOOL_BTN} ${moreOpen ? '!text-[var(--accent)] !bg-[var(--bg-secondary)]' : ''}`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none" />
+                <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+                <circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none" />
+              </svg>
+            </button>
+
+            {moreOpen && (
+              <div
+                className="absolute right-0 top-full mt-2 w-52 rounded-xl p-1.5 shadow-xl z-50 animate-fade-in"
+                style={{
+                  backgroundColor: 'var(--bg-elevated, var(--bg-primary))',
+                  border: '1px solid var(--border)',
+                }}
+              >
+                <MenuItem onClick={() => handleMenuAction(onToggleSidebar)}>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+                  </svg>
+                  Recent docs
+                </MenuItem>
+
+                <MenuItem onClick={() => handleMenuAction(onCopyLink)} disabled={slug === null}>
+                  {copied ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                    </svg>
+                  )}
+                  {copied ? 'Copied!' : 'Copy link'}
+                </MenuItem>
+
+                <MenuItem onClick={() => handleMenuAction(onCopyMarkdown)} disabled={markdownText.length === 0}>
+                  {copiedMarkdown ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                    </svg>
+                  )}
+                  {copiedMarkdown ? 'Copied!' : 'Copy markdown'}
+                </MenuItem>
+
+                <MenuItem onClick={() => handleMenuAction(onShowQr)} disabled={slug === null}>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" />
+                    <rect x="5" y="5" width="3" height="3" fill="currentColor" stroke="none" /><rect x="16" y="5" width="3" height="3" fill="currentColor" stroke="none" /><rect x="5" y="16" width="3" height="3" fill="currentColor" stroke="none" />
+                  </svg>
+                  Show QR code
+                </MenuItem>
+
+                <div className="my-1 h-px" style={{ backgroundColor: 'var(--border-light)' }} />
+
+                <MenuItem onClick={() => { handleMenuAction(() => {}); fileInputRef.current?.click(); }} disabled={isPdfImporting}>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
+                  </svg>
+                  {isPdfImporting ? 'Importing…' : 'Import PDF'}
+                </MenuItem>
+
+                <MenuItem onClick={() => handleMenuAction(onExportPdf)} disabled={markdownText.length === 0}>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                  Export as PDF
+                </MenuItem>
+
+                <MenuItem onClick={() => handleMenuAction(onNewDoc)} disabled={slug === null && markdownText.length === 0}>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                  New doc
+                </MenuItem>
+              </div>
+            )}
+          </div>
+
+          {/* ── Mode toggle (always visible) ────────────── */}
+          <div className="w-px h-4 mx-1.5" style={{ backgroundColor: 'var(--border)' }} />
           <button
             onClick={onToggle}
             title={mode === 'editor' ? 'Show Preview' : 'Show Editor'}
             aria-label={mode === 'editor' ? 'Show Preview' : 'Show Editor'}
-            className="flex items-center justify-center w-8 h-8 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800"
+            className="flex items-center gap-1.5 px-2.5 h-8 rounded-md text-xs font-medium transition-all duration-150"
+            style={{
+              color: 'var(--accent)',
+              backgroundColor: 'color-mix(in srgb, var(--accent) 10%, transparent)',
+            }}
           >
             {mode === 'editor' ? (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                <circle cx="12" cy="12" r="3" />
-              </svg>
+              <>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
+                </svg>
+                <span className="hidden sm:inline">Preview</span>
+              </>
             ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-              </svg>
+              <>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+                <span className="hidden sm:inline">Editor</span>
+              </>
             )}
           </button>
         </div>
       </header>
+
+      {/* Hidden file input — shared between desktop button and mobile menu */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,application/pdf"
+        className="sr-only"
+        aria-hidden="true"
+        tabIndex={-1}
+        onChange={handleFileChange}
+      />
     </div>
   );
 }
