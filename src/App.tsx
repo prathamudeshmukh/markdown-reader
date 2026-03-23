@@ -53,7 +53,7 @@ export default function App() {
               onProgress: (current, total) => setPdfImportProgress({ current, total }),
             });
         setMarkdownText(result.markdown);
-        if (mode !== 'editor') toggleMode('button');
+        if (mode === 'editor') toggleMode('button');
         setPdfImportWarning(true);
         track('pdf_imported', {
           page_count: result.pageCount,

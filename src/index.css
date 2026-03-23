@@ -147,6 +147,11 @@ body {
 /* ── Editor caret ─────────────────────────────────────────── */
 .editor-textarea {
   caret-color: var(--accent);
+  scrollbar-width: none; /* Firefox */
+}
+
+.editor-textarea::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
 }
 
 /* ── Print ────────────────────────────────────────────────── */
