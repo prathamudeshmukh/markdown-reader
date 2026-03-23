@@ -1,9 +1,12 @@
 import { handleDocsRequest } from './src/api/docsRouter';
+import { handlePdfRequest } from './src/api/pdfRouter';
 
 interface Env {
   ASSETS: { fetch(request: Request): Promise<Response> };
   SUPABASE_URL: string;
   SUPABASE_ANON_KEY: string;
+  PDF_BUCKET: R2Bucket;
+  PDF2MARKDOWN_API_URL: string;
 }
 
 const PREFIX = '/mreader';
@@ -22,6 +25,10 @@ export default {
       console.error({ error: `Missing env: ${!env.SUPABASE_URL ? 'SUPABASE_URL' : 'SUPABASE_ANON_KEY'}` })
         
     }
+
+    // PDF routes — checked before docs API
+    const pdfResponse = await handlePdfRequest(request, env);
+    if (pdfResponse) return pdfResponse;
 
     // API routes — checked before asset fallback
     const apiResponse = await handleDocsRequest(request, env);

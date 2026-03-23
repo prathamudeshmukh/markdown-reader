@@ -10,6 +10,13 @@ routes = [
 directory = "./dist"
 binding = "ASSETS"
 
+[[r2_buckets]]
+binding = "PDF_BUCKET"
+bucket_name = "markdown-reader-pdf-temp"
+
+[vars]
+PDF2MARKDOWN_API_URL = "https://pdf2html.templify.cloud"
+
 [observability]
 [observability.logs]
 enabled = true

@@ -9,11 +9,20 @@ vi.mock('./telemetry', () => ({
   getContentLengthBucket: vi.fn(() => 'xs'),
 }));
 
-const { mockPdfToMarkdown } = vi.hoisted(() => ({ mockPdfToMarkdown: vi.fn() }));
+const { mockPdfToMarkdown, mockPdfFileToMarkdown, mockFeatureFlags } = vi.hoisted(() => ({
+  mockPdfToMarkdown: vi.fn(),
+  mockPdfFileToMarkdown: vi.fn(),
+  mockFeatureFlags: { usePdfApi: false },
+}));
 vi.mock('./utils/pdfToMarkdown', async (importOriginal) => {
   const original = await importOriginal<typeof import('./utils/pdfToMarkdown')>();
   return { ...original, pdfToMarkdown: mockPdfToMarkdown };
 });
+vi.mock('./utils/pdfApiClient', async (importOriginal) => {
+  const original = await importOriginal<typeof import('./utils/pdfApiClient')>();
+  return { ...original, pdfFileToMarkdown: mockPdfFileToMarkdown };
+});
+vi.mock('./config/features', () => ({ readFeatureFlags: () => mockFeatureFlags }));
 vi.mock('./components/QrModal', () => ({
   default: ({ onClose }: { onClose: () => void }) => (
     <div data-testid="qr-modal"><button onClick={onClose}>close-qr</button></div>
@@ -25,6 +34,7 @@ import { useMarkdownState } from './hooks/useMarkdownState';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { track } from './telemetry';
 import { PdfImportError } from './utils/pdfToMarkdown';
+import { PdfApiError } from './utils/pdfApiClient';
 
 const baseState = {
   markdownText: '',
@@ -212,6 +222,53 @@ describe('App', () => {
 
     it('shows a generic error banner for unknown errors', async () => {
       mockPdfToMarkdown.mockRejectedValue(new Error('Something went wrong'));
+
+      render(<App />);
+      const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+      fireEvent.change(input, { target: { files: [makeFile()] } });
+
+      await screen.findByText(/failed to import/i);
+    });
+  });
+
+  describe('import PDF (API mode)', () => {
+    function makeFile() {
+      return new File(['%PDF'], 'test.pdf', { type: 'application/pdf' });
+    }
+
+    beforeEach(() => {
+      mockFeatureFlags.usePdfApi = true;
+    });
+
+    afterEach(() => {
+      mockFeatureFlags.usePdfApi = false;
+    });
+
+    it('calls pdfFileToMarkdown instead of pdfToMarkdown when toggle is on', async () => {
+      const setMarkdownText = vi.fn();
+      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, setMarkdownText });
+      mockPdfFileToMarkdown.mockResolvedValue({ markdown: '# API result', pageCount: 2 });
+
+      render(<App />);
+      const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+      fireEvent.change(input, { target: { files: [makeFile()] } });
+
+      await vi.waitFor(() => expect(setMarkdownText).toHaveBeenCalledWith('# API result'));
+      expect(mockPdfToMarkdown).not.toHaveBeenCalled();
+    });
+
+    it('shows error banner when PdfApiError is thrown', async () => {
+      mockPdfFileToMarkdown.mockRejectedValue(new PdfApiError('CONVERSION_FAILED'));
+
+      render(<App />);
+      const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+      fireEvent.change(input, { target: { files: [makeFile()] } });
+
+      await screen.findByText(/conversion service failed/i);
+    });
+
+    it('shows generic error banner for unknown errors', async () => {
+      mockPdfFileToMarkdown.mockRejectedValue(new Error('unexpected'));
 
       render(<App />);
       const input = document.querySelector('input[type="file"]') as HTMLInputElement;

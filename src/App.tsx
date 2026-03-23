@@ -9,6 +9,10 @@ import QrModal from './components/QrModal';
 import { readRecentDocs } from './utils/recentDocs';
 import { getContentLengthBucket, track, type InteractionSource } from './telemetry';
 import { pdfToMarkdown, PdfImportError } from './utils/pdfToMarkdown';
+import { pdfFileToMarkdown, PdfApiError } from './utils/pdfApiClient';
+import { readFeatureFlags } from './config/features';
+
+const FEATURES = readFeatureFlags();
 
 const PDF_IMPORT_UNKNOWN_ERROR = 'Failed to import PDF. Please try again.';
 
@@ -41,7 +45,9 @@ export default function App() {
       setIsPdfImporting(true);
       setPdfImportError(null);
       try {
-        const result = await pdfToMarkdown(file);
+        const result = FEATURES.usePdfApi
+          ? await pdfFileToMarkdown(file)
+          : await pdfToMarkdown(file);
         setMarkdownText(result.markdown);
         if (mode !== 'editor') toggleMode('button');
         setPdfImportWarning(true);
@@ -50,7 +56,10 @@ export default function App() {
           content_length_bucket: getContentLengthBucket(result.markdown),
         });
       } catch (err) {
-        const message = err instanceof PdfImportError ? err.userMessage : PDF_IMPORT_UNKNOWN_ERROR;
+        const message =
+          err instanceof PdfApiError || err instanceof PdfImportError
+            ? err.userMessage
+            : PDF_IMPORT_UNKNOWN_ERROR;
         setPdfImportError(message);
       } finally {
         setIsPdfImporting(false);
