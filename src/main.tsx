@@ -1,5 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { registerSW } from 'virtual:pwa-register';
 import 'highlight.js/styles/github.css';
 import './index.css';
 import App from './App';
@@ -9,6 +10,7 @@ const root = document.getElementById('root');
 if (!root) throw new Error('Root element not found');
 
 initTelemetry();
+registerSW({ immediate: true });
 
 createRoot(root).render(
   <StrictMode>
