@@ -13,6 +13,7 @@ export type TelemetryEventName =
   | 'markdown_copied'
   | 'qr_opened'
   | 'pdf_exported'
+  | 'markdown_downloaded'
   | 'pdf_imported'
   | 'recent_doc_opened';
 
@@ -58,6 +59,9 @@ export interface TelemetryPropsByEvent {
   };
   pdf_exported: {
     mode_at_export: 'editor' | 'preview';
+  };
+  markdown_downloaded: {
+    content_length_bucket: ContentLengthBucket;
   };
   pdf_imported: {
     page_count: number;

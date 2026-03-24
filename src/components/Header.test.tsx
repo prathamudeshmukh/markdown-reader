@@ -23,6 +23,7 @@ const defaultActions: HeaderActions = {
   onSave: vi.fn(),
   onNewDoc: vi.fn(),
   onExportPdf: vi.fn(),
+  onDownloadMarkdown: vi.fn(),
   onCopyLink: vi.fn(),
   onCopyMarkdown: vi.fn(),
   onToggleSidebar: vi.fn(),

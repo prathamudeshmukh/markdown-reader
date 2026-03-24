@@ -22,6 +22,7 @@ export interface HeaderActions {
   onSave: () => void;
   onNewDoc: () => void;
   onExportPdf: () => void;
+  onDownloadMarkdown: () => void;
   onCopyLink: () => void;
   onCopyMarkdown: () => void;
   onToggleSidebar: () => void;
@@ -83,11 +84,13 @@ function MenuItem({
 export default function Header({
   document: { slug, markdownText, presenceCount },
   ui: { mode, isSaving, isLoading, copied, copiedMarkdown, sidebarOpen, isPdfImporting },
-  actions: { onToggle, onSave, onNewDoc, onExportPdf, onCopyLink, onCopyMarkdown, onToggleSidebar, onShowQr, onImportPdf },
+  actions: { onToggle, onSave, onNewDoc, onExportPdf, onDownloadMarkdown, onCopyLink, onCopyMarkdown, onToggleSidebar, onShowQr, onImportPdf },
 }: HeaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const moreRef = useRef<HTMLDivElement>(null);
+  const exportRef = useRef<HTMLDivElement>(null);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
 
   // Close overflow menu on outside click
   useEffect(() => {
@@ -100,6 +103,18 @@ export default function Header({
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, [moreOpen]);
+
+  // Close export dropdown on outside click
+  useEffect(() => {
+    if (!exportOpen) return;
+    function handleClick(e: MouseEvent) {
+      if (exportRef.current && !exportRef.current.contains(e.target as Node)) {
+        setExportOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [exportOpen]);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -226,12 +241,42 @@ export default function Header({
               )}
             </button>
 
-            {/* Export PDF */}
-            <button onClick={onExportPdf} title="Export as PDF" aria-label="Export as PDF" disabled={markdownText.length === 0} className={`${TOOL_BTN} ${TOOL_BTN_DISABLED}`}>
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-            </button>
+            {/* Export as dropdown */}
+            <div ref={exportRef} className="relative">
+              <button
+                onClick={() => setExportOpen((v) => !v)}
+                title="Export as…"
+                aria-label="Export as…"
+                disabled={markdownText.length === 0}
+                className={`${TOOL_BTN} ${TOOL_BTN_DISABLED} ${exportOpen ? '!text-[var(--accent)] !bg-[var(--bg-secondary)]' : ''}`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+              </button>
+
+              {exportOpen && (
+                <div
+                  className="absolute right-0 top-full mt-2 w-44 rounded-xl p-1.5 shadow-xl z-50 animate-fade-in"
+                  style={{ backgroundColor: 'var(--bg-elevated, var(--bg-primary))', border: '1px solid var(--border)' }}
+                >
+                  <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Export as</p>
+                  <MenuItem onClick={() => { setExportOpen(false); onExportPdf(); }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" /><polyline points="13 2 13 9 20 9" />
+                    </svg>
+                    PDF
+                  </MenuItem>
+                  <MenuItem onClick={() => { setExportOpen(false); onDownloadMarkdown(); }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" /><polyline points="13 2 13 9 20 9" />
+                      <polyline points="8 15 12 19 16 15" /><line x1="12" y1="12" x2="12" y2="19" />
+                    </svg>
+                    Markdown
+                  </MenuItem>
+                </div>
+              )}
+            </div>
 
             {/* New doc */}
             <button onClick={onNewDoc} title="New doc" aria-label="New doc" disabled={slug === null && markdownText.length === 0} className={`${TOOL_BTN} ${TOOL_BTN_DISABLED}`}>
@@ -314,11 +359,21 @@ export default function Header({
                   {isPdfImporting ? 'Importing…' : 'Import PDF'}
                 </MenuItem>
 
+                <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Export as</p>
+
                 <MenuItem onClick={() => handleMenuAction(onExportPdf)} disabled={markdownText.length === 0}>
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+                    <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" /><polyline points="13 2 13 9 20 9" />
                   </svg>
-                  Export as PDF
+                  PDF
+                </MenuItem>
+
+                <MenuItem onClick={() => handleMenuAction(onDownloadMarkdown)} disabled={markdownText.length === 0}>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" /><polyline points="13 2 13 9 20 9" />
+                    <polyline points="8 15 12 19 16 15" /><line x1="12" y1="12" x2="12" y2="19" />
+                  </svg>
+                  Markdown
                 </MenuItem>
 
                 <MenuItem onClick={() => handleMenuAction(onNewDoc)} disabled={slug === null && markdownText.length === 0}>
