@@ -1,4 +1,4 @@
-# Markdown Reader
+# Scriptorium
 
 A frontend-only markdown editor and previewer. Write markdown in the editor, get a shareable link — no backend, no sign-up required.
 

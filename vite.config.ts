@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.png', 'logo.png'],
       manifest: {
-        name: 'Markdown Reader',
-        short_name: 'MD Reader',
+        name: 'Scriptorium',
+        short_name: 'Scriptorium',
         description: 'A free, privacy-first online Markdown editor and viewer. Write, preview, and share Markdown documents instantly — no account needed.',
         theme_color: '#0f172a',
         background_color: '#0f172a',
