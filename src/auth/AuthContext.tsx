@@ -1,0 +1,80 @@
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import type { User } from '@supabase/supabase-js';
+import { getSupabaseClient } from '../realtime/supabaseRealtimeClient';
+
+interface AuthContextValue {
+  user: User | null;
+  isAuthLoading: boolean;
+  signInWithEmail: (email: string) => Promise<{ error: string | null }>;
+  signOut: () => void;
+}
+
+const AuthContext = createContext<AuthContextValue>({
+  user: null,
+  isAuthLoading: false,
+  signInWithEmail: async () => ({ error: null }),
+  signOut: () => {},
+});
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+
+  useEffect(() => {
+    let supabase: ReturnType<typeof getSupabaseClient>;
+    try {
+      supabase = getSupabaseClient();
+    } catch {
+      // Silently skip auth when env vars are missing (CI / no .env.local).
+      setIsAuthLoading(false);
+      return;
+    }
+
+    supabase.auth.getSession().then(({ data }) => {
+      setUser(data.session?.user ?? null);
+      setIsAuthLoading(false);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const signInWithEmail = useCallback(async (email: string): Promise<{ error: string | null }> => {
+    let supabase: ReturnType<typeof getSupabaseClient>;
+    try {
+      supabase = getSupabaseClient();
+    } catch {
+      return { error: null };
+    }
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: window.location.href },
+    });
+    return { error: error?.message ?? null };
+  }, []);
+
+  const signOut = useCallback(() => {
+    let supabase: ReturnType<typeof getSupabaseClient>;
+    try {
+      supabase = getSupabaseClient();
+    } catch {
+      return;
+    }
+    void supabase.auth.signOut();
+  }, []);
+
+  return (
+    <AuthContext.Provider value={{ user, isAuthLoading, signInWithEmail, signOut }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth(): AuthContextValue {
+  return useContext(AuthContext);
+}

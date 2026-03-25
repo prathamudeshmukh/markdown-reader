@@ -4,6 +4,7 @@ import { registerSW } from 'virtual:pwa-register';
 import 'highlight.js/styles/github.css';
 import './index.css';
 import App from './App';
+import { AuthProvider } from './auth/AuthContext';
 import { initTelemetry } from './telemetry';
 
 const root = document.getElementById('root');
@@ -14,6 +15,8 @@ registerSW({ immediate: true });
 
 createRoot(root).render(
   <StrictMode>
-    <App />
+    <AuthProvider>
+      <App />
+    </AuthProvider>
   </StrictMode>,
 );

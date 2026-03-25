@@ -6,6 +6,8 @@ import Editor from './components/Editor';
 import Preview from './components/Preview';
 import RecentDocsSidebar from './components/RecentDocsSidebar';
 import QrModal from './components/QrModal';
+import EmailSignInModal from './components/EmailSignInModal';
+import { useAuth } from './auth/AuthContext';
 import { readRecentDocs } from './utils/recentDocs';
 import { getContentLengthBucket, track, type InteractionSource } from './telemetry';
 import { pdfToMarkdown, PdfImportError } from './utils/pdfToMarkdown';
@@ -19,7 +21,9 @@ const PDF_IMPORT_UNKNOWN_ERROR = 'Failed to import PDF. Please try again.';
 export default function App() {
   const { markdownText, slug, mode, isLoading, isSaving, error, presenceCount, setMarkdownText, toggleMode, onSave } =
     useMarkdownState();
+  const { user, isAuthLoading, signInWithEmail, signOut } = useAuth();
 
+  const [signInOpen, setSignInOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [copiedMarkdown, setCopiedMarkdown] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -153,6 +157,8 @@ export default function App() {
           onShowQr: openQr,
           onImportPdf: handleImportPdf,
         }}
+        auth={{ user, isAuthLoading }}
+        authActions={{ onSignInClick: () => setSignInOpen(true), onSignOut: signOut }}
       />
 
       {error && (
@@ -208,6 +214,13 @@ export default function App() {
             PDF imported — tables may not have converted correctly, please review.
           </div>
         </div>
+      )}
+
+      {signInOpen && (
+        <EmailSignInModal
+          onClose={() => setSignInOpen(false)}
+          onSubmit={signInWithEmail}
+        />
       )}
 
       <RecentDocsSidebar

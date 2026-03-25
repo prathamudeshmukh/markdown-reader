@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import Header, { type DocumentState, type UiState, type HeaderActions } from './Header';
+import type { User } from '@supabase/supabase-js';
+import Header, { type DocumentState, type UiState, type HeaderActions, type AuthState, type AuthActions } from './Header';
 
 const defaultDocument: DocumentState = {
   slug: null,
@@ -31,15 +32,29 @@ const defaultActions: HeaderActions = {
   onImportPdf: vi.fn(),
 };
 
+const defaultAuth: AuthState = {
+  user: null,
+  isAuthLoading: false,
+};
+
+const defaultAuthActions: AuthActions = {
+  onSignInClick: vi.fn(),
+  onSignOut: vi.fn(),
+};
+
 function makeProps(overrides: {
   document?: Partial<DocumentState>;
   ui?: Partial<UiState>;
   actions?: Partial<HeaderActions>;
+  auth?: Partial<AuthState>;
+  authActions?: Partial<AuthActions>;
 } = {}) {
   return {
     document: { ...defaultDocument, ...overrides.document },
     ui: { ...defaultUi, ...overrides.ui },
     actions: { ...defaultActions, ...overrides.actions },
+    auth: { ...defaultAuth, ...overrides.auth },
+    authActions: { ...defaultAuthActions, ...overrides.authActions },
   };
 }
 
@@ -212,6 +227,37 @@ describe('Header', () => {
       render(<Header {...makeProps({ actions: { onToggle } })} />);
       fireEvent.click(screen.getByRole('button', { name: 'Show Preview' }));
       expect(onToggle).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe('auth UI', () => {
+    it('renders Sign in button when no user and not loading', () => {
+      render(<Header {...makeProps({ auth: { user: null, isAuthLoading: false } })} />);
+      expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
+    });
+
+    it('hides auth UI while loading', () => {
+      render(<Header {...makeProps({ auth: { user: null, isAuthLoading: true } })} />);
+      expect(screen.queryByRole('button', { name: 'Sign in' })).not.toBeInTheDocument();
+    });
+
+    it('calls onSignInClick when Sign in is clicked', () => {
+      const onSignInClick = vi.fn();
+      render(<Header {...makeProps({ auth: { user: null, isAuthLoading: false }, authActions: { onSignInClick } })} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+      expect(onSignInClick).toHaveBeenCalledOnce();
+    });
+
+    it('renders UserMenu when user is signed in', () => {
+      const mockUser = { id: '1', email: 'dev@example.com', user_metadata: {} } as User;
+      render(<Header {...makeProps({ auth: { user: mockUser, isAuthLoading: false } })} />);
+      expect(screen.getByRole('button', { name: /account menu/i })).toBeInTheDocument();
+    });
+
+    it('does not render Sign in button when user is signed in', () => {
+      const mockUser = { id: '1', email: 'dev@example.com', user_metadata: {} } as User;
+      render(<Header {...makeProps({ auth: { user: mockUser, isAuthLoading: false } })} />);
+      expect(screen.queryByRole('button', { name: 'Sign in' })).not.toBeInTheDocument();
     });
   });
 });

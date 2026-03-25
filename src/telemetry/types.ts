@@ -15,7 +15,11 @@ export type TelemetryEventName =
   | 'pdf_exported'
   | 'markdown_downloaded'
   | 'pdf_imported'
-  | 'recent_doc_opened';
+  | 'recent_doc_opened'
+  | 'auth_sign_in_clicked'
+  | 'auth_sign_in_email_submitted'
+  | 'auth_sign_in_succeeded'
+  | 'auth_sign_out';
 
 export interface TelemetrySharedProps {
   session_id: string;
@@ -70,4 +74,8 @@ export interface TelemetryPropsByEvent {
   recent_doc_opened: {
     source: 'sidebar' | 'dropdown';
   };
+  auth_sign_in_clicked: Record<string, never>;
+  auth_sign_in_email_submitted: Record<string, never>;
+  auth_sign_in_succeeded: Record<string, never>;
+  auth_sign_out: Record<string, never>;
 }

@@ -1,5 +1,7 @@
 import { useRef, useState, useEffect } from 'react';
+import type { User } from '@supabase/supabase-js';
 import PresenceIndicator from './PresenceIndicator';
+import UserMenu from './UserMenu';
 
 export interface DocumentState {
   slug: string | null;
@@ -30,10 +32,22 @@ export interface HeaderActions {
   onImportPdf: (file: File) => void;
 }
 
+export interface AuthState {
+  user: User | null;
+  isAuthLoading: boolean;
+}
+
+export interface AuthActions {
+  onSignInClick: () => void;
+  onSignOut: () => void;
+}
+
 interface HeaderProps {
   document: DocumentState;
   ui: UiState;
   actions: HeaderActions;
+  auth: AuthState;
+  authActions: AuthActions;
 }
 
 function Spinner() {
@@ -85,6 +99,8 @@ export default function Header({
   document: { slug, markdownText, presenceCount },
   ui: { mode, isSaving, isLoading, copied, copiedMarkdown, sidebarOpen, isPdfImporting },
   actions: { onToggle, onSave, onNewDoc, onExportPdf, onDownloadMarkdown, onCopyLink, onCopyMarkdown, onToggleSidebar, onShowQr, onImportPdf },
+  auth: { user, isAuthLoading },
+  authActions: { onSignInClick, onSignOut },
 }: HeaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const moreRef = useRef<HTMLDivElement>(null);
@@ -382,6 +398,21 @@ export default function Header({
                   </svg>
                   New doc
                 </MenuItem>
+
+                {!isAuthLoading && (
+                  <>
+                    <div className="my-1 h-px" style={{ backgroundColor: 'var(--border-light)' }} />
+                    {user ? (
+                      <MenuItem onClick={() => handleMenuAction(onSignOut)}>
+                        Sign out
+                      </MenuItem>
+                    ) : (
+                      <MenuItem onClick={() => handleMenuAction(onSignInClick)}>
+                        Sign in
+                      </MenuItem>
+                    )}
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -415,6 +446,33 @@ export default function Header({
               </>
             )}
           </button>
+
+          {/* ── Auth (always visible) ────────────────────── */}
+          {!isAuthLoading && (
+            <>
+              <div className="w-px h-4 mx-1.5" style={{ backgroundColor: 'var(--border)' }} />
+              {user ? (
+                <UserMenu user={user} onSignOut={onSignOut} />
+              ) : (
+                <button
+                  onClick={onSignInClick}
+                  aria-label="Sign in"
+                  className="flex items-center gap-1 px-2.5 h-8 rounded-md text-xs font-medium transition-all duration-150"
+                  style={{ color: 'var(--text-muted)' }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)';
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--bg-secondary)';
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)';
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+                  }}
+                >
+                  Sign in
+                </button>
+              )}
+            </>
+          )}
         </div>
       </header>
 
