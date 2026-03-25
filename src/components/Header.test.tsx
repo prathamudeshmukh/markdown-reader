@@ -146,18 +146,19 @@ describe('Header', () => {
   describe('export PDF button', () => {
     it('is disabled when markdownText is empty', () => {
       render(<Header {...makeProps({ document: { markdownText: '' } })} />);
-      expect(screen.getByRole('button', { name: 'Export as PDF' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Export as…' })).toBeDisabled();
     });
 
     it('is enabled when markdownText is non-empty', () => {
       render(<Header {...makeProps({ document: { markdownText: '# Hello' } })} />);
-      expect(screen.getByRole('button', { name: 'Export as PDF' })).not.toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Export as…' })).not.toBeDisabled();
     });
 
     it('calls onExportPdf when clicked', () => {
       const onExportPdf = vi.fn();
       render(<Header {...makeProps({ document: { markdownText: '# Hello' }, actions: { onExportPdf } })} />);
-      fireEvent.click(screen.getByRole('button', { name: 'Export as PDF' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Export as…' }));
+      fireEvent.click(screen.getByRole('button', { name: 'PDF' }));
       expect(onExportPdf).toHaveBeenCalledOnce();
     });
   });

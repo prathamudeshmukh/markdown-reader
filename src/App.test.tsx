@@ -164,7 +164,8 @@ describe('App', () => {
         markdownText: '# Hello',
       });
       render(<App />);
-      fireEvent.click(screen.getByRole('button', { name: 'Export as PDF' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Export as…' }));
+      fireEvent.click(screen.getByRole('button', { name: 'PDF' }));
       expect(track).toHaveBeenCalledWith('pdf_exported', { mode_at_export: 'preview' });
       expect(print).toHaveBeenCalledOnce();
     });
@@ -181,7 +182,8 @@ describe('App', () => {
         toggleMode,
       });
       render(<App />);
-      fireEvent.click(screen.getByRole('button', { name: 'Export as PDF' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Export as…' }));
+      fireEvent.click(screen.getByRole('button', { name: 'PDF' }));
       expect(track).toHaveBeenCalledWith('pdf_exported', { mode_at_export: 'editor' });
       expect(toggleMode).toHaveBeenCalledOnce();
       expect(print).not.toHaveBeenCalled();
@@ -217,7 +219,7 @@ describe('App', () => {
       const input = document.querySelector('input[type="file"]') as HTMLInputElement;
       fireEvent.change(input, { target: { files: [makeFile()] } });
 
-      await screen.findByText(/no text/i);
+      await vi.waitFor(() => expect(screen.getByText(/no text/i)).toBeInTheDocument());
     });
 
     it('shows a generic error banner for unknown errors', async () => {
@@ -227,7 +229,7 @@ describe('App', () => {
       const input = document.querySelector('input[type="file"]') as HTMLInputElement;
       fireEvent.change(input, { target: { files: [makeFile()] } });
 
-      await screen.findByText(/failed to import/i);
+      await vi.waitFor(() => expect(screen.getByText(/failed to import/i)).toBeInTheDocument());
     });
   });
 
@@ -264,7 +266,7 @@ describe('App', () => {
       const input = document.querySelector('input[type="file"]') as HTMLInputElement;
       fireEvent.change(input, { target: { files: [makeFile()] } });
 
-      await screen.findByText(/conversion service failed/i);
+      await vi.waitFor(() => expect(screen.getByText(/conversion service failed/i)).toBeInTheDocument());
     });
 
     it('shows generic error banner for unknown errors', async () => {
@@ -274,7 +276,7 @@ describe('App', () => {
       const input = document.querySelector('input[type="file"]') as HTMLInputElement;
       fireEvent.change(input, { target: { files: [makeFile()] } });
 
-      await screen.findByText(/failed to import/i);
+      await vi.waitFor(() => expect(screen.getByText(/failed to import/i)).toBeInTheDocument());
     });
   });
 
