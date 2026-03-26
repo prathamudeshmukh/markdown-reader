@@ -20,9 +20,9 @@ const FEATURES = readFeatureFlags();
 const PDF_IMPORT_UNKNOWN_ERROR = 'Failed to import PDF. Please try again.';
 
 export default function App() {
-  const { markdownText, title, slug, mode, isLoading, isSaving, error, presenceCount, setMarkdownText, setTitle, toggleMode, onSave } =
-    useMarkdownState();
   const { user, isAuthLoading, signInWithEmail, signOut } = useAuth();
+  const { markdownText, title, slug, mode, isLoading, isSaving, error, presenceCount, setMarkdownText, setTitle, toggleMode, onSave } =
+    useMarkdownState({ isAuthLoading });
 
   const [signInOpen, setSignInOpen] = useState(false);
   const [copied, setCopied] = useState(false);

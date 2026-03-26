@@ -161,6 +161,25 @@ describe('useMarkdownState', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
+    it('does not call fetchDoc while auth is loading', () => {
+      renderHook(() => useMarkdownState({ isAuthLoading: true }));
+      expect(fetchDoc).not.toHaveBeenCalled();
+    });
+
+    it('calls fetchDoc once auth finishes loading', async () => {
+      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null });
+      const { rerender } = renderHook(
+        ({ isAuthLoading }) => useMarkdownState({ isAuthLoading }),
+        { initialProps: { isAuthLoading: true } },
+      );
+
+      expect(fetchDoc).not.toHaveBeenCalled();
+
+      rerender({ isAuthLoading: false });
+
+      await waitFor(() => expect(fetchDoc).toHaveBeenCalledWith('abc1234'));
+    });
+
     it('calls updateDoc debounced on text change', async () => {
       vi.useFakeTimers();
       vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null });

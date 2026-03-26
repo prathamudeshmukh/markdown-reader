@@ -20,7 +20,7 @@ interface MarkdownState {
 
 const DEBOUNCE_MS = 250;
 
-export function useMarkdownState() {
+export function useMarkdownState({ isAuthLoading = false }: { isAuthLoading?: boolean } = {}) {
   const slug = getSlugFromPath();
 
   const [state, setState] = useState<MarkdownState>({
@@ -53,7 +53,7 @@ export function useMarkdownState() {
   }, [slug]);
 
   useEffect(() => {
-    if (!slug) return;
+    if (!slug || isAuthLoading) return;
 
     fetchDoc(slug)
       .then((doc) => {
@@ -67,7 +67,7 @@ export function useMarkdownState() {
       .catch((err: Error) =>
         setState((prev) => ({ ...prev, isLoading: false, error: err.message })),
       );
-  }, [slug]);
+  }, [slug, isAuthLoading]);
 
   const setMarkdownText = useCallback(
     (text: string) => {
