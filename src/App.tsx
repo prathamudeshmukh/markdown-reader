@@ -236,7 +236,14 @@ export default function App() {
       <DocTitle title={title} mode={mode} onChange={setTitle} />
 
       <main className="flex-1 flex flex-col overflow-hidden">
-        {mode === 'editor' ? (
+        {isLoading ? (
+          <div
+            className="flex-1 flex items-center justify-center text-sm animate-fade-in"
+            style={{ color: 'var(--text-muted)', backgroundColor: 'var(--bg-primary)' }}
+          >
+            Loading…
+          </div>
+        ) : mode === 'editor' ? (
           <Editor value={markdownText} onChange={setMarkdownText} />
         ) : (
           <Preview content={markdownText} />
