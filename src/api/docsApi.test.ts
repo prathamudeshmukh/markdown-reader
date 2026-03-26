@@ -19,7 +19,7 @@ describe('docsApi', () => {
       const result = await fetchDoc('abc1234');
 
       expect(result).toEqual(doc);
-      expect(fetch).toHaveBeenCalledWith('/mreader/api/docs/abc1234');
+      expect(fetch).toHaveBeenCalledWith('/mreader/api/docs/abc1234', expect.objectContaining({ headers: {} }));
     });
 
     it('throws with error message on 404', async () => {
@@ -27,6 +27,22 @@ describe('docsApi', () => {
         new Response(JSON.stringify({ error: 'Not found' }), { status: 404 }),
       );
       await expect(fetchDoc('missing')).rejects.toThrow('Not found');
+    });
+
+    it('includes Authorization header when auth token is set', async () => {
+      setAuthToken('user-jwt-token');
+      vi.mocked(fetch).mockResolvedValueOnce(
+        new Response(JSON.stringify({ slug: 'abc1234', content: '# Hello', title: null }), { status: 200 }),
+      );
+
+      await fetchDoc('abc1234');
+
+      expect(fetch).toHaveBeenCalledWith(
+        '/mreader/api/docs/abc1234',
+        expect.objectContaining({
+          headers: expect.objectContaining({ Authorization: 'Bearer user-jwt-token' }),
+        }),
+      );
     });
 
     it('throws on 500', async () => {

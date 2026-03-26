@@ -144,6 +144,25 @@ describe('handleDocsRequest', () => {
       expect(await res?.json()).toEqual({ slug: 'abc1234', content: '# Hello', title: null, user_id: null });
     });
 
+    it('forwards user JWT to getDoc when Authorization header is present', async () => {
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId });
+
+      await handleDocsRequest(
+        makeRequest('GET', '/mreader/api/docs/abc1234', undefined, { Authorization: `Bearer ${fakeJwt}` }),
+        env,
+      );
+
+      expect(getDoc).toHaveBeenCalledWith(env, 'abc1234', fakeJwt);
+    });
+
+    it('passes undefined JWT to getDoc when no Authorization header', async () => {
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null });
+
+      await handleDocsRequest(makeRequest('GET', '/mreader/api/docs/abc1234'), env);
+
+      expect(getDoc).toHaveBeenCalledWith(env, 'abc1234', undefined);
+    });
+
     it('returns 404 when doc does not exist', async () => {
       vi.mocked(getDoc).mockResolvedValueOnce(null);
 

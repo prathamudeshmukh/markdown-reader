@@ -113,6 +113,39 @@ describe('supabaseClient', () => {
       );
     });
 
+    it('uses userJwt in Authorization header when provided', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce(
+        new Response(JSON.stringify([{ slug: 'abc1234', content: '# Hello', title: null, user_id: 'uid' }]), { status: 200 }),
+      );
+
+      const payload = btoa(JSON.stringify({ sub: 'uid' }));
+      const fakeJwt = `header.${payload}.sig`;
+
+      await getDoc(env, 'abc1234', fakeJwt);
+
+      expect(fetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          headers: expect.objectContaining({ Authorization: `Bearer ${fakeJwt}` }),
+        }),
+      );
+    });
+
+    it('falls back to anon key when userJwt is not provided', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce(
+        new Response(JSON.stringify([]), { status: 200 }),
+      );
+
+      await getDoc(env, 'abc1234');
+
+      expect(fetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          headers: expect.objectContaining({ Authorization: `Bearer ${env.SUPABASE_ANON_KEY}` }),
+        }),
+      );
+    });
+
     it('throws when response is not ok', async () => {
       vi.mocked(fetch).mockResolvedValueOnce(new Response('error', { status: 500 }));
       await expect(getDoc(env, 'abc')).rejects.toThrow('getDoc failed');
