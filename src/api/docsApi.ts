@@ -41,7 +41,9 @@ async function parseResponse<T>(res: Response): Promise<T> {
 }
 
 export async function fetchDoc(slug: string): Promise<Doc> {
-  const res = await fetch(`${API_BASE}/${slug}`);
+  const res = await fetch(`${API_BASE}/${slug}`, {
+    headers: { ...authHeaders() },
+  });
   return parseResponse<Doc>(res);
 }
 

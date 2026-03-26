@@ -64,12 +64,13 @@ export async function createDoc(env: SupabaseEnv, slug: string, fields: CreateDo
   return rows[0];
 }
 
-export async function getDoc(env: SupabaseEnv, slug: string): Promise<Doc | null> {
+export async function getDoc(env: SupabaseEnv, slug: string, userJwt?: string): Promise<Doc | null> {
   const url = `${env.SUPABASE_URL}/rest/v1/docs?slug=eq.${encodeURIComponent(slug)}&select=slug,content,title,user_id`;
+  const token = userJwt ?? env.SUPABASE_ANON_KEY;
   const res = await fetch(url, {
     headers: {
       apikey: env.SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${env.SUPABASE_ANON_KEY}`,
+      Authorization: `Bearer ${token}`,
     },
   });
 
