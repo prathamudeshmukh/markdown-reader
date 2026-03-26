@@ -1,10 +1,11 @@
 import { nanoid } from 'nanoid';
-import { createDoc, getDoc, updateDoc, type SupabaseEnv } from './supabaseClient';
+import { createDoc, getDoc, updateDoc, getUserDocs, type SupabaseEnv } from './supabaseClient';
 
 export type RouterEnv = SupabaseEnv;
 
 const API_PREFIX = '/mreader/api/docs';
 const MAX_CONTENT_BYTES = 500_000;
+const MAX_TITLE_CHARS = 300;
 const SLUG_LENGTH = 7;
 
 function json(data: unknown, status = 200): Response {
@@ -14,8 +15,29 @@ function json(data: unknown, status = 200): Response {
   });
 }
 
+function extractBearerToken(request: Request): string | undefined {
+  const header = request.headers.get('Authorization') ?? '';
+  if (!header.startsWith('Bearer ')) return undefined;
+  return header.slice(7);
+}
+
+function extractUserIdFromJwt(jwt: string): string | undefined {
+  try {
+    const payload = JSON.parse(atob(jwt.split('.')[1])) as { sub?: string };
+    return payload.sub;
+  } catch {
+    return undefined;
+  }
+}
+
+function parseTitle(raw: unknown): string | undefined {
+  if (typeof raw !== 'string') return undefined;
+  const trimmed = raw.trim().slice(0, MAX_TITLE_CHARS);
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
 async function handlePost(request: Request, env: RouterEnv): Promise<Response> {
-  const body = (await request.json()) as { content?: unknown };
+  const body = (await request.json()) as { content?: unknown; title?: unknown };
 
   if (typeof body.content !== 'string') {
     return json({ error: 'content must be a string' }, 400);
@@ -25,11 +47,14 @@ async function handlePost(request: Request, env: RouterEnv): Promise<Response> {
     return json({ error: 'Content too large' }, 413);
   }
 
+  const title = parseTitle(body.title);
+  const userJwt = extractBearerToken(request);
+
   // Generate slug with one retry on collision
   for (let attempt = 0; attempt < 2; attempt++) {
     const slug = nanoid(SLUG_LENGTH);
     try {
-      const doc = await createDoc(env, slug, body.content);
+      const doc = await createDoc(env, slug, { content: body.content, title, userJwt });
       return json({ slug: doc.slug }, 201);
     } catch (err) {
       const isDuplicate = err instanceof Error && err.message.includes('duplicate');
@@ -46,8 +71,19 @@ async function handleGet(slug: string, env: RouterEnv): Promise<Response> {
   return json(doc);
 }
 
+async function handleGetUserDocs(request: Request, env: RouterEnv): Promise<Response> {
+  const userJwt = extractBearerToken(request);
+  if (!userJwt) return json({ error: 'Unauthorized' }, 401);
+
+  const userId = extractUserIdFromJwt(userJwt);
+  if (!userId) return json({ error: 'Invalid token' }, 401);
+
+  const docs = await getUserDocs(env, userId, userJwt);
+  return json({ docs });
+}
+
 async function handlePut(request: Request, slug: string, env: RouterEnv): Promise<Response> {
-  const body = (await request.json()) as { content?: unknown };
+  const body = (await request.json()) as { content?: unknown; title?: unknown };
 
   if (typeof body.content !== 'string') {
     return json({ error: 'content must be a string' }, 400);
@@ -57,7 +93,10 @@ async function handlePut(request: Request, slug: string, env: RouterEnv): Promis
     return json({ error: 'Content too large' }, 413);
   }
 
-  const doc = await updateDoc(env, slug, body.content);
+  const title = parseTitle(body.title);
+  const userJwt = extractBearerToken(request);
+
+  const doc = await updateDoc(env, slug, { content: body.content, title, userJwt });
   return json({ slug: doc.slug });
 }
 
@@ -70,6 +109,7 @@ export async function handleDocsRequest(
 
   if (pathname === API_PREFIX) {
     if (method === 'POST') return handlePost(request, env);
+    if (method === 'GET') return handleGetUserDocs(request, env);
     return json({ error: 'Method not allowed' }, 405);
   }
 

@@ -1,7 +1,7 @@
-import type { RecentDoc } from '../utils/recentDocs';
+import type { DisplayDoc } from '../hooks/useRecentDocs';
 
 interface RecentDocsSidebarProps {
-  docs: RecentDoc[];
+  docs: DisplayDoc[];
   isOpen: boolean;
   onClose: () => void;
   onDocOpen?: () => void;
@@ -99,12 +99,26 @@ export default function RecentDocsSidebar({ docs, isOpen, onClose, onDocOpen }: 
                     (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
                   }}
                 >
-                  <span
-                    className="font-mono text-xs truncate w-full"
-                    style={{ fontFamily: '"IBM Plex Mono", monospace' }}
-                  >
-                    {doc.slug}
-                  </span>
+                  {doc.title ? (
+                    <>
+                      <span className="text-xs font-medium truncate w-full">
+                        {doc.title}
+                      </span>
+                      <span
+                        className="font-mono text-[10px] truncate w-full"
+                        style={{ color: 'var(--text-muted)', fontFamily: '"IBM Plex Mono", monospace' }}
+                      >
+                        {doc.slug}
+                      </span>
+                    </>
+                  ) : (
+                    <span
+                      className="font-mono text-xs truncate w-full"
+                      style={{ fontFamily: '"IBM Plex Mono", monospace' }}
+                    >
+                      {doc.slug}
+                    </span>
+                  )}
                   <time
                     dateTime={doc.savedAt}
                     className="text-[10px]"

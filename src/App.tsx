@@ -1,14 +1,15 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useMarkdownState } from './hooks/useMarkdownState';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import { useRecentDocs } from './hooks/useRecentDocs';
 import Header from './components/Header';
 import Editor from './components/Editor';
 import Preview from './components/Preview';
 import RecentDocsSidebar from './components/RecentDocsSidebar';
+import DocTitle from './components/DocTitle';
 import QrModal from './components/QrModal';
 import EmailSignInModal from './components/EmailSignInModal';
 import { useAuth } from './auth/AuthContext';
-import { readRecentDocs } from './utils/recentDocs';
 import { getContentLengthBucket, track, type InteractionSource } from './telemetry';
 import { pdfToMarkdown, PdfImportError } from './utils/pdfToMarkdown';
 import { pdfFileToMarkdown, PdfApiError } from './utils/pdfApiClient';
@@ -19,7 +20,7 @@ const FEATURES = readFeatureFlags();
 const PDF_IMPORT_UNKNOWN_ERROR = 'Failed to import PDF. Please try again.';
 
 export default function App() {
-  const { markdownText, slug, mode, isLoading, isSaving, error, presenceCount, setMarkdownText, toggleMode, onSave } =
+  const { markdownText, title, slug, mode, isLoading, isSaving, error, presenceCount, setMarkdownText, setTitle, toggleMode, onSave } =
     useMarkdownState();
   const { user, isAuthLoading, signInWithEmail, signOut } = useAuth();
 
@@ -122,7 +123,7 @@ export default function App() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = slug ? `${slug}.md` : 'document.md';
+    a.download = slug ? `${title ?? slug}.md` : 'document.md';
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -138,7 +139,8 @@ export default function App() {
     }
   }
 
-  const recentDocs = readRecentDocs();
+  const recentDocsState = useRecentDocs();
+  const recentDocs = recentDocsState.status === 'ready' ? recentDocsState.docs : [];
 
   return (
     <div className="h-full flex flex-col pt-16" style={{ backgroundColor: 'var(--bg-primary)' }}>
@@ -230,6 +232,8 @@ export default function App() {
         onDocOpen={() => track('recent_doc_opened', { source: 'sidebar' })}
       />
       {qrOpen && <QrModal url={window.location.href} onClose={() => setQrOpen(false)} />}
+
+      <DocTitle title={title} mode={mode} onChange={setTitle} />
 
       <main className="flex-1 flex flex-col overflow-hidden">
         {mode === 'editor' ? (

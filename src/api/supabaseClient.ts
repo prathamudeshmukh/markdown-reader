@@ -6,22 +6,53 @@ export interface SupabaseEnv {
 export interface Doc {
   slug: string;
   content: string;
+  title: string | null;
+  user_id: string | null;
 }
 
-function authHeaders(env: SupabaseEnv): Record<string, string> {
+export interface DocSummary {
+  slug: string;
+  title: string | null;
+  updatedAt: string;
+}
+
+function extractUserIdFromJwt(jwt: string): string | undefined {
+  try {
+    const payload = JSON.parse(atob(jwt.split('.')[1])) as { sub?: string };
+    return payload.sub;
+  } catch {
+    return undefined;
+  }
+}
+
+function buildHeaders(env: SupabaseEnv, userJwt?: string): Record<string, string> {
+  const token = userJwt ?? env.SUPABASE_ANON_KEY;
   return {
     apikey: env.SUPABASE_ANON_KEY,
-    Authorization: `Bearer ${env.SUPABASE_ANON_KEY}`,
+    Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
     Prefer: 'return=representation',
   };
 }
 
-export async function createDoc(env: SupabaseEnv, slug: string, content: string): Promise<Doc> {
+interface CreateDocFields {
+  content: string;
+  title?: string;
+  userJwt?: string;
+}
+
+export async function createDoc(env: SupabaseEnv, slug: string, fields: CreateDocFields): Promise<Doc> {
+  const { content, title, userJwt } = fields;
+  const userId = userJwt ? extractUserIdFromJwt(userJwt) : undefined;
+
+  const body: Record<string, unknown> = { slug, content };
+  if (title !== undefined) body.title = title;
+  if (userId !== undefined) body.user_id = userId;
+
   const res = await fetch(`${env.SUPABASE_URL}/rest/v1/docs`, {
     method: 'POST',
-    headers: authHeaders(env),
-    body: JSON.stringify({ slug, content }),
+    headers: buildHeaders(env, userJwt),
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {
@@ -34,7 +65,7 @@ export async function createDoc(env: SupabaseEnv, slug: string, content: string)
 }
 
 export async function getDoc(env: SupabaseEnv, slug: string): Promise<Doc | null> {
-  const url = `${env.SUPABASE_URL}/rest/v1/docs?slug=eq.${encodeURIComponent(slug)}&select=slug,content`;
+  const url = `${env.SUPABASE_URL}/rest/v1/docs?slug=eq.${encodeURIComponent(slug)}&select=slug,content,title,user_id`;
   const res = await fetch(url, {
     headers: {
       apikey: env.SUPABASE_ANON_KEY,
@@ -51,12 +82,24 @@ export async function getDoc(env: SupabaseEnv, slug: string): Promise<Doc | null
   return rows[0] ?? null;
 }
 
-export async function updateDoc(env: SupabaseEnv, slug: string, content: string): Promise<Doc> {
+interface UpdateDocFields {
+  content?: string;
+  title?: string;
+  userJwt?: string;
+}
+
+export async function updateDoc(env: SupabaseEnv, slug: string, fields: UpdateDocFields): Promise<Doc> {
+  const { content, title, userJwt } = fields;
   const url = `${env.SUPABASE_URL}/rest/v1/docs?slug=eq.${encodeURIComponent(slug)}`;
+
+  const body: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (content !== undefined) body.content = content;
+  if (title !== undefined) body.title = title;
+
   const res = await fetch(url, {
     method: 'PATCH',
-    headers: authHeaders(env),
-    body: JSON.stringify({ content, updated_at: new Date().toISOString() }),
+    headers: buildHeaders(env, userJwt),
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {
@@ -66,4 +109,22 @@ export async function updateDoc(env: SupabaseEnv, slug: string, content: string)
 
   const rows: Doc[] = await res.json();
   return rows[0];
+}
+
+export async function getUserDocs(env: SupabaseEnv, userId: string, userJwt: string): Promise<DocSummary[]> {
+  const url = `${env.SUPABASE_URL}/rest/v1/docs?user_id=eq.${encodeURIComponent(userId)}&select=slug,title,updated_at&order=updated_at.desc`;
+  const res = await fetch(url, {
+    headers: {
+      apikey: env.SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${userJwt}`,
+    },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`getUserDocs failed: ${res.status} ${text}`);
+  }
+
+  const rows: Array<{ slug: string; title: string | null; updated_at: string }> = await res.json();
+  return rows.map((row) => ({ slug: row.slug, title: row.title, updatedAt: row.updated_at }));
 }

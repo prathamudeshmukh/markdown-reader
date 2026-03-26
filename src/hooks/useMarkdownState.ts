@@ -9,6 +9,7 @@ type Mode = 'editor' | 'preview';
 
 interface MarkdownState {
   markdownText: string;
+  title: string | null;
   slug: string | null;
   mode: Mode;
   isLoading: boolean;
@@ -24,6 +25,7 @@ export function useMarkdownState() {
 
   const [state, setState] = useState<MarkdownState>({
     markdownText: '',
+    title: null,
     slug,
     mode: slug !== null ? 'preview' : 'editor',
     isLoading: slug !== null,
@@ -41,6 +43,7 @@ export function useMarkdownState() {
   });
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const titleDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     track('app_opened', {
@@ -53,13 +56,13 @@ export function useMarkdownState() {
     if (!slug) return;
 
     fetchDoc(slug)
-      .then(({ content }) => {
-        addRecentDoc(slug);
+      .then((doc) => {
+        addRecentDoc(slug, doc.title);
         track('doc_opened', {
           has_slug: true,
-          content_length_bucket: getContentLengthBucket(content),
+          content_length_bucket: getContentLengthBucket(doc.content),
         });
-        setState((prev) => ({ ...prev, markdownText: content, isLoading: false }));
+        setState((prev) => ({ ...prev, markdownText: doc.content, title: doc.title, isLoading: false }));
       })
       .catch((err: Error) =>
         setState((prev) => ({ ...prev, isLoading: false, error: err.message })),
@@ -76,7 +79,7 @@ export function useMarkdownState() {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {
         setState((prev) => ({ ...prev, isSaving: true }));
-        updateDoc(slug, text)
+        updateDoc(slug, { content: text })
           .then(() => setState((prev) => ({ ...prev, isSaving: false })))
           .catch((err: Error) =>
             setState((prev) => ({ ...prev, isSaving: false, error: err.message })),
@@ -84,6 +87,25 @@ export function useMarkdownState() {
       }, DEBOUNCE_MS);
     },
     [slug, broadcastContent],
+  );
+
+  const setTitle = useCallback(
+    (newTitle: string) => {
+      setState((prev) => ({ ...prev, title: newTitle }));
+
+      if (!slug) return;
+
+      if (titleDebounceRef.current) clearTimeout(titleDebounceRef.current);
+      titleDebounceRef.current = setTimeout(() => {
+        setState((prev) => ({ ...prev, isSaving: true }));
+        updateDoc(slug, { title: newTitle })
+          .then(() => setState((prev) => ({ ...prev, isSaving: false })))
+          .catch((err: Error) =>
+            setState((prev) => ({ ...prev, isSaving: false, error: err.message })),
+          );
+      }, DEBOUNCE_MS);
+    },
+    [slug],
   );
 
   const toggleMode = useCallback((source: InteractionSource = 'button') => {
@@ -108,15 +130,15 @@ export function useMarkdownState() {
 
     setState((prev) => ({ ...prev, isSaving: true }));
     try {
-      const { slug: newSlug } = await saveDoc(state.markdownText);
-      addRecentDoc(newSlug);
+      const { slug: newSlug } = await saveDoc({ content: state.markdownText, title: state.title ?? undefined });
+      addRecentDoc(newSlug, state.title);
       track('doc_save_succeeded', { slug_created: true });
       window.location.replace(`/mreader/d/${newSlug}`);
     } catch (err) {
       track('doc_save_failed', { error_type: getErrorType(err) });
       setState((prev) => ({ ...prev, isSaving: false, error: (err as Error).message }));
     }
-  }, [state.markdownText]);
+  }, [state.markdownText, state.title]);
 
-  return { ...state, presenceCount, setMarkdownText, toggleMode, onSave };
+  return { ...state, presenceCount, setMarkdownText, setTitle, toggleMode, onSave };
 }

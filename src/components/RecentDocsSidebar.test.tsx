@@ -1,11 +1,11 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import RecentDocsSidebar from './RecentDocsSidebar';
-import type { RecentDoc } from '../utils/recentDocs';
+import type { DisplayDoc } from '../hooks/useRecentDocs';
 
-const sampleDocs: RecentDoc[] = [
-  { slug: 'abc1234', savedAt: '2026-03-12T15:40:00.000Z' },
-  { slug: 'xyz9999', savedAt: '2026-03-11T09:12:00.000Z' },
+const sampleDocs: DisplayDoc[] = [
+  { slug: 'abc1234', title: 'My First Doc', savedAt: '2026-03-12T15:40:00.000Z' },
+  { slug: 'xyz9999', title: null, savedAt: '2026-03-11T09:12:00.000Z' },
 ];
 
 const onClose = vi.fn();
@@ -16,9 +16,13 @@ describe('RecentDocsSidebar', () => {
     expect(screen.getByText('No saved docs yet')).toBeInTheDocument();
   });
 
-  it('renders all doc slugs', () => {
+  it('renders title when available', () => {
     render(<RecentDocsSidebar docs={sampleDocs} isOpen={true} onClose={onClose} />);
-    expect(screen.getByText('abc1234')).toBeInTheDocument();
+    expect(screen.getByText('My First Doc')).toBeInTheDocument();
+  });
+
+  it('renders slug when title is null', () => {
+    render(<RecentDocsSidebar docs={sampleDocs} isOpen={true} onClose={onClose} />);
     expect(screen.getByText('xyz9999')).toBeInTheDocument();
   });
 
@@ -42,7 +46,7 @@ describe('RecentDocsSidebar', () => {
     render(
       <RecentDocsSidebar docs={sampleDocs} isOpen={true} onClose={onClose} onDocOpen={onDocOpen} />,
     );
-    fireEvent.click(screen.getByRole('button', { name: /abc1234/i }));
+    fireEvent.click(screen.getByText('My First Doc'));
     expect(onDocOpen).toHaveBeenCalledOnce();
   });
 });

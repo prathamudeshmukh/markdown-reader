@@ -9,7 +9,7 @@ export default function Editor({ value, onChange }: EditorProps) {
       style={{ backgroundColor: 'var(--bg-primary)' }}
     >
       <textarea
-        className="editor-textarea flex-1 w-full max-w-2xl px-8 sm:px-12 pt-10 pb-24 font-mono text-sm resize-none outline-none leading-8 tracking-wide"
+        className="editor-textarea flex-1 w-full max-w-2xl px-8 sm:px-12 pt-4 pb-24 font-mono text-sm resize-none outline-none leading-8 tracking-wide"
         style={{
           backgroundColor: 'transparent',
           color: 'var(--text-primary)',

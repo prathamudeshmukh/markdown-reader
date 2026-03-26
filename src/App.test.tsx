@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('./hooks/useMarkdownState');
 vi.mock('./hooks/useKeyboardShortcuts', () => ({ useKeyboardShortcuts: vi.fn() }));
-vi.mock('./utils/recentDocs', () => ({ readRecentDocs: vi.fn(() => []) }));
+vi.mock('./hooks/useRecentDocs', () => ({ useRecentDocs: vi.fn(() => ({ status: 'ready', docs: [] })) }));
 vi.mock('./telemetry', () => ({
   track: vi.fn(),
   getContentLengthBucket: vi.fn(() => 'xs'),
@@ -38,6 +38,7 @@ import { PdfApiError } from './utils/pdfApiClient';
 
 const baseState = {
   markdownText: '',
+  title: null as string | null,
   slug: null as string | null,
   mode: 'editor' as const,
   isLoading: false,
@@ -45,6 +46,7 @@ const baseState = {
   error: null as string | null,
   presenceCount: 1,
   setMarkdownText: vi.fn(),
+  setTitle: vi.fn(),
   toggleMode: vi.fn(),
   onSave: vi.fn(),
 };
@@ -66,7 +68,7 @@ describe('App', () => {
 
   it('renders the editor in editor mode', () => {
     render(<App />);
-    expect(screen.getByRole('textbox')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Start writing…')).toBeInTheDocument();
   });
 
   it('shows loading banner when isLoading is true', () => {

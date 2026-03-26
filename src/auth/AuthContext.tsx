@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { getSupabaseClient } from '../realtime/supabaseRealtimeClient';
+import { setAuthToken } from '../api/docsApi';
 
 interface AuthContextValue {
   user: User | null;
@@ -32,6 +33,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     supabase.auth.getSession().then(({ data }) => {
       setUser(data.session?.user ?? null);
+      setAuthToken(data.session?.access_token);
       setIsAuthLoading(false);
     });
 
@@ -39,6 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      setAuthToken(session?.access_token);
     });
 
     return () => subscription.unsubscribe();
@@ -65,6 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       return;
     }
+    setAuthToken(undefined);
     void supabase.auth.signOut();
   }, []);
 

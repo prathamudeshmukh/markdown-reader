@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
-import type { RecentDoc } from '../utils/recentDocs';
+import type { DisplayDoc } from '../hooks/useRecentDocs';
 
 interface RecentDocsDropdownProps {
-  docs: RecentDoc[];
+  docs: DisplayDoc[];
   onClose: () => void;
   onDocOpen?: () => void;
 }
@@ -49,11 +49,22 @@ export default function RecentDocsDropdown({ docs, onClose, onDocOpen }: RecentD
               onDocOpen?.();
               window.location.href = `/mreader/d/${doc.slug}`;
             }}
-            className="w-full flex items-center justify-between gap-2 px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            className="w-full flex flex-col gap-0.5 px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left"
           >
-            <span className="font-mono text-xs text-gray-800 dark:text-gray-200 truncate">
-              {doc.slug}
-            </span>
+            {doc.title ? (
+              <>
+                <span className="text-xs font-medium text-gray-800 dark:text-gray-200 truncate w-full">
+                  {doc.title}
+                </span>
+                <span className="font-mono text-[10px] text-gray-400 dark:text-gray-500 truncate w-full">
+                  {doc.slug}
+                </span>
+              </>
+            ) : (
+              <span className="font-mono text-xs text-gray-800 dark:text-gray-200 truncate">
+                {doc.slug}
+              </span>
+            )}
             <time
               dateTime={doc.savedAt}
               className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap"

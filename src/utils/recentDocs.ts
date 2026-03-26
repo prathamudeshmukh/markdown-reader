@@ -2,6 +2,7 @@ const STORAGE_KEY = 'mreader:recentDocs';
 
 export interface RecentDoc {
   slug: string;
+  title?: string | null;
   savedAt: string;
 }
 
@@ -26,9 +27,9 @@ export function readRecentDocs(): RecentDoc[] {
   }
 }
 
-export function addRecentDoc(slug: string): RecentDoc[] {
+export function addRecentDoc(slug: string, title?: string | null): RecentDoc[] {
   const current = readRecentDocs();
-  const newEntry: RecentDoc = { slug, savedAt: new Date().toISOString() };
+  const newEntry: RecentDoc = { slug, title: title ?? null, savedAt: new Date().toISOString() };
   const deduplicated = current.filter((doc) => doc.slug !== slug);
   const updated = [newEntry, ...deduplicated];
   localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));

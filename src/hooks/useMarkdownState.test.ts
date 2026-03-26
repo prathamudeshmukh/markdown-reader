@@ -40,6 +40,7 @@ describe('useMarkdownState', () => {
     it('starts with empty text, not loading, no error', () => {
       const { result } = renderHook(() => useMarkdownState());
       expect(result.current.markdownText).toBe('');
+      expect(result.current.title).toBeNull();
       expect(result.current.isLoading).toBe(false);
       expect(result.current.slug).toBeNull();
       expect(result.current.error).toBeNull();
@@ -68,21 +69,33 @@ describe('useMarkdownState', () => {
       expect(saveDoc).not.toHaveBeenCalled();
     });
 
-    it('onSave calls saveDoc and redirects on success', async () => {
+    it('onSave calls saveDoc with content object and redirects on success', async () => {
       vi.mocked(saveDoc).mockResolvedValueOnce({ slug: 'new1234' });
       const { result } = renderHook(() => useMarkdownState());
 
       act(() => result.current.setMarkdownText('# Hello'));
       await act(() => result.current.onSave());
 
-      expect(saveDoc).toHaveBeenCalledWith('# Hello');
-      expect(addRecentDoc).toHaveBeenCalledWith('new1234');
+      expect(saveDoc).toHaveBeenCalledWith({ content: '# Hello', title: undefined });
+      expect(addRecentDoc).toHaveBeenCalledWith('new1234', null);
       expect(track).toHaveBeenCalledWith(
         'doc_save_clicked',
         expect.objectContaining({ source: 'button' }),
       );
       expect(track).toHaveBeenCalledWith('doc_save_succeeded', { slug_created: true });
       expect(window.location.replace).toHaveBeenCalledWith('/mreader/d/new1234');
+    });
+
+    it('onSave includes title when set', async () => {
+      vi.mocked(saveDoc).mockResolvedValueOnce({ slug: 'new1234' });
+      const { result } = renderHook(() => useMarkdownState());
+
+      act(() => result.current.setMarkdownText('# Hello'));
+      act(() => result.current.setTitle('My Doc'));
+      await act(() => result.current.onSave());
+
+      expect(saveDoc).toHaveBeenCalledWith({ content: '# Hello', title: 'My Doc' });
+      expect(addRecentDoc).toHaveBeenCalledWith('new1234', 'My Doc');
     });
 
     it('onSave sets error on failure', async () => {
@@ -122,21 +135,22 @@ describe('useMarkdownState', () => {
     });
 
     it('starts in loading state with correct slug', () => {
-      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello' });
+      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null });
       const { result } = renderHook(() => useMarkdownState());
       expect(result.current.isLoading).toBe(true);
       expect(result.current.slug).toBe('abc1234');
     });
 
-    it('fetches doc and populates markdownText', async () => {
-      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello' });
+    it('fetches doc and populates markdownText and title', async () => {
+      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: 'My Doc' });
       const { result } = renderHook(() => useMarkdownState());
 
       await waitFor(() => expect(result.current.isLoading).toBe(false));
 
       expect(result.current.markdownText).toBe('# Hello');
+      expect(result.current.title).toBe('My Doc');
       expect(fetchDoc).toHaveBeenCalledWith('abc1234');
-      expect(addRecentDoc).toHaveBeenCalledWith('abc1234');
+      expect(addRecentDoc).toHaveBeenCalledWith('abc1234', 'My Doc');
     });
 
     it('sets error when fetch fails', async () => {
@@ -149,7 +163,7 @@ describe('useMarkdownState', () => {
 
     it('calls updateDoc debounced on text change', async () => {
       vi.useFakeTimers();
-      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello' });
+      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null });
       vi.mocked(updateDoc).mockResolvedValue(undefined);
 
       const { result } = renderHook(() => useMarkdownState());
@@ -159,13 +173,29 @@ describe('useMarkdownState', () => {
       expect(updateDoc).not.toHaveBeenCalled();
 
       await act(() => vi.runAllTimersAsync());
-      expect(updateDoc).toHaveBeenCalledWith('abc1234', '# Updated');
+      expect(updateDoc).toHaveBeenCalledWith('abc1234', { content: '# Updated' });
+      vi.useRealTimers();
+    });
+
+    it('calls updateDoc debounced on title change', async () => {
+      vi.useFakeTimers();
+      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null });
+      vi.mocked(updateDoc).mockResolvedValue(undefined);
+
+      const { result } = renderHook(() => useMarkdownState());
+      await act(() => vi.runAllTimersAsync());
+
+      act(() => result.current.setTitle('New Title'));
+      expect(updateDoc).not.toHaveBeenCalled();
+
+      await act(() => vi.runAllTimersAsync());
+      expect(updateDoc).toHaveBeenCalledWith('abc1234', { title: 'New Title' });
       vi.useRealTimers();
     });
 
     it('sets error when updateDoc fails', async () => {
       vi.useFakeTimers();
-      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello' });
+      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null });
       vi.mocked(updateDoc).mockRejectedValueOnce(new Error('Save failed'));
 
       const { result } = renderHook(() => useMarkdownState());
