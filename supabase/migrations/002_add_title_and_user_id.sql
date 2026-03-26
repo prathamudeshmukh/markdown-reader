@@ -8,6 +8,14 @@ create index if not exists docs_user_id_idx on docs(user_id);
 
 -- Replace blanket anon-read policy with two scoped policies
 drop policy if exists "anon can read docs" on docs;
+drop policy if exists "anon can read public docs" on docs;
+drop policy if exists "auth can read own and public docs" on docs;
+drop policy if exists "auth can create own docs" on docs;
+drop policy if exists "anon can update unowned docs" on docs;
+drop policy if exists "auth can update own docs" on docs;
+
+-- Replace blanket anon-update policy with two scoped policies
+drop policy if exists "anon can update docs" on docs;
 
 -- Unauthenticated users can only read public (unowned) docs
 create policy "anon can read public docs"
@@ -23,9 +31,6 @@ create policy "auth can read own and public docs"
 create policy "auth can create own docs"
   on docs for insert to authenticated
   with check (user_id is null or user_id = auth.uid());
-
--- Replace blanket anon-update policy with two scoped policies
-drop policy if exists "anon can update docs" on docs;
 
 -- Unauthenticated users can only update unowned docs
 create policy "anon can update unowned docs"
