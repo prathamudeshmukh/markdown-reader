@@ -10,7 +10,6 @@ type Mode = 'editor' | 'preview';
 interface MarkdownState {
   markdownText: string;
   title: string | null;
-  slug: string | null;
   mode: Mode;
   isLoading: boolean;
   isSaving: boolean;
@@ -21,12 +20,11 @@ interface MarkdownState {
 const DEBOUNCE_MS = 250;
 
 export function useMarkdownState({ isAuthLoading = false }: { isAuthLoading?: boolean } = {}) {
-  const slug = getSlugFromPath();
+  const [slug, setSlug] = useState<string | null>(() => getSlugFromPath());
 
   const [state, setState] = useState<MarkdownState>({
     markdownText: '',
     title: null,
-    slug,
     mode: slug !== null ? 'preview' : 'editor',
     isLoading: slug !== null,
     isSaving: false,
@@ -44,6 +42,7 @@ export function useMarkdownState({ isAuthLoading = false }: { isAuthLoading?: bo
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const titleDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savedLocallyRef = useRef(false);
 
   useEffect(() => {
     track('app_opened', {
@@ -53,7 +52,7 @@ export function useMarkdownState({ isAuthLoading = false }: { isAuthLoading?: bo
   }, [slug]);
 
   useEffect(() => {
-    if (!slug || isAuthLoading) return;
+    if (!slug || isAuthLoading || savedLocallyRef.current) return;
 
     fetchDoc(slug)
       .then((doc) => {
@@ -133,12 +132,15 @@ export function useMarkdownState({ isAuthLoading = false }: { isAuthLoading?: bo
       const { slug: newSlug } = await saveDoc({ content: state.markdownText, title: state.title ?? undefined });
       addRecentDoc(newSlug, state.title);
       track('doc_save_succeeded', { slug_created: true });
-      window.location.replace(`/mreader/d/${newSlug}`);
+      history.pushState({}, '', `/mreader/d/${newSlug}`);
+      savedLocallyRef.current = true;
+      setSlug(newSlug);
+      setState((prev) => ({ ...prev, isSaving: false }));
     } catch (err) {
       track('doc_save_failed', { error_type: getErrorType(err) });
       setState((prev) => ({ ...prev, isSaving: false, error: (err as Error).message }));
     }
   }, [state.markdownText, state.title]);
 
-  return { ...state, presenceCount, setMarkdownText, setTitle, toggleMode, onSave };
+  return { ...state, slug, presenceCount, setMarkdownText, setTitle, toggleMode, onSave };
 }

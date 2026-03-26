@@ -86,18 +86,22 @@ async function handleGetUserDocs(request: Request, env: RouterEnv): Promise<Resp
 async function handlePut(request: Request, slug: string, env: RouterEnv): Promise<Response> {
   const body = (await request.json()) as { content?: unknown; title?: unknown };
 
-  if (typeof body.content !== 'string') {
+  if (body.content !== undefined && typeof body.content !== 'string') {
     return json({ error: 'content must be a string' }, 400);
   }
 
-  if (new TextEncoder().encode(body.content).length > MAX_CONTENT_BYTES) {
+  if (body.content === undefined && body.title === undefined) {
+    return json({ error: 'content or title is required' }, 400);
+  }
+
+  if (typeof body.content === 'string' && new TextEncoder().encode(body.content).length > MAX_CONTENT_BYTES) {
     return json({ error: 'Content too large' }, 413);
   }
 
   const title = parseTitle(body.title);
   const userJwt = extractBearerToken(request);
 
-  const doc = await updateDoc(env, slug, { content: body.content, title, userJwt });
+  const doc = await updateDoc(env, slug, { content: body.content as string | undefined, title, userJwt });
   return json({ slug: doc.slug });
 }
 

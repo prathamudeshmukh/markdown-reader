@@ -25,8 +25,9 @@ import { track } from '../telemetry';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.spyOn(history, 'pushState').mockImplementation(() => {});
   Object.defineProperty(window, 'location', {
-    value: { replace: vi.fn(), pathname: '/mreader/' },
+    value: { pathname: '/mreader/' },
     writable: true,
   });
 });
@@ -69,7 +70,7 @@ describe('useMarkdownState', () => {
       expect(saveDoc).not.toHaveBeenCalled();
     });
 
-    it('onSave calls saveDoc with content object and redirects on success', async () => {
+    it('onSave calls saveDoc, updates URL and slug in-place on success', async () => {
       vi.mocked(saveDoc).mockResolvedValueOnce({ slug: 'new1234' });
       const { result } = renderHook(() => useMarkdownState());
 
@@ -83,7 +84,10 @@ describe('useMarkdownState', () => {
         expect.objectContaining({ source: 'button' }),
       );
       expect(track).toHaveBeenCalledWith('doc_save_succeeded', { slug_created: true });
-      expect(window.location.replace).toHaveBeenCalledWith('/mreader/d/new1234');
+      expect(history.pushState).toHaveBeenCalledWith({}, '', '/mreader/d/new1234');
+      expect(result.current.slug).toBe('new1234');
+      expect(result.current.mode).toBe('editor');
+      expect(result.current.isSaving).toBe(false);
     });
 
     it('onSave includes title when set', async () => {

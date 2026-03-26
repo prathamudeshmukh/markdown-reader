@@ -199,7 +199,23 @@ describe('handleDocsRequest', () => {
       );
     });
 
-    it('returns 400 when content is missing', async () => {
+    it('returns 200 for title-only update', async () => {
+      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: 'New Title', user_id: null });
+
+      const res = await handleDocsRequest(
+        makeRequest('PUT', '/mreader/api/docs/abc1234', { title: 'New Title' }),
+        env,
+      );
+
+      expect(res?.status).toBe(200);
+      expect(updateDoc).toHaveBeenCalledWith(
+        env,
+        'abc1234',
+        expect.objectContaining({ content: undefined, title: 'New Title' }),
+      );
+    });
+
+    it('returns 400 when neither content nor title is provided', async () => {
       const res = await handleDocsRequest(
         makeRequest('PUT', '/mreader/api/docs/abc1234', {}),
         env,
