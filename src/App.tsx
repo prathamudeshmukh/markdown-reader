@@ -240,9 +240,8 @@ export default function App() {
           <div
             className="flex-1 flex items-center justify-center text-sm animate-fade-in"
             style={{ color: 'var(--text-muted)', backgroundColor: 'var(--bg-primary)' }}
-          >
-            Loading…
-          </div>
+            aria-label="Loading document"
+          />
         ) : mode === 'editor' ? (
           <Editor value={markdownText} onChange={setMarkdownText} />
         ) : (

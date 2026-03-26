@@ -74,7 +74,7 @@ describe('App', () => {
   it('shows loading banner when isLoading is true', () => {
     vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, isLoading: true });
     render(<App />);
-    expect(screen.getByText(/Loading…/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Loading document')).toBeInTheDocument();
   });
 
   it('shows error banner when error is set', () => {
