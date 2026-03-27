@@ -40,6 +40,7 @@ const baseState = {
   markdownText: '',
   title: null as string | null,
   slug: null as string | null,
+  collectionId: null as string | null,
   mode: 'editor' as const,
   isLoading: false,
   isSaving: false,
@@ -49,6 +50,7 @@ const baseState = {
   setTitle: vi.fn(),
   toggleMode: vi.fn(),
   onSave: vi.fn(),
+  navigateToDoc: vi.fn(),
 };
 
 describe('App', () => {

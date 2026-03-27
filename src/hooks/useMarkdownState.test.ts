@@ -77,7 +77,7 @@ describe('useMarkdownState', () => {
       act(() => result.current.setMarkdownText('# Hello'));
       await act(() => result.current.onSave());
 
-      expect(saveDoc).toHaveBeenCalledWith({ content: '# Hello', title: undefined });
+      expect(saveDoc).toHaveBeenCalledWith({ content: '# Hello', title: undefined, collectionId: null });
       expect(addRecentDoc).toHaveBeenCalledWith('new1234', null);
       expect(track).toHaveBeenCalledWith(
         'doc_save_clicked',
@@ -98,7 +98,7 @@ describe('useMarkdownState', () => {
       act(() => result.current.setTitle('My Doc'));
       await act(() => result.current.onSave());
 
-      expect(saveDoc).toHaveBeenCalledWith({ content: '# Hello', title: 'My Doc' });
+      expect(saveDoc).toHaveBeenCalledWith({ content: '# Hello', title: 'My Doc', collectionId: null });
       expect(addRecentDoc).toHaveBeenCalledWith('new1234', 'My Doc');
     });
 
@@ -229,6 +229,88 @@ describe('useMarkdownState', () => {
 
       expect(result.current.error).toBe('Save failed');
       vi.useRealTimers();
+    });
+  });
+
+  describe('navigateToDoc', () => {
+    beforeEach(() => {
+      vi.mocked(getSlugFromPath).mockReturnValue('abc1234');
+    });
+
+    it('updates URL, sets new slug, and resets state to loading', async () => {
+      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Old', title: null });
+      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'xyz5678', content: '# New', title: null });
+      const { result } = renderHook(() => useMarkdownState());
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      act(() => result.current.navigateToDoc('xyz5678'));
+
+      expect(history.pushState).toHaveBeenCalledWith({}, '', '/mreader/d/xyz5678');
+      expect(result.current.slug).toBe('xyz5678');
+      expect(result.current.isLoading).toBe(true);
+      expect(result.current.markdownText).toBe('');
+      expect(result.current.title).toBeNull();
+    });
+
+    it('fetches and loads the new doc content after navigation', async () => {
+      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Old', title: null });
+      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'xyz5678', content: '# New', title: 'New Doc' });
+      const { result } = renderHook(() => useMarkdownState());
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      act(() => result.current.navigateToDoc('xyz5678'));
+
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+      expect(fetchDoc).toHaveBeenCalledWith('xyz5678');
+      expect(result.current.markdownText).toBe('# New');
+      expect(result.current.title).toBe('New Doc');
+    });
+
+    it('cancels pending text debounce so updateDoc is not called for the old slug', async () => {
+      vi.useFakeTimers();
+      vi.mocked(fetchDoc).mockResolvedValue({ slug: 'abc1234', content: '# Hello', title: null });
+      vi.mocked(updateDoc).mockResolvedValue(undefined);
+
+      const { result } = renderHook(() => useMarkdownState());
+      await act(() => vi.runAllTimersAsync());
+
+      act(() => result.current.setMarkdownText('# Unsaved edit'));
+      act(() => result.current.navigateToDoc('xyz5678'));
+      await act(() => vi.runAllTimersAsync());
+
+      expect(updateDoc).not.toHaveBeenCalledWith('abc1234', expect.anything());
+      vi.useRealTimers();
+    });
+
+    it('cancels pending title debounce so updateDoc is not called for the old slug', async () => {
+      vi.useFakeTimers();
+      vi.mocked(fetchDoc).mockResolvedValue({ slug: 'abc1234', content: '# Hello', title: null });
+      vi.mocked(updateDoc).mockResolvedValue(undefined);
+
+      const { result } = renderHook(() => useMarkdownState());
+      await act(() => vi.runAllTimersAsync());
+
+      act(() => result.current.setTitle('Unsaved title'));
+      act(() => result.current.navigateToDoc('xyz5678'));
+      await act(() => vi.runAllTimersAsync());
+
+      expect(updateDoc).not.toHaveBeenCalledWith('abc1234', expect.anything());
+      vi.useRealTimers();
+    });
+
+    it('clears savedLocallyRef so fetchDoc fires for the new slug after a prior save', async () => {
+      vi.mocked(getSlugFromPath).mockReturnValue(null);
+      vi.mocked(saveDoc).mockResolvedValueOnce({ slug: 'new1234' });
+      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'xyz5678', content: '# Other', title: null });
+
+      const { result } = renderHook(() => useMarkdownState());
+      act(() => result.current.setMarkdownText('# Hello'));
+      await act(() => result.current.onSave());
+      expect(result.current.slug).toBe('new1234');
+
+      act(() => result.current.navigateToDoc('xyz5678'));
+
+      await waitFor(() => expect(fetchDoc).toHaveBeenCalledWith('xyz5678'));
     });
   });
 });

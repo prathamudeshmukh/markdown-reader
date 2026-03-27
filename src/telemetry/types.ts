@@ -19,7 +19,10 @@ export type TelemetryEventName =
   | 'auth_sign_in_clicked'
   | 'auth_sign_in_email_submitted'
   | 'auth_sign_in_succeeded'
-  | 'auth_sign_out';
+  | 'auth_sign_out'
+  | 'collection_created'
+  | 'collection_deleted'
+  | 'doc_moved_to_collection';
 
 export interface TelemetrySharedProps {
   session_id: string;
@@ -78,4 +81,7 @@ export interface TelemetryPropsByEvent {
   auth_sign_in_email_submitted: Record<string, never>;
   auth_sign_in_succeeded: Record<string, never>;
   auth_sign_out: Record<string, never>;
+  collection_created: { has_parent: boolean };
+  collection_deleted: Record<string, never>;
+  doc_moved_to_collection: { to_root: boolean };
 }

@@ -196,17 +196,27 @@ export default function Header({
           <div className="hidden sm:flex items-center gap-0.5">
             <div className="w-px h-4 mx-1" style={{ backgroundColor: 'var(--border)' }} />
 
-            {/* Sidebar */}
+            {/* Sidebar — collections for signed-in, recent docs for guests */}
             <button
               onClick={onToggleSidebar}
-              title={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
-              aria-label={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
+              title={user
+                ? (sidebarOpen ? 'Hide collections' : 'Show collections')
+                : (sidebarOpen ? 'Hide recent docs' : 'Show recent docs')}
+              aria-label={user
+                ? (sidebarOpen ? 'Hide collections' : 'Show collections')
+                : (sidebarOpen ? 'Hide recent docs' : 'Show recent docs')}
               className={`${TOOL_BTN} ${sidebarOpen ? '!text-[var(--accent)] !bg-[var(--bg-secondary)]' : ''}`}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <polyline points="12 6 12 12 16 14" />
-              </svg>
+              {user ? (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+              )}
             </button>
 
             {/* Copy link */}
@@ -325,10 +335,16 @@ export default function Header({
                 }}
               >
                 <MenuItem onClick={() => handleMenuAction(onToggleSidebar)}>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
-                  </svg>
-                  Recent docs
+                  {user ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+                    </svg>
+                  )}
+                  {user ? 'Collections' : 'Recent docs'}
                 </MenuItem>
 
                 <MenuItem onClick={() => handleMenuAction(onCopyLink)} disabled={slug === null}>

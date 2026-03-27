@@ -35,7 +35,7 @@ describe('useRecentDocs', () => {
     expect(result.current.status).toBe('ready');
     if (result.current.status === 'ready') {
       expect(result.current.docs).toEqual([
-        { slug: 'abc1234', title: 'My Doc', savedAt: '2026-03-12T15:40:00.000Z' },
+        { slug: 'abc1234', title: 'My Doc', savedAt: '2026-03-12T15:40:00.000Z', collectionId: null },
       ]);
     }
     expect(fetchUserDocs).not.toHaveBeenCalled();
@@ -59,7 +59,7 @@ describe('useRecentDocs', () => {
     const user = { id: 'user-uuid', email: 'test@example.com' } as never;
     vi.mocked(useAuth).mockReturnValue({ user, isAuthLoading: false, signInWithEmail: vi.fn(), signOut: vi.fn() });
     vi.mocked(fetchUserDocs).mockResolvedValueOnce([
-      { slug: 'abc1234', title: 'Server Doc', updatedAt: '2026-03-12T15:40:00.000Z' },
+      { slug: 'abc1234', title: 'Server Doc', updatedAt: '2026-03-12T15:40:00.000Z', collectionId: null },
     ]);
 
     const { result } = renderHook(() => useRecentDocs());

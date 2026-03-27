@@ -4,8 +4,8 @@ import RecentDocsSidebar from './RecentDocsSidebar';
 import type { DisplayDoc } from '../hooks/useRecentDocs';
 
 const sampleDocs: DisplayDoc[] = [
-  { slug: 'abc1234', title: 'My First Doc', savedAt: '2026-03-12T15:40:00.000Z' },
-  { slug: 'xyz9999', title: null, savedAt: '2026-03-11T09:12:00.000Z' },
+  { slug: 'abc1234', title: 'My First Doc', savedAt: '2026-03-12T15:40:00.000Z', collectionId: null },
+  { slug: 'xyz9999', title: null, savedAt: '2026-03-11T09:12:00.000Z', collectionId: null },
 ];
 
 const onClose = vi.fn();

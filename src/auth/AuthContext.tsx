@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { getSupabaseClient } from '../realtime/supabaseRealtimeClient';
-import { setAuthToken } from '../api/docsApi';
+import { setAuthToken } from '../api/authToken';
 
 interface AuthContextValue {
   user: User | null;

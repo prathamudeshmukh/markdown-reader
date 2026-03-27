@@ -1,3 +1,6 @@
+export { setAuthToken } from './authToken';
+import { authHeaders } from './authToken';
+
 const API_BASE = '/mreader/api/docs';
 
 export interface Doc {
@@ -10,26 +13,19 @@ export interface DocSummary {
   slug: string;
   title: string | null;
   updatedAt: string;
+  collectionId: string | null;
 }
 
 export interface SaveDocInput {
   content: string;
   title?: string;
+  collectionId?: string | null;
 }
 
 export interface UpdateDocInput {
   content?: string;
   title?: string;
-}
-
-let authToken: string | undefined;
-
-export function setAuthToken(token: string | undefined): void {
-  authToken = token;
-}
-
-function authHeaders(): Record<string, string> {
-  return authToken ? { Authorization: `Bearer ${authToken}` } : {};
+  collectionId?: string | null;
 }
 
 async function parseResponse<T>(res: Response): Promise<T> {
@@ -48,19 +44,28 @@ export async function fetchDoc(slug: string): Promise<Doc> {
 }
 
 export async function saveDoc(input: SaveDocInput): Promise<{ slug: string }> {
+  const body: Record<string, unknown> = { content: input.content };
+  if (input.title !== undefined) body.title = input.title;
+  if (input.collectionId !== undefined) body.collection_id = input.collectionId;
+
   const res = await fetch(API_BASE, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify(input),
+    body: JSON.stringify(body),
   });
   return parseResponse<{ slug: string }>(res);
 }
 
 export async function updateDoc(slug: string, input: UpdateDocInput): Promise<void> {
+  const body: Record<string, unknown> = {};
+  if (input.content !== undefined) body.content = input.content;
+  if (input.title !== undefined) body.title = input.title;
+  if (input.collectionId !== undefined) body.collection_id = input.collectionId;
+
   const res = await fetch(`${API_BASE}/${slug}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify(input),
+    body: JSON.stringify(body),
   });
   await parseResponse<unknown>(res);
 }

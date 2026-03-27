@@ -47,7 +47,7 @@ describe('handleDocsRequest', () => {
 
   describe('POST /mreader/api/docs', () => {
     it('creates a doc and returns 201 with slug', async () => {
-      vi.mocked(createDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null });
+      vi.mocked(createDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null });
 
       const res = await handleDocsRequest(
         makeRequest('POST', '/mreader/api/docs', { content: '# Hello' }),
@@ -59,7 +59,7 @@ describe('handleDocsRequest', () => {
     });
 
     it('passes title to createDoc when provided', async () => {
-      vi.mocked(createDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: 'My Doc', user_id: null });
+      vi.mocked(createDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: 'My Doc', user_id: null, collection_id: null });
 
       await handleDocsRequest(
         makeRequest('POST', '/mreader/api/docs', { content: '# Hello', title: 'My Doc' }),
@@ -74,7 +74,7 @@ describe('handleDocsRequest', () => {
     });
 
     it('passes userJwt to createDoc when Authorization header present', async () => {
-      vi.mocked(createDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId });
+      vi.mocked(createDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId, collection_id: null });
 
       await handleDocsRequest(
         makeRequest('POST', '/mreader/api/docs', { content: '# Hello' }, { Authorization: `Bearer ${fakeJwt}` }),
@@ -120,7 +120,7 @@ describe('handleDocsRequest', () => {
     });
 
     it('returns user docs when authorized', async () => {
-      const docs = [{ slug: 'abc1234', title: 'My Doc', updatedAt: '2026-03-12T15:40:00.000Z' }];
+      const docs = [{ slug: 'abc1234', title: 'My Doc', updatedAt: '2026-03-12T15:40:00.000Z', collectionId: null }];
       vi.mocked(getUserDocs).mockResolvedValueOnce(docs);
 
       const res = await handleDocsRequest(
@@ -136,7 +136,7 @@ describe('handleDocsRequest', () => {
 
   describe('GET /mreader/api/docs/:slug', () => {
     it('returns 200 with doc when found', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null });
 
       const res = await handleDocsRequest(makeRequest('GET', '/mreader/api/docs/abc1234'), env);
 
@@ -145,7 +145,7 @@ describe('handleDocsRequest', () => {
     });
 
     it('forwards user JWT to getDoc when Authorization header is present', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId, collection_id: null });
 
       await handleDocsRequest(
         makeRequest('GET', '/mreader/api/docs/abc1234', undefined, { Authorization: `Bearer ${fakeJwt}` }),
@@ -156,7 +156,7 @@ describe('handleDocsRequest', () => {
     });
 
     it('passes undefined JWT to getDoc when no Authorization header', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null });
 
       await handleDocsRequest(makeRequest('GET', '/mreader/api/docs/abc1234'), env);
 
@@ -173,7 +173,7 @@ describe('handleDocsRequest', () => {
 
   describe('PUT /mreader/api/docs/:slug', () => {
     it('returns 200 with slug on successful update', async () => {
-      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Updated', title: null, user_id: null });
+      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Updated', title: null, user_id: null, collection_id: null });
 
       const res = await handleDocsRequest(
         makeRequest('PUT', '/mreader/api/docs/abc1234', { content: '# Updated' }),
@@ -185,7 +185,7 @@ describe('handleDocsRequest', () => {
     });
 
     it('passes title to updateDoc when provided', async () => {
-      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Updated', title: 'New Title', user_id: null });
+      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Updated', title: 'New Title', user_id: null, collection_id: null });
 
       await handleDocsRequest(
         makeRequest('PUT', '/mreader/api/docs/abc1234', { content: '# Updated', title: 'New Title' }),
@@ -200,7 +200,7 @@ describe('handleDocsRequest', () => {
     });
 
     it('returns 200 for title-only update', async () => {
-      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: 'New Title', user_id: null });
+      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: 'New Title', user_id: null, collection_id: null });
 
       const res = await handleDocsRequest(
         makeRequest('PUT', '/mreader/api/docs/abc1234', { title: 'New Title' }),

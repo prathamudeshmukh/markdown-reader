@@ -7,6 +7,7 @@ export interface DisplayDoc {
   slug: string;
   title: string | null;
   savedAt: string;
+  collectionId: string | null;
 }
 
 type RecentDocsState =
@@ -21,7 +22,12 @@ export function useRecentDocs(): RecentDocsState {
   useEffect(() => {
     if (!user) {
       const local = readRecentDocs().map(
-        (d: RecentDoc): DisplayDoc => ({ slug: d.slug, title: d.title ?? null, savedAt: d.savedAt }),
+        (d: RecentDoc): DisplayDoc => ({
+          slug: d.slug,
+          title: d.title ?? null,
+          savedAt: d.savedAt,
+          collectionId: null,
+        }),
       );
       setState({ status: 'ready', docs: local });
       return;
@@ -31,7 +37,12 @@ export function useRecentDocs(): RecentDocsState {
     fetchUserDocs()
       .then((docs: DocSummary[]) => {
         const display = docs.map(
-          (d): DisplayDoc => ({ slug: d.slug, title: d.title, savedAt: d.updatedAt }),
+          (d): DisplayDoc => ({
+            slug: d.slug,
+            title: d.title,
+            savedAt: d.updatedAt,
+            collectionId: d.collectionId,
+          }),
         );
         setState({ status: 'ready', docs: display });
       })

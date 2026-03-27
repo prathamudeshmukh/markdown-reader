@@ -19,8 +19,16 @@ interface MarkdownState {
 
 const DEBOUNCE_MS = 250;
 
+function getCollectionIdFromQuery(): string | null {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('collection');
+}
+
 export function useMarkdownState({ isAuthLoading = false }: { isAuthLoading?: boolean } = {}) {
   const [slug, setSlug] = useState<string | null>(() => getSlugFromPath());
+  const [collectionId, setCollectionId] = useState<string | null>(() =>
+    slug ? null : getCollectionIdFromQuery(),
+  );
 
   const [state, setState] = useState<MarkdownState>({
     markdownText: '',
@@ -119,6 +127,24 @@ export function useMarkdownState({ isAuthLoading = false }: { isAuthLoading?: bo
     });
   }, []);
 
+  const navigateToDoc = useCallback((newSlug: string) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (titleDebounceRef.current) clearTimeout(titleDebounceRef.current);
+    savedLocallyRef.current = false;
+    history.pushState({}, '', `/mreader/d/${newSlug}`);
+    setSlug(newSlug);
+    setCollectionId(null);
+    setState({
+      markdownText: '',
+      title: null,
+      mode: 'preview',
+      isLoading: true,
+      isSaving: false,
+      error: null,
+      presenceCount: 0,
+    });
+  }, []);
+
   const onSave = useCallback(async (source: InteractionSource = 'button') => {
     if (state.markdownText.length === 0) return;
 
@@ -129,18 +155,23 @@ export function useMarkdownState({ isAuthLoading = false }: { isAuthLoading?: bo
 
     setState((prev) => ({ ...prev, isSaving: true }));
     try {
-      const { slug: newSlug } = await saveDoc({ content: state.markdownText, title: state.title ?? undefined });
+      const { slug: newSlug } = await saveDoc({
+        content: state.markdownText,
+        title: state.title ?? undefined,
+        collectionId,
+      });
       addRecentDoc(newSlug, state.title);
       track('doc_save_succeeded', { slug_created: true });
       history.pushState({}, '', `/mreader/d/${newSlug}`);
       savedLocallyRef.current = true;
       setSlug(newSlug);
+      setCollectionId(null);
       setState((prev) => ({ ...prev, isSaving: false }));
     } catch (err) {
       track('doc_save_failed', { error_type: getErrorType(err) });
       setState((prev) => ({ ...prev, isSaving: false, error: (err as Error).message }));
     }
-  }, [state.markdownText, state.title]);
+  }, [state.markdownText, state.title, collectionId]);
 
-  return { ...state, slug, presenceCount, setMarkdownText, setTitle, toggleMode, onSave };
+  return { ...state, slug, collectionId, presenceCount, setMarkdownText, setTitle, toggleMode, onSave, navigateToDoc };
 }

@@ -1,11 +1,13 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useMarkdownState } from './hooks/useMarkdownState';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useRecentDocs } from './hooks/useRecentDocs';
+import { useCollections } from './hooks/useCollections';
 import Header from './components/Header';
 import Editor from './components/Editor';
 import Preview from './components/Preview';
 import RecentDocsSidebar from './components/RecentDocsSidebar';
+import CollectionsSidebar from './components/CollectionsSidebar';
 import DocTitle from './components/DocTitle';
 import QrModal from './components/QrModal';
 import EmailSignInModal from './components/EmailSignInModal';
@@ -14,6 +16,7 @@ import { getContentLengthBucket, track, type InteractionSource } from './telemet
 import { pdfToMarkdown, PdfImportError } from './utils/pdfToMarkdown';
 import { pdfFileToMarkdown, PdfApiError } from './utils/pdfApiClient';
 import { readFeatureFlags } from './config/features';
+import { EMPTY_TREE } from './types/collections';
 
 const FEATURES = readFeatureFlags();
 
@@ -21,13 +24,33 @@ const PDF_IMPORT_UNKNOWN_ERROR = 'Failed to import PDF. Please try again.';
 
 export default function App() {
   const { user, isAuthLoading, signInWithEmail, signOut } = useAuth();
-  const { markdownText, title, slug, mode, isLoading, isSaving, error, presenceCount, setMarkdownText, setTitle, toggleMode, onSave } =
+  const { markdownText, title, slug, mode, isLoading, isSaving, error, presenceCount, setMarkdownText, setTitle, toggleMode, onSave, navigateToDoc } =
     useMarkdownState({ isAuthLoading });
+
+  const collectionsHook = useCollections();
+  const collectionsTree = collectionsHook.state.status === 'ready'
+    ? collectionsHook.state.tree
+    : EMPTY_TREE;
+
+  const handleSave = useCallback(async (source: InteractionSource = 'button') => {
+    const isNewDoc = slug === null;
+    await onSave(source);
+    if (isNewDoc) collectionsHook.refresh();
+  }, [slug, onSave, collectionsHook]);
 
   const [signInOpen, setSignInOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [copiedMarkdown, setCopiedMarkdown] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const hasAutoOpenedSidebar = useRef(false);
+
+  useEffect(() => {
+    if (isAuthLoading || hasAutoOpenedSidebar.current) return;
+    if (user) {
+      setSidebarOpen(true);
+      hasAutoOpenedSidebar.current = true;
+    }
+  }, [user, isAuthLoading]);
   const [qrOpen, setQrOpen] = useState(false);
   const [isPdfImporting, setIsPdfImporting] = useState(false);
   const [pdfImportProgress, setPdfImportProgress] = useState<{ current: number; total: number } | null>(null);
@@ -109,7 +132,7 @@ export default function App() {
 
   useKeyboardShortcuts({
     onSave: () => {
-      void onSave('shortcut');
+      void handleSave('shortcut');
     },
     onToggleMode: () => toggleMode('shortcut'),
     onCopyLink: () => {
@@ -132,7 +155,6 @@ export default function App() {
     track('pdf_exported', { mode_at_export: mode });
     if (mode === 'editor') {
       toggleMode('button');
-      // Wait for re-render before printing
       setTimeout(() => window.print(), 100);
     } else {
       window.print();
@@ -143,13 +165,16 @@ export default function App() {
   const recentDocs = recentDocsState.status === 'ready' ? recentDocsState.docs : [];
 
   return (
-    <div className="h-full flex flex-col pt-16" style={{ backgroundColor: 'var(--bg-primary)' }}>
+    <div
+      className={`h-full flex flex-col pt-16 transition-[margin] duration-200 ease-in-out${user && sidebarOpen ? ' ml-64' : ''}`}
+      style={{ backgroundColor: 'var(--bg-primary)' }}
+    >
       <Header
         document={{ slug, markdownText, presenceCount }}
         ui={{ mode, isSaving, isLoading, copied, copiedMarkdown, sidebarOpen, isPdfImporting }}
         actions={{
           onToggle: () => toggleMode('button'),
-          onSave: () => { void onSave('button'); },
+          onSave: () => { void handleSave('button'); },
           onNewDoc: () => { window.location.href = '/mreader/'; },
           onExportPdf: handleExportPdf,
           onDownloadMarkdown: handleDownloadMarkdown,
@@ -174,7 +199,6 @@ export default function App() {
         </div>
       )}
 
-      {/* PDF toasts — fixed bottom-center, no layout shift */}
       {isPdfImporting && (
         <div className="fixed bottom-6 left-4 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-50 animate-slide-up">
           <div
@@ -225,12 +249,31 @@ export default function App() {
         />
       )}
 
-      <RecentDocsSidebar
-        docs={recentDocs}
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        onDocOpen={() => track('recent_doc_opened', { source: 'sidebar' })}
-      />
+      {user ? (
+        <CollectionsSidebar
+          tree={collectionsTree}
+          isOpen={sidebarOpen}
+          currentSlug={slug}
+          onClose={() => setSidebarOpen(false)}
+          onCreateCollection={collectionsHook.createCollection}
+          onRenameCollection={collectionsHook.renameCollection}
+          onDeleteCollection={collectionsHook.deleteCollection}
+          onMoveDoc={collectionsHook.moveDocToCollection}
+          onNavigateToDoc={navigateToDoc}
+          onNewDocInCollection={(collectionId) => {
+            const url = collectionId ? `/mreader/?collection=${collectionId}` : '/mreader/';
+            window.location.href = url;
+          }}
+        />
+      ) : (
+        <RecentDocsSidebar
+          docs={recentDocs}
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          onDocOpen={() => track('recent_doc_opened', { source: 'sidebar' })}
+        />
+      )}
+
       {qrOpen && <QrModal url={window.location.href} onClose={() => setQrOpen(false)} />}
 
       <DocTitle title={title} mode={mode} onChange={setTitle} />
