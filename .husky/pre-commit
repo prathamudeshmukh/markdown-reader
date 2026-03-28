@@ -1,7 +1,20 @@
-echo "Running pre-commit checks..."
+echo "Running pre-commit checks (tests + build in parallel)..."
 
-echo "\n[1/2] Running tests..."
-npm run test:run
+npm run test:run &
+TEST_PID=$!
 
-echo "\n[2/2] Running build..."
-npm run build
+npm run build &
+BUILD_PID=$!
+
+wait $TEST_PID
+TEST_EXIT=$?
+
+wait $BUILD_PID
+BUILD_EXIT=$?
+
+[ $TEST_EXIT -ne 0 ] && echo "\nPre-commit: tests failed."
+[ $BUILD_EXIT -ne 0 ] && echo "\nPre-commit: build failed."
+
+[ $TEST_EXIT -ne 0 ] || [ $BUILD_EXIT -ne 0 ] && exit 1
+
+echo "\nAll pre-commit checks passed."
