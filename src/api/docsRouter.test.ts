@@ -141,7 +141,7 @@ describe('handleDocsRequest', () => {
       const res = await handleDocsRequest(makeRequest('GET', '/mreader/api/docs/abc1234'), env);
 
       expect(res?.status).toBe(200);
-      expect(await res?.json()).toEqual({ slug: 'abc1234', content: '# Hello', title: null, user_id: null });
+      expect(await res?.json()).toEqual({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null });
     });
 
     it('forwards user JWT to getDoc when Authorization header is present', async () => {

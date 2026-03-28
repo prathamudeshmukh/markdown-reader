@@ -67,7 +67,7 @@ describe('useRecentDocs', () => {
     await waitFor(() => expect(result.current.status).toBe('ready'));
     if (result.current.status === 'ready') {
       expect(result.current.docs).toEqual([
-        { slug: 'abc1234', title: 'Server Doc', savedAt: '2026-03-12T15:40:00.000Z' },
+        { slug: 'abc1234', title: 'Server Doc', savedAt: '2026-03-12T15:40:00.000Z', collectionId: null },
       ]);
     }
     expect(readRecentDocs).not.toHaveBeenCalled();
