@@ -1,0 +1,7 @@
+echo "Running pre-commit checks..."
+
+echo "\n[1/2] Running tests..."
+npm run test:run
+
+echo "\n[2/2] Running build..."
+npm run build
