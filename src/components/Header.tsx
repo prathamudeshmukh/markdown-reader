@@ -152,7 +152,7 @@ export default function Header({
         {/* Brand */}
         <div className="flex items-center shrink-0">
           <h1
-            className="text-[17px] font-semibold tracking-wide font-display italic"
+            className="text-[15px] font-semibold tracking-tight font-sans"
             style={{ color: 'var(--text-primary)' }}
           >
             Scriptorium
@@ -328,39 +328,12 @@ export default function Header({
 
             {moreOpen && (
               <div
-                className="absolute right-0 top-full mt-2 w-52 rounded-xl p-1.5 shadow-xl z-50 animate-fade-in"
+                className="absolute right-0 top-full mt-2 w-48 rounded-xl p-1.5 shadow-xl z-50 animate-fade-in"
                 style={{
                   backgroundColor: 'var(--bg-elevated, var(--bg-primary))',
                   border: '1px solid var(--border)',
                 }}
               >
-                <MenuItem onClick={() => handleMenuAction(onToggleSidebar)}>
-                  {user ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-                    </svg>
-                  ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
-                    </svg>
-                  )}
-                  {user ? 'Collections' : 'Recent docs'}
-                </MenuItem>
-
-                <MenuItem onClick={() => handleMenuAction(onCopyLink)} disabled={slug === null}>
-                  {copied ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                    </svg>
-                  )}
-                  {copied ? 'Copied!' : 'Copy link'}
-                </MenuItem>
-
                 <MenuItem onClick={() => handleMenuAction(onCopyMarkdown)} disabled={markdownText.length === 0}>
                   {copiedMarkdown ? (
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -379,7 +352,7 @@ export default function Header({
                     <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" />
                     <rect x="5" y="5" width="3" height="3" fill="currentColor" stroke="none" /><rect x="16" y="5" width="3" height="3" fill="currentColor" stroke="none" /><rect x="5" y="16" width="3" height="3" fill="currentColor" stroke="none" />
                   </svg>
-                  Show QR code
+                  QR code
                 </MenuItem>
 
                 <div className="my-1 h-px" style={{ backgroundColor: 'var(--border-light)' }} />
@@ -407,39 +380,17 @@ export default function Header({
                   </svg>
                   Markdown
                 </MenuItem>
-
-                <MenuItem onClick={() => handleMenuAction(onNewDoc)} disabled={slug === null && markdownText.length === 0}>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-                  </svg>
-                  New doc
-                </MenuItem>
-
-                {!isAuthLoading && (
-                  <>
-                    <div className="my-1 h-px" style={{ backgroundColor: 'var(--border-light)' }} />
-                    {user ? (
-                      <MenuItem onClick={() => handleMenuAction(onSignOut)}>
-                        Sign out
-                      </MenuItem>
-                    ) : (
-                      <MenuItem onClick={() => handleMenuAction(onSignInClick)}>
-                        Sign in
-                      </MenuItem>
-                    )}
-                  </>
-                )}
               </div>
             )}
           </div>
 
-          {/* ── Mode toggle (always visible) ────────────── */}
-          <div className="w-px h-4 mx-1.5" style={{ backgroundColor: 'var(--border)' }} />
+          {/* ── Mode toggle (desktop only — mobile uses BottomActionBar) ── */}
+          <div className="hidden sm:block w-px h-4 mx-1.5" style={{ backgroundColor: 'var(--border)' }} />
           <button
             onClick={onToggle}
             title={mode === 'editor' ? 'Show Preview' : 'Show Editor'}
             aria-label={mode === 'editor' ? 'Show Preview' : 'Show Editor'}
-            className="flex items-center gap-1.5 px-2.5 h-8 rounded-md text-xs font-medium transition-all duration-150"
+            className="hidden sm:flex items-center gap-1.5 px-2.5 h-8 rounded-md text-xs font-medium transition-all duration-150"
             style={{
               color: 'var(--accent)',
               backgroundColor: 'color-mix(in srgb, var(--accent) 10%, transparent)',
@@ -450,7 +401,7 @@ export default function Header({
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
                 </svg>
-                <span className="hidden sm:inline">Preview</span>
+                Preview
               </>
             ) : (
               <>
@@ -458,7 +409,7 @@ export default function Header({
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                 </svg>
-                <span className="hidden sm:inline">Editor</span>
+                Editor
               </>
             )}
           </button>

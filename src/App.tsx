@@ -4,6 +4,7 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useRecentDocs } from './hooks/useRecentDocs';
 import { useCollections } from './hooks/useCollections';
 import Header from './components/Header';
+import BottomActionBar from './components/BottomActionBar';
 import Editor from './components/Editor';
 import Preview from './components/Preview';
 import RecentDocsSidebar from './components/RecentDocsSidebar';
@@ -166,7 +167,7 @@ export default function App() {
 
   return (
     <div
-      className={`h-full flex flex-col pt-16 transition-[margin] duration-200 ease-in-out${user && sidebarOpen ? ' ml-64' : ''}`}
+      className={`h-full flex flex-col pt-16 pb-[calc(56px+env(safe-area-inset-bottom))] sm:pb-0 transition-[margin] duration-200 ease-in-out${user && sidebarOpen ? ' ml-64' : ''}`}
       style={{ backgroundColor: 'var(--bg-primary)' }}
     >
       <Header
@@ -275,6 +276,24 @@ export default function App() {
       )}
 
       {qrOpen && <QrModal url={window.location.href} onClose={() => setQrOpen(false)} />}
+
+      <BottomActionBar
+        document={{ slug, markdownText, presenceCount }}
+        ui={{ mode, isSaving, isLoading, copied, copiedMarkdown, sidebarOpen, isPdfImporting }}
+        actions={{
+          onToggle: () => toggleMode('button'),
+          onSave: () => { void handleSave('button'); },
+          onCopyLink: () => { void copyLink('button'); },
+          onNewDoc: () => { window.location.href = '/mreader/'; },
+          onToggleSidebar: () => setSidebarOpen((prev) => !prev),
+          onImportPdf: handleImportPdf,
+          onExportPdf: handleExportPdf,
+          onDownloadMarkdown: handleDownloadMarkdown,
+          onShowQr: openQr,
+          onCopyMarkdown: () => { void copyMarkdown(); },
+        }}
+        auth={{ user }}
+      />
 
       <DocTitle title={title} mode={mode} onChange={setTitle} />
 

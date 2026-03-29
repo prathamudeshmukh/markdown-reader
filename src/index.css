@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,38 +6,38 @@
 
 /* ── Design tokens ─────────────────────────────────────────── */
 :root {
-  --bg-primary:    #f9f4ea;
-  --bg-secondary:  #f2ead8;
-  --bg-elevated:   #fffef9;
-  --text-primary:  #2b2118;
-  --text-secondary:#6b5640;
-  --text-muted:    #9c8070;
-  --accent:        #9c6130;
-  --accent-hover:  #7e4d24;
-  --border:        #e0d5c5;
-  --border-light:  #ede7db;
-  --selection-bg:  rgba(196, 160, 74, 0.28);
+  --bg-primary:    #fafafa;
+  --bg-secondary:  #f4f4f5;
+  --bg-elevated:   #ffffff;
+  --text-primary:  #09090b;
+  --text-secondary:#52525b;
+  --text-muted:    #a1a1aa;
+  --accent:        #6366f1;
+  --accent-hover:  #4f46e5;
+  --border:        #e4e4e7;
+  --border-light:  #f4f4f5;
+  --selection-bg:  rgba(99, 102, 241, 0.15);
 
   /* Semi-transparent surfaces for header/toasts */
-  --surface-glass: rgba(249, 244, 234, 0.96);
-  --toast-glass:   rgba(249, 244, 234, 0.94);
+  --surface-glass: rgba(250, 250, 250, 0.95);
+  --toast-glass:   rgba(250, 250, 250, 0.93);
 }
 
 .dark {
-  --bg-primary:    #181310;
-  --bg-secondary:  #211c14;
-  --bg-elevated:   #231e16;
-  --text-primary:  #e8dcc8;
-  --text-secondary:#a8927a;
-  --text-muted:    #6a5948;
-  --accent:        #d4904a;
-  --accent-hover:  #e8a85e;
-  --border:        #332a20;
-  --border-light:  #2b2318;
-  --selection-bg:  rgba(212, 144, 74, 0.22);
+  --bg-primary:    #0d0d0d;
+  --bg-secondary:  #161616;
+  --bg-elevated:   #1a1a1a;
+  --text-primary:  #fafafa;
+  --text-secondary:#a1a1aa;
+  --text-muted:    #52525b;
+  --accent:        #818cf8;
+  --accent-hover:  #a5b4fc;
+  --border:        #262626;
+  --border-light:  #1f1f1f;
+  --selection-bg:  rgba(129, 140, 248, 0.20);
 
-  --surface-glass: rgba(24, 19, 16, 0.96);
-  --toast-glass:   rgba(24, 19, 16, 0.94);
+  --surface-glass: rgba(13, 13, 13, 0.96);
+  --toast-glass:   rgba(13, 13, 13, 0.94);
 }
 
 /* ── Base ─────────────────────────────────────────────────── */
@@ -48,6 +48,7 @@ html, body, #root {
 body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
+  font-family: 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -71,9 +72,9 @@ body {
 
 /* ── Prose / typography overrides ────────────────────────── */
 .prose {
-  font-family: 'Lora', Georgia, serif;
+  font-family: 'Inter', system-ui, sans-serif;
   color: var(--text-primary);
-  line-height: 1.8;
+  line-height: 1.75;
 }
 
 .prose h1,
@@ -82,13 +83,14 @@ body {
 .prose h4,
 .prose h5,
 .prose h6 {
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: 'Inter', system-ui, sans-serif;
   color: var(--text-primary);
-  font-weight: 600;
+  font-weight: 700;
 }
 
-.prose h1 { letter-spacing: -0.02em; }
-.prose h2 { letter-spacing: -0.015em; }
+.prose h1 { letter-spacing: -0.025em; }
+.prose h2 { letter-spacing: -0.02em; }
+.prose h3 { letter-spacing: -0.015em; }
 
 .prose code,
 .prose pre {

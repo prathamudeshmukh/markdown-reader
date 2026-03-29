@@ -10,7 +10,7 @@ export default function DocTitle({ title, mode, onChange }: DocTitleProps) {
     return (
       <div className="max-w-2xl mx-auto w-full px-6 sm:px-10 pt-10 pb-0">
         <h1
-          className="text-2xl font-bold font-display"
+          className="text-2xl font-bold font-sans"
           style={{ color: 'var(--text-primary)' }}
         >
           {title}
@@ -32,7 +32,7 @@ export default function DocTitle({ title, mode, onChange }: DocTitleProps) {
             (e.currentTarget as HTMLInputElement).blur();
           }
         }}
-        className="w-full bg-transparent outline-none text-2xl font-bold font-display"
+        className="w-full bg-transparent outline-none text-2xl font-bold font-sans"
         style={{
           color: 'var(--text-primary)',
           caretColor: 'var(--accent)',
