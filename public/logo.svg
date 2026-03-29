@@ -1,0 +1,22 @@
+<svg width="512" height="512" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g" x1="44" y1="46" x2="156" y2="154" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#c7d2fe"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Badge background -->
+  <rect width="200" height="200" rx="48" fill="#111111"/>
+  <!-- 1px inner border -->
+  <rect x="0.5" y="0.5" width="199" height="199" rx="47.5" stroke="#262626" stroke-width="1"/>
+
+  <!-- # mark: left vertical -->
+  <rect x="72" y="46" width="12" height="108" rx="6" fill="url(#g)"/>
+  <!-- # mark: right vertical -->
+  <rect x="116" y="46" width="12" height="108" rx="6" fill="url(#g)"/>
+  <!-- # mark: top horizontal -->
+  <rect x="44" y="79" width="112" height="12" rx="6" fill="url(#g)"/>
+  <!-- # mark: bottom horizontal -->
+  <rect x="44" y="109" width="112" height="12" rx="6" fill="url(#g)"/>
+</svg>

@@ -150,12 +150,26 @@ export default function Header({
         style={{ borderBottom: '1px solid var(--border)' }}
       >
         {/* Brand */}
-        <div className="flex items-center shrink-0">
+        <div className="flex items-center gap-2.5 shrink-0">
+          <svg width="28" height="28" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <linearGradient id="logo-gradient" x1="44" y1="46" x2="156" y2="154" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="#c7d2fe" />
+                <stop offset="100%" stopColor="#6366f1" />
+              </linearGradient>
+            </defs>
+            <rect width="200" height="200" rx="48" fill="#111111" />
+            <rect x="0.5" y="0.5" width="199" height="199" rx="47.5" stroke="#262626" strokeWidth="1" />
+            <rect x="72" y="46" width="12" height="108" rx="6" fill="url(#logo-gradient)" />
+            <rect x="116" y="46" width="12" height="108" rx="6" fill="url(#logo-gradient)" />
+            <rect x="44" y="79" width="112" height="12" rx="6" fill="url(#logo-gradient)" />
+            <rect x="44" y="109" width="112" height="12" rx="6" fill="url(#logo-gradient)" />
+          </svg>
           <h1
-            className="text-[15px] font-semibold tracking-tight font-sans"
+            className="hidden sm:block text-[15px] font-semibold tracking-tight font-sans"
             style={{ color: 'var(--text-primary)' }}
           >
-            Scriptorium
+            Scripto<span style={{ color: 'var(--accent)' }}>rium</span>
           </h1>
         </div>
 
