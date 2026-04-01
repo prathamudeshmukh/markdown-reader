@@ -3,10 +3,12 @@ import { useMarkdownState } from './hooks/useMarkdownState';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useRecentDocs } from './hooks/useRecentDocs';
 import { useCollections } from './hooks/useCollections';
+import { useHeadings } from './hooks/useHeadings';
 import Header from './components/Header';
 import BottomActionBar from './components/BottomActionBar';
 import Editor from './components/Editor';
 import Preview from './components/Preview';
+import TableOfContents, { MobileToc } from './components/TableOfContents';
 import RecentDocsSidebar from './components/RecentDocsSidebar';
 import CollectionsSidebar from './components/CollectionsSidebar';
 import DocTitle from './components/DocTitle';
@@ -43,7 +45,13 @@ export default function App() {
   const [copied, setCopied] = useState(false);
   const [copiedMarkdown, setCopiedMarkdown] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [tocOpen, setTocOpen] = useState(true);
+  const [mobileTocOpen, setMobileTocOpen] = useState(false);
+  const previewRef = useRef<HTMLDivElement>(null);
   const hasAutoOpenedSidebar = useRef(false);
+
+  const { headings, activeId } = useHeadings(markdownText, previewRef);
+  const hasToc = headings.filter((h) => h.level !== 1).length >= 2;
 
   useEffect(() => {
     if (isAuthLoading || hasAutoOpenedSidebar.current) return;
@@ -293,9 +301,8 @@ export default function App() {
           onCopyMarkdown: () => { void copyMarkdown(); },
         }}
         auth={{ user }}
+        toc={{ isOpen: mobileTocOpen, hasHeadings: hasToc, onToggle: () => setMobileTocOpen((prev) => !prev) }}
       />
-
-      <DocTitle title={title} mode={mode} onChange={setTitle} />
 
       <main className="flex-1 flex flex-col overflow-hidden">
         {isLoading ? (
@@ -305,11 +312,34 @@ export default function App() {
             aria-label="Loading document"
           />
         ) : mode === 'editor' ? (
-          <Editor value={markdownText} onChange={setMarkdownText} />
+          <>
+            <DocTitle title={title} mode={mode} onChange={setTitle} />
+            <Editor value={markdownText} onChange={setMarkdownText} />
+          </>
         ) : (
-          <Preview content={markdownText} />
+          <div className="flex-1 min-h-0 flex flex-row overflow-hidden">
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <DocTitle title={title} mode={mode} onChange={setTitle} />
+              <Preview ref={previewRef} content={markdownText} />
+            </div>
+            <TableOfContents
+              headings={headings}
+              activeId={activeId}
+              isOpen={tocOpen}
+              onToggle={() => setTocOpen((prev) => !prev)}
+            />
+          </div>
         )}
       </main>
+
+      {mode === 'preview' && (
+        <MobileToc
+          headings={headings}
+          activeId={activeId}
+          isOpen={mobileTocOpen}
+          onToggle={() => setMobileTocOpen((prev) => !prev)}
+        />
+      )}
     </div>
   );
 }

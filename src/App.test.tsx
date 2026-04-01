@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 vi.mock('./hooks/useMarkdownState');
 vi.mock('./hooks/useKeyboardShortcuts', () => ({ useKeyboardShortcuts: vi.fn() }));
 vi.mock('./hooks/useRecentDocs', () => ({ useRecentDocs: vi.fn(() => ({ status: 'ready', docs: [] })) }));
+vi.mock('./hooks/useHeadings', () => ({ useHeadings: vi.fn(() => ({ headings: [], activeId: null })) }));
 vi.mock('./telemetry', () => ({
   track: vi.fn(),
   getContentLengthBucket: vi.fn(() => 'xs'),

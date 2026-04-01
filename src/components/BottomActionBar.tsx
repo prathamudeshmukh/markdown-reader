@@ -1,10 +1,17 @@
 import type { DocumentState, UiState, HeaderActions, AuthState } from './Header';
 
+interface TocTriggerProps {
+  isOpen: boolean;
+  hasHeadings: boolean;
+  onToggle: () => void;
+}
+
 interface BottomActionBarProps {
   document: DocumentState;
   ui: UiState;
   actions: Pick<HeaderActions, 'onToggle' | 'onSave' | 'onCopyLink' | 'onNewDoc' | 'onToggleSidebar' | 'onImportPdf' | 'onExportPdf' | 'onDownloadMarkdown' | 'onShowQr' | 'onCopyMarkdown'>;
   auth: Pick<AuthState, 'user'>;
+  toc?: TocTriggerProps;
 }
 
 function Spinner() {
@@ -46,6 +53,7 @@ export default function BottomActionBar({
   ui: { mode, isSaving, isLoading, copied, sidebarOpen },
   actions: { onToggle, onSave, onCopyLink, onNewDoc, onToggleSidebar },
   auth: { user },
+  toc,
 }: BottomActionBarProps) {
   const isNewDoc = slug === null;
   const isEmpty = markdownText.length === 0;
@@ -103,6 +111,24 @@ export default function BottomActionBar({
 
         {/* Divider */}
         <div className="w-px self-stretch my-3" style={{ backgroundColor: 'var(--border-light)' }} />
+
+        {/* Contents — visible only in preview mode when document has headings */}
+        {mode === 'preview' && toc?.hasHeadings && (
+          <>
+            <BarButton
+              onClick={toc.onToggle}
+              active={toc.isOpen}
+              label="Contents"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="12" x2="15" y2="12" />
+                <line x1="3" y1="18" x2="12" y2="18" />
+              </svg>
+            </BarButton>
+            <div className="w-px self-stretch my-3" style={{ backgroundColor: 'var(--border-light)' }} />
+          </>
+        )}
 
         {/* Save — centre, slightly elevated */}
         <div className="flex flex-col items-center justify-center flex-1 py-2">
