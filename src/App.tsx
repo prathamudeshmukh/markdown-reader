@@ -48,7 +48,7 @@ export default function App() {
   useEffect(() => {
     if (isAuthLoading || hasAutoOpenedSidebar.current) return;
     if (user) {
-      setSidebarOpen(true);
+      setSidebarOpen(window.innerWidth >= 640);
       hasAutoOpenedSidebar.current = true;
     }
   }, [user, isAuthLoading]);
