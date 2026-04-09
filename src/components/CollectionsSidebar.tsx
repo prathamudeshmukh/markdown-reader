@@ -74,6 +74,12 @@ export default function CollectionsSidebar({
   const [createDraft, setCreateDraft] = useState('');
   const [movingDocSlug, setMovingDocSlug] = useState<string | null>(null);
   const createInputRef = useRef<HTMLInputElement>(null);
+  const [enableTransition, setEnableTransition] = useState(false);
+
+  useEffect(() => {
+    const id = setTimeout(() => setEnableTransition(true), 0);
+    return () => clearTimeout(id);
+  }, []);
 
   // Auto-expand the collection containing the current doc
   useEffect(() => {
@@ -164,7 +170,7 @@ export default function CollectionsSidebar({
       className={[
         'fixed inset-y-0 left-0 z-40 w-64 pt-16',
         'flex flex-col overflow-hidden',
-        'transition-transform duration-200 ease-in-out',
+        enableTransition ? 'transition-transform duration-200 ease-in-out' : '',
         isOpen ? 'translate-x-0' : '-translate-x-full',
       ].join(' ')}
       style={{

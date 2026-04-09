@@ -77,6 +77,17 @@ body {
   line-height: 1.75;
 }
 
+.prose p,
+.prose li,
+.prose strong,
+.prose em,
+.prose dt,
+.prose dd,
+.prose label,
+.prose span {
+  color: var(--text-primary);
+}
+
 .prose h1,
 .prose h2,
 .prose h3,
@@ -95,6 +106,14 @@ body {
 .prose code,
 .prose pre {
   font-family: 'IBM Plex Mono', 'Courier New', monospace;
+}
+
+.prose :not(pre) > code {
+  color: var(--text-primary);
+  background-color: var(--bg-secondary);
+  padding: 0.1em 0.35em;
+  border-radius: 0.25em;
+  border: 1px solid var(--border);
 }
 
 .prose pre {
@@ -126,8 +145,16 @@ body {
   border-bottom-color: var(--border);
 }
 
+.prose thead th {
+  color: var(--text-primary);
+}
+
 .prose tbody tr {
   border-bottom-color: var(--border-light);
+}
+
+.prose tbody td {
+  color: var(--text-primary);
 }
 
 /* ── Scrollbar ────────────────────────────────────────────── */
