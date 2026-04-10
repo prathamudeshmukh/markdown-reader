@@ -1,3 +1,5 @@
+import { NewDocIcon, NewFolderIcon, RenameIcon, DeleteIcon } from './SidebarIcons';
+
 interface CollectionContextMenuProps {
   collectionName: string;
   onNewDoc: () => void;
@@ -19,15 +21,24 @@ export default function CollectionContextMenu({
     <>
       <div className="fixed inset-0 z-40" onClick={onClose} aria-hidden="true" />
       <div
-        className="absolute right-0 top-8 z-50 w-44 rounded shadow-lg overflow-hidden"
-        style={{ backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
+        className="absolute right-0 top-7 z-50 w-48 rounded-lg overflow-hidden py-1"
+        style={{
+          backgroundColor: 'var(--bg-elevated)',
+          border: '1px solid var(--border)',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.06)',
+        }}
         role="menu"
       >
-        <MenuItem label="New doc here" onClick={onNewDoc} />
-        <MenuItem label="New sub-collection" onClick={onNewSubCollection} />
-        <div style={{ height: '1px', backgroundColor: 'var(--border-light)', margin: '2px 0' }} />
-        <MenuItem label="Rename" onClick={onRename} />
-        <MenuItem label={`Delete "${collectionName}"`} onClick={onDelete} isDanger />
+        <MenuItem label="New doc here" icon={<NewDocIcon />} onClick={onNewDoc} />
+        <MenuItem label="New sub-collection" icon={<NewFolderIcon />} onClick={onNewSubCollection} />
+        <div style={{ height: '1px', backgroundColor: 'var(--border-light)', margin: '4px 8px' }} />
+        <MenuItem label="Rename" icon={<RenameIcon />} onClick={onRename} />
+        <MenuItem
+          label={`Delete "${collectionName}"`}
+          icon={<DeleteIcon />}
+          onClick={onDelete}
+          isDanger
+        />
       </div>
     </>
   );
@@ -35,21 +46,31 @@ export default function CollectionContextMenu({
 
 interface MenuItemProps {
   label: string;
+  icon: React.ReactNode;
   onClick: () => void;
   isDanger?: boolean;
 }
 
-function MenuItem({ label, onClick, isDanger = false }: MenuItemProps) {
+function MenuItem({ label, icon, onClick, isDanger = false }: MenuItemProps) {
   return (
     <button
       onClick={onClick}
-      className="w-full px-3 py-2 text-xs text-left transition-colors"
+      className="w-full px-3 py-1.5 text-xs text-left transition-colors flex items-center gap-2.5"
       style={{ color: isDanger ? '#dc2626' : 'var(--text-primary)' }}
-      onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = isDanger ? '#fef2f2' : 'var(--border-light)'; }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; }}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.backgroundColor = isDanger
+          ? 'rgba(220,38,38,0.06)'
+          : 'var(--border-light)';
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+      }}
       role="menuitem"
     >
-      {label}
+      <span className="shrink-0" style={{ opacity: isDanger ? 1 : 0.65 }}>
+        {icon}
+      </span>
+      <span className="truncate">{label}</span>
     </button>
   );
 }

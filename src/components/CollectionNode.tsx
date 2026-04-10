@@ -3,6 +3,21 @@ import type { CollectionNode as CollectionNodeType, CollectionTree, CreateCollec
 import DocRow from './DocRow';
 import CollectionContextMenu from './CollectionContextMenu';
 import MoveDocPopover from './MoveDocPopover';
+import { ChevronIcon, FolderIcon, KebabIcon } from './SidebarIcons';
+import { SidebarActionButton } from './SidebarIconButton';
+import { INDENT_BASE, INDENT_STEP } from './sidebar.constants';
+
+// All callbacks the parent must supply. Grouped to keep CollectionNodeProps
+// under the 3-parameter smell threshold (replaces 7 individual callback props).
+export interface CollectionNodeActions {
+  onToggle: () => void;
+  onRename: (id: string, name: string) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+  onNewDoc: (collectionId: string) => void;
+  onNewSubCollection: (input: CreateCollectionInput) => void;
+  onNavigateToDoc: (slug: string) => void;
+  onMoveDoc: (slug: string, collectionId: string | null) => void;
+}
 
 interface CollectionNodeProps {
   node: CollectionNodeType;
@@ -10,14 +25,55 @@ interface CollectionNodeProps {
   isExpanded: boolean;
   currentSlug: string | null;
   tree: CollectionTree;
-  onToggle: () => void;
-  onRename: (id: string, name: string) => Promise<void>;
-  onDelete: (id: string) => void;
-  onNewDoc: (collectionId: string) => void;
-  onNewSubCollection: (input: CreateCollectionInput) => void;
-  onNavigateToDoc: (slug: string) => void;
-  onMoveDoc: (slug: string, collectionId: string | null) => void;
+  actions: CollectionNodeActions;
   children?: React.ReactNode;
+}
+
+function totalDocs(node: CollectionNodeType): number {
+  return node.docs.length + node.children.reduce((acc, child) => acc + totalDocs(child), 0);
+}
+
+function DeleteConfirmation({
+  name,
+  onCancel,
+  onConfirm,
+}: {
+  name: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div
+      className="mx-2 mb-1.5 p-2.5 rounded-md text-xs"
+      style={{
+        backgroundColor: 'rgba(220, 38, 38, 0.06)',
+        border: '1px solid rgba(220, 38, 38, 0.2)',
+      }}
+    >
+      <p className="mb-2 leading-snug" style={{ color: 'var(--text-primary)' }}>
+        Delete <span style={{ fontWeight: 600 }}>&quot;{name}&quot;</span>?
+        Its docs will move to root.
+      </p>
+      <div className="flex gap-1.5">
+        <button
+          onClick={onCancel}
+          className="px-2.5 py-1 rounded-md text-xs transition-colors"
+          style={{ color: 'var(--text-muted)', backgroundColor: 'var(--border-light)' }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--border)'; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--border-light)'; }}
+        >
+          Cancel
+        </button>
+        <button
+          onClick={onConfirm}
+          className="px-2.5 py-1 rounded-md text-xs font-medium"
+          style={{ backgroundColor: '#dc2626', color: '#fff' }}
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export default function CollectionNode({
@@ -26,17 +82,12 @@ export default function CollectionNode({
   isExpanded,
   currentSlug,
   tree,
-  onToggle,
-  onRename,
-  onDelete,
-  onNewDoc,
-  onNewSubCollection,
-  onNavigateToDoc,
-  onMoveDoc,
+  actions,
   children,
 }: CollectionNodeProps) {
   const { collection } = node;
-  const paddingLeft = 8 + depth * 16;
+  const paddingLeft = INDENT_BASE + depth * INDENT_STEP;
+  const docCount = totalDocs(node);
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
@@ -52,7 +103,7 @@ export default function CollectionNode({
   function commitRename() {
     const trimmed = draftName.trim();
     if (trimmed && trimmed !== collection.name) {
-      void onRename(collection.id, trimmed);
+      void actions.onRename(collection.id, trimmed);
     } else {
       setDraftName(collection.name);
     }
@@ -65,38 +116,30 @@ export default function CollectionNode({
   }
 
   function handleMoveDoc(slug: string, collectionId: string | null) {
-    onMoveDoc(slug, collectionId);
+    actions.onMoveDoc(slug, collectionId);
     setMovingDocSlug(null);
+  }
+
+  function handleDeleteConfirmed() {
+    setConfirmDelete(false);
+    void actions.onDelete(collection.id);
   }
 
   return (
     <div>
       {/* Collection row */}
-      <div
-        className="relative group flex items-center gap-1 py-1.5 pr-2"
-        style={{ paddingLeft }}
-      >
-        {/* Expand/collapse chevron */}
+      <div className="relative group flex items-center gap-1 py-1.5 pr-2" style={{ paddingLeft }}>
         <button
-          onClick={onToggle}
-          className="shrink-0 flex items-center justify-center w-4 h-4 rounded transition-colors"
+          onClick={actions.onToggle}
+          className="shrink-0 flex items-center justify-center w-4 h-4"
           style={{ color: 'var(--text-muted)' }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; }}
           aria-label={isExpanded ? 'Collapse' : 'Expand'}
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-3 w-3 transition-transform"
-            style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}
-            viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-            strokeLinecap="round" strokeLinejoin="round"
-          >
-            <polyline points="9 18 15 12 9 6" />
-          </svg>
+          <ChevronIcon isExpanded={isExpanded} />
         </button>
 
-        {/* Name or rename input */}
+        <FolderIcon isOpen={isExpanded} />
+
         {isRenaming ? (
           <input
             ref={renameInputRef}
@@ -104,7 +147,7 @@ export default function CollectionNode({
             onChange={(e) => setDraftName(e.target.value)}
             onBlur={commitRename}
             onKeyDown={handleRenameKeyDown}
-            className="flex-1 min-w-0 text-xs px-1 rounded outline-none"
+            className="flex-1 min-w-0 text-xs px-1.5 py-0.5 rounded-md outline-none"
             style={{
               backgroundColor: 'var(--bg-primary)',
               border: '1px solid var(--accent)',
@@ -118,31 +161,40 @@ export default function CollectionNode({
             className="flex-1 min-w-0 text-xs font-medium text-left truncate"
             style={{ color: 'var(--text-primary)' }}
             onDoubleClick={() => { setIsRenaming(true); setDraftName(collection.name); }}
-            onClick={onToggle}
+            onClick={actions.onToggle}
           >
             {collection.name}
           </button>
         )}
 
-        {/* Kebab menu */}
-        <button
+        {!isRenaming && docCount > 0 && (
+          <span
+            className="shrink-0 text-[9px] px-1.5 py-0.5 rounded-full tabular-nums"
+            style={{
+              color: 'var(--text-muted)',
+              backgroundColor: 'var(--border-light)',
+              border: '1px solid var(--border)',
+            }}
+          >
+            {docCount}
+          </span>
+        )}
+
+        <SidebarActionButton
           onClick={(e) => { e.stopPropagation(); setMenuOpen((prev) => !prev); }}
-          className="shrink-0 flex items-center justify-center w-5 h-5 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-          style={{ color: 'var(--text-muted)' }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--border)'; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; }}
-          aria-label="Collection options"
+          label="Collection options"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
-            <circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" />
-          </svg>
-        </button>
+          <KebabIcon />
+        </SidebarActionButton>
 
         {menuOpen && !confirmDelete && (
           <CollectionContextMenu
             collectionName={collection.name}
-            onNewDoc={() => { setMenuOpen(false); onNewDoc(collection.id); }}
-            onNewSubCollection={() => { setMenuOpen(false); onNewSubCollection({ name: '', parentId: collection.id }); }}
+            onNewDoc={() => { setMenuOpen(false); actions.onNewDoc(collection.id); }}
+            onNewSubCollection={() => {
+              setMenuOpen(false);
+              actions.onNewSubCollection({ name: '', parentId: collection.id });
+            }}
             onRename={() => { setMenuOpen(false); setIsRenaming(true); setDraftName(collection.name); }}
             onDelete={() => { setMenuOpen(false); setConfirmDelete(true); }}
             onClose={() => setMenuOpen(false)}
@@ -150,44 +202,30 @@ export default function CollectionNode({
         )}
       </div>
 
-      {/* Inline delete confirmation */}
       {confirmDelete && (
-        <div
-          className="mx-2 mb-1 p-2 rounded text-xs"
-          style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca' }}
-        >
-          <p className="mb-1.5" style={{ color: '#991b1b' }}>
-            Delete &quot;{collection.name}&quot;? Its docs will move to root.
-          </p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setConfirmDelete(false)}
-              className="px-2 py-1 rounded text-xs transition-colors"
-              style={{ color: 'var(--text-muted)', backgroundColor: 'var(--border-light)' }}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => { setConfirmDelete(false); onDelete(collection.id); }}
-              className="px-2 py-1 rounded text-xs"
-              style={{ backgroundColor: '#dc2626', color: '#fff' }}
-            >
-              Delete
-            </button>
-          </div>
-        </div>
+        <DeleteConfirmation
+          name={collection.name}
+          onCancel={() => setConfirmDelete(false)}
+          onConfirm={handleDeleteConfirmed}
+        />
       )}
 
-      {/* Expanded content */}
-      {isExpanded && (
-        <div>
+      {/* Animated expand/collapse via CSS grid */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateRows: isExpanded ? '1fr' : '0fr',
+          transition: 'grid-template-rows 0.18s cubic-bezier(0.4, 0, 0.2, 1)',
+        }}
+      >
+        <div style={{ overflow: 'hidden' }}>
           {node.docs.map((doc) => (
             <div key={doc.slug} className="relative">
               <DocRow
                 doc={doc}
                 isActive={doc.slug === currentSlug}
                 depth={depth + 1}
-                onNavigateToDoc={onNavigateToDoc}
+                onNavigateToDoc={actions.onNavigateToDoc}
                 onMoveDoc={(slug) => setMovingDocSlug(slug)}
               />
               {movingDocSlug === doc.slug && (
@@ -202,7 +240,7 @@ export default function CollectionNode({
           ))}
           {children}
         </div>
-      )}
+      </div>
     </div>
   );
 }
