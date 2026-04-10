@@ -158,7 +158,7 @@ export default function App() {
 
   return (
     <div
-      className="h-full flex flex-col pt-16 pb-[calc(56px+env(safe-area-inset-bottom))] sm:pb-0"
+      className="h-full flex flex-col pt-[57px] pb-[calc(56px+env(safe-area-inset-bottom))] sm:pb-0"
       style={{ backgroundColor: 'var(--bg-primary)' }}
     >
       <Header

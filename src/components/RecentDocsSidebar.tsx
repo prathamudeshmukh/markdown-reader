@@ -32,7 +32,7 @@ export default function RecentDocsSidebar({ docs, isOpen, onClose, onDocOpen }: 
       {/* Sidebar panel */}
       <aside
         className={[
-          'fixed inset-y-0 left-0 z-40 w-56 pt-16',
+          'fixed inset-y-0 left-0 z-40 w-56 pt-[57px]',
           'flex flex-col overflow-y-auto',
           'transition-transform duration-200 ease-in-out',
           isOpen ? 'translate-x-0' : '-translate-x-full',
