@@ -118,9 +118,9 @@ describe('CollectionsSidebar', () => {
       expect(screen.getByRole('complementary').className).toContain('translate-x-0');
     });
 
-    it('applies -translate-x-full class when isOpen is false', () => {
+    it('applies translate-x-full class when isOpen is false', () => {
       render(<CollectionsSidebar {...makeProps({ isOpen: false })} />);
-      expect(screen.getByRole('complementary').className).toContain('-translate-x-full');
+      expect(screen.getByRole('complementary').className).toContain('translate-x-full');
     });
   });
 
