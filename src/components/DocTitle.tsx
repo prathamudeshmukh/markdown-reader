@@ -8,19 +8,35 @@ export default function DocTitle({ title, mode, onChange }: DocTitleProps) {
   if (mode === 'preview') {
     if (!title) return null;
     return (
-      <div className="max-w-3xl mx-auto w-full px-3 sm:px-10 pt-10 pb-4">
+      <div className="max-w-3xl mx-auto w-full px-3 sm:px-10 pt-10 pb-0">
         <h1
-          className="text-2xl font-bold font-sans"
-          style={{ color: 'var(--text-primary)' }}
+          style={{
+            fontFamily: 'Inter, system-ui, sans-serif',
+            fontSize: '1.5rem',
+            fontWeight: 700,
+            letterSpacing: '-0.02em',
+            lineHeight: 1.15,
+            color: 'var(--text-primary)',
+            margin: 0,
+            paddingBottom: '1rem',
+          }}
         >
           {title}
         </h1>
+        <div
+          style={{
+            height: '1px',
+            marginBottom: '0.25rem',
+            background: 'linear-gradient(90deg, var(--accent) 0%, var(--border) 40%, transparent 100%)',
+            opacity: 0.6,
+          }}
+        />
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-3xl mx-auto px-8 sm:px-12 pt-10 pb-4">
+    <div className="w-full max-w-3xl mx-auto px-8 sm:px-12 pt-10 pb-0">
       <input
         type="text"
         value={title ?? ''}
@@ -32,11 +48,20 @@ export default function DocTitle({ title, mode, onChange }: DocTitleProps) {
             (e.currentTarget as HTMLInputElement).blur();
           }
         }}
-        className="w-full bg-transparent outline-none text-2xl font-bold font-sans"
+        className="doc-title-input w-full bg-transparent outline-none"
         style={{
+          fontSize: '1.5rem',
+          fontWeight: 600,
+          letterSpacing: '-0.02em',
+          lineHeight: 1.2,
           color: 'var(--text-primary)',
           caretColor: 'var(--accent)',
           border: 'none',
+          borderBottom: '1.5px solid var(--border)',
+          borderRadius: 0,
+          paddingBottom: '0.6rem',
+          transition: 'border-color 0.15s ease',
+          fontFamily: 'Inter, system-ui, sans-serif',
         }}
         aria-label="Document title"
       />

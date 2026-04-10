@@ -173,6 +173,16 @@ body {
   background: var(--text-muted);
 }
 
+/* ── Doc title input ──────────────────────────────────────── */
+.doc-title-input::placeholder {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.doc-title-input:focus {
+  border-bottom-color: var(--accent) !important;
+}
+
 /* ── Editor caret ─────────────────────────────────────────── */
 .editor-textarea {
   caret-color: var(--accent);
