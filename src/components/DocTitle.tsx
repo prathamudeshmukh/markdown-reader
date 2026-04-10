@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react';
+
 interface DocTitleProps {
   title: string | null;
   mode: 'editor' | 'preview';
@@ -5,6 +7,15 @@ interface DocTitleProps {
 }
 
 export default function DocTitle({ title, mode, onChange }: DocTitleProps) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [title, mode]);
+
   if (mode === 'preview') {
     if (!title) return null;
     return (
@@ -36,16 +47,21 @@ export default function DocTitle({ title, mode, onChange }: DocTitleProps) {
   }
 
   return (
-    <div className="w-full max-w-3xl mx-auto px-8 sm:px-12 pt-10 pb-0">
-      <input
-        type="text"
+    <div className="w-full max-w-3xl mx-auto px-3 sm:px-12 pt-10 pb-0">
+      <textarea
+        ref={textareaRef}
+        rows={1}
         value={title ?? ''}
         placeholder="Untitled"
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => {
+          onChange(e.target.value);
+          e.target.style.height = 'auto';
+          e.target.style.height = `${e.target.scrollHeight}px`;
+        }}
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
             e.preventDefault();
-            (e.currentTarget as HTMLInputElement).blur();
+            (e.currentTarget as HTMLTextAreaElement).blur();
           }
         }}
         className="doc-title-input w-full bg-transparent outline-none"
@@ -62,6 +78,8 @@ export default function DocTitle({ title, mode, onChange }: DocTitleProps) {
           paddingBottom: '0.6rem',
           transition: 'border-color 0.15s ease',
           fontFamily: 'Inter, system-ui, sans-serif',
+          resize: 'none',
+          overflow: 'hidden',
         }}
         aria-label="Document title"
       />
