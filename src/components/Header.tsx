@@ -30,6 +30,8 @@ export interface HeaderActions {
   onToggleSidebar: () => void;
   onShowQr: () => void;
   onImportPdf: (file: File) => void;
+  onOpenCommandPalette?: () => void;
+  onOpenShortcutHelp?: () => void;
 }
 
 export interface AuthState {
@@ -108,7 +110,7 @@ function ToolGroup({ children }: { children: React.ReactNode }) {
 export default function Header({
   document: { slug, markdownText, presenceCount },
   ui: { mode, isSaving, isLoading, copied, copiedMarkdown, sidebarOpen, isPdfImporting },
-  actions: { onToggle, onSave, onNewDoc, onExportPdf, onDownloadMarkdown, onCopyLink, onCopyMarkdown, onToggleSidebar, onShowQr, onImportPdf },
+  actions: { onToggle, onSave, onNewDoc, onExportPdf, onDownloadMarkdown, onCopyLink, onCopyMarkdown, onToggleSidebar, onShowQr, onImportPdf, onOpenCommandPalette, onOpenShortcutHelp },
   auth: { user, isAuthLoading },
   authActions: { onSignInClick, onSignOut },
 }: HeaderProps) {
@@ -200,6 +202,7 @@ export default function Header({
           >
             <button
               onClick={mode === 'preview' ? onToggle : undefined}
+              title="Editor  Ctrl+P"
               aria-label={mode === 'preview' ? 'Show Editor' : 'Editor'}
               className="flex items-center gap-1.5 px-3.5 py-1 text-xs font-medium rounded-full transition-all duration-200"
               style={mode === 'editor' ? activeToggleStyle : { color: 'var(--text-muted)' }}
@@ -212,6 +215,7 @@ export default function Header({
             </button>
             <button
               onClick={mode === 'editor' ? onToggle : undefined}
+              title="Preview  Ctrl+P"
               aria-label={mode === 'editor' ? 'Show Preview' : 'Preview'}
               className="flex items-center gap-1.5 px-3.5 py-1 text-xs font-medium rounded-full transition-all duration-200"
               style={mode === 'preview' ? activeToggleStyle : { color: 'var(--text-muted)' }}
@@ -259,6 +263,69 @@ export default function Header({
           {/* ── Desktop tool groups ───────────────────────── */}
           <div className="hidden sm:flex items-center gap-1.5">
 
+            {/* Keyboard feature pills — command palette + shortcut help */}
+            {(onOpenCommandPalette || onOpenShortcutHelp) && (
+              <div className="flex items-center gap-1">
+                {onOpenCommandPalette && (
+                  <button
+                    onClick={onOpenCommandPalette}
+                    title="Command palette"
+                    aria-label="Command palette"
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all duration-150"
+                    style={{
+                      backgroundColor: 'var(--bg-secondary)',
+                      border: '1px solid var(--border)',
+                      color: 'var(--text-secondary)',
+                    }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)';
+                      (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--accent)';
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
+                      (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)';
+                    }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="4 17 10 11 4 5" /><line x1="12" y1="19" x2="20" y2="19" />
+                    </svg>
+                    <span>Commands</span>
+                    <kbd
+                      className="font-mono text-[10px] px-1 rounded"
+                      style={{ backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-light)' }}
+                    >
+                      ⌘K
+                    </kbd>
+                  </button>
+                )}
+
+                {onOpenShortcutHelp && (
+                  <button
+                    onClick={onOpenShortcutHelp}
+                    title="Keyboard shortcuts"
+                    aria-label="Keyboard shortcuts"
+                    className="flex items-center justify-center w-7 h-7 rounded-lg text-sm font-medium transition-all duration-150"
+                    style={{
+                      backgroundColor: 'var(--bg-secondary)',
+                      border: '1px solid var(--border)',
+                      color: 'var(--text-muted)',
+                      fontFamily: "'IBM Plex Mono', monospace",
+                    }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)';
+                      (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--accent)';
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)';
+                      (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)';
+                    }}
+                  >
+                    ?
+                  </button>
+                )}
+              </div>
+            )}
+
             {/* Sharing group */}
             <ToolGroup>
               {/* Sidebar */}
@@ -287,7 +354,7 @@ export default function Header({
               {/* Copy link */}
               <button
                 onClick={onCopyLink}
-                title="Copy link"
+                title="Copy link  Ctrl+Shift+C"
                 aria-label="Copy link"
                 disabled={slug === null}
                 className={`${TOOL_BTN} ${TOOL_BTN_DISABLED}`}
@@ -399,7 +466,7 @@ export default function Header({
               {/* New doc */}
               <button
                 onClick={onNewDoc}
-                title="New doc"
+                title="New doc  Ctrl+Shift+N"
                 aria-label="New doc"
                 disabled={slug === null && markdownText.length === 0}
                 className={`${TOOL_BTN} ${TOOL_BTN_DISABLED}`}

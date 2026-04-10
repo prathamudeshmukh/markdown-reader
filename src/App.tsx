@@ -12,6 +12,8 @@ import CollectionsSidebar from './components/CollectionsSidebar';
 import DocTitle from './components/DocTitle';
 import QrModal from './components/QrModal';
 import EmailSignInModal from './components/EmailSignInModal';
+import ShortcutHelpModal from './components/ShortcutHelpModal';
+import CommandPalette from './components/CommandPalette';
 import { useAuth } from './auth/AuthContext';
 import { getContentLengthBucket, track, type InteractionSource } from './telemetry';
 import { pdfToMarkdown, PdfImportError } from './utils/pdfToMarkdown';
@@ -40,6 +42,8 @@ export default function App() {
   }, [slug, onSave, collectionsHook]);
 
   const [signInOpen, setSignInOpen] = useState(false);
+  const [shortcutHelpOpen, setShortcutHelpOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [copiedMarkdown, setCopiedMarkdown] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -123,13 +127,12 @@ export default function App() {
   }, [markdownText]);
 
   useKeyboardShortcuts({
-    onSave: () => {
-      void handleSave('shortcut');
-    },
+    onSave: () => { void handleSave('shortcut'); },
     onToggleMode: () => toggleMode('shortcut'),
-    onCopyLink: () => {
-      void copyLink('shortcut');
-    },
+    onCopyLink: () => { void copyLink('shortcut'); },
+    onNewDoc: () => { window.location.href = '/mreader/'; },
+    onOpenCommandPalette: () => setCommandPaletteOpen(true),
+    onOpenShortcutHelp: () => setShortcutHelpOpen(true),
   });
 
   function handleDownloadMarkdown() {
@@ -175,6 +178,8 @@ export default function App() {
           onToggleSidebar: () => setSidebarOpen((prev) => !prev),
           onShowQr: openQr,
           onImportPdf: handleImportPdf,
+          onOpenCommandPalette: () => setCommandPaletteOpen(true),
+          onOpenShortcutHelp: () => setShortcutHelpOpen(true),
         }}
         auth={{ user, isAuthLoading }}
         authActions={{ onSignInClick: () => setSignInOpen(true), onSignOut: signOut }}
@@ -267,6 +272,34 @@ export default function App() {
       )}
 
       {qrOpen && <QrModal url={window.location.href} onClose={() => setQrOpen(false)} />}
+
+      {shortcutHelpOpen && (
+        <ShortcutHelpModal onClose={() => setShortcutHelpOpen(false)} />
+      )}
+
+      {commandPaletteOpen && (
+        <CommandPalette
+          onClose={() => setCommandPaletteOpen(false)}
+          isAuthenticated={!!user}
+          recentDocs={recentDocs}
+          currentSlug={slug}
+          actions={{
+            onNewDoc: () => { window.location.href = '/mreader/'; },
+            onToggleMode: () => toggleMode('button'),
+            onSave: () => { void handleSave('button'); },
+            onCopyLink: () => { void copyLink('button'); },
+            onCopyMarkdown: () => { void copyMarkdown(); },
+            onShowQr: openQr,
+            onDownloadMarkdown: handleDownloadMarkdown,
+            onExportPdf: handleExportPdf,
+            onToggleSidebar: () => setSidebarOpen((prev) => !prev),
+            onSignIn: () => setSignInOpen(true),
+            onSignOut: signOut,
+            onOpenShortcutHelp: () => { setCommandPaletteOpen(false); setShortcutHelpOpen(true); },
+            onNavigateToDoc: navigateToDoc,
+          }}
+        />
+      )}
 
       <BottomActionBar
         document={{ slug, markdownText, presenceCount }}
