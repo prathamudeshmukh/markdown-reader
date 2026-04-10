@@ -21,9 +21,9 @@ export default function DocTitle({ title, mode, onChange }: DocTitleProps) {
     return (
       <div className="max-w-3xl mx-auto w-full px-3 sm:px-10 pt-10 pb-0">
         <h1
+          className="text-lg sm:text-2xl"
           style={{
             fontFamily: 'Inter, system-ui, sans-serif',
-            fontSize: '1.5rem',
             fontWeight: 700,
             letterSpacing: '-0.02em',
             lineHeight: 1.15,
@@ -64,9 +64,8 @@ export default function DocTitle({ title, mode, onChange }: DocTitleProps) {
             (e.currentTarget as HTMLTextAreaElement).blur();
           }
         }}
-        className="doc-title-input w-full bg-transparent outline-none"
+        className="doc-title-input w-full bg-transparent outline-none text-lg sm:text-2xl"
         style={{
-          fontSize: '1.5rem',
           fontWeight: 600,
           letterSpacing: '-0.02em',
           lineHeight: 1.2,

@@ -34,7 +34,7 @@ export default function Preview({ content }: PreviewProps) {
 
   return (
     <div className="flex-1 overflow-auto animate-mode-enter" style={{ backgroundColor: 'var(--bg-primary)' }}>
-      <div className="max-w-3xl mx-auto px-3 sm:px-10 pt-4 pb-10 prose prose-headings:font-display">
+      <div className="max-w-3xl mx-auto px-3 sm:px-10 pt-4 pb-10 prose prose-sm sm:prose-base prose-headings:font-display">
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           rehypePlugins={[rehypeHighlight, [rehypeSanitize, sanitizeSchema]]}
