@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { getInitialMarkdownText } from '../utils/onboarding';
 import { getSlugFromPath } from '../utils/route';
 import { fetchDoc, saveDoc, updateDoc } from '../api/docsApi';
 import { addRecentDoc } from '../utils/recentDocs';
@@ -31,7 +32,7 @@ export function useMarkdownState({ isAuthLoading = false }: { isAuthLoading?: bo
   );
 
   const [state, setState] = useState<MarkdownState>({
-    markdownText: '',
+    markdownText: getInitialMarkdownText(slug === null),
     title: null,
     mode: slug !== null ? 'preview' : 'editor',
     isLoading: slug !== null,

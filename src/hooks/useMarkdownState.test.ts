@@ -16,12 +16,17 @@ vi.mock('../telemetry', () => ({
   getContentLengthBucket: vi.fn(() => 'xs'),
   getErrorType: vi.fn(() => 'unknown'),
 }));
+vi.mock('../utils/onboarding', () => ({
+  getInitialMarkdownText: vi.fn(() => ''),
+  SAMPLE_DOC: '# Sample',
+}));
 
 import { useMarkdownState } from './useMarkdownState';
 import { getSlugFromPath } from '../utils/route';
 import { fetchDoc, saveDoc, updateDoc } from '../api/docsApi';
 import { addRecentDoc } from '../utils/recentDocs';
 import { track } from '../telemetry';
+import { getInitialMarkdownText, SAMPLE_DOC } from '../utils/onboarding';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -45,6 +50,12 @@ describe('useMarkdownState', () => {
       expect(result.current.isLoading).toBe(false);
       expect(result.current.slug).toBeNull();
       expect(result.current.error).toBeNull();
+    });
+
+    it('loads sample doc on first new-doc visit when getInitialMarkdownText returns it', () => {
+      vi.mocked(getInitialMarkdownText).mockReturnValueOnce(SAMPLE_DOC);
+      const { result } = renderHook(() => useMarkdownState());
+      expect(result.current.markdownText).toBe(SAMPLE_DOC);
     });
 
     it('does not call fetchDoc on mount', () => {

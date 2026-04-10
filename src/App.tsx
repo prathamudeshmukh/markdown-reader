@@ -1,5 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useMarkdownState } from './hooks/useMarkdownState';
+import { useOnboarding } from './hooks/useOnboarding';
+import OnboardingTooltips from './components/OnboardingTooltips';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useRecentDocs } from './hooks/useRecentDocs';
 import { useCollections } from './hooks/useCollections';
@@ -40,6 +42,9 @@ export default function App() {
     await onSave(source);
     if (isNewDoc) collectionsHook.refresh();
   }, [slug, onSave, collectionsHook]);
+
+  const { tooltipsVisible, dismissTooltip, onCopyLinkInteraction, onQrInteraction, onSidebarInteraction } =
+    useOnboarding(slug === null);
 
   const [signInOpen, setSignInOpen] = useState(false);
   const [shortcutHelpOpen, setShortcutHelpOpen] = useState(false);
@@ -98,11 +103,13 @@ export default function App() {
   );
 
   const openQr = useCallback(() => {
+    onQrInteraction();
     track('qr_opened', { has_slug: slug !== null });
     setQrOpen(true);
-  }, [slug]);
+  }, [slug, onQrInteraction]);
 
   const copyLink = useCallback(async (source: InteractionSource = 'button') => {
+    onCopyLinkInteraction();
     try {
       await navigator.clipboard.writeText(window.location.href);
       track('link_copied', { has_slug: slug !== null, source });
@@ -111,7 +118,7 @@ export default function App() {
     } catch {
       // Ignore clipboard failures (e.g. unsupported browsers).
     }
-  }, [slug]);
+  }, [slug, onCopyLinkInteraction]);
 
   const copyMarkdown = useCallback(async () => {
     try {
@@ -125,6 +132,11 @@ export default function App() {
       // Ignore clipboard failures (e.g. unsupported browsers).
     }
   }, [markdownText]);
+
+  const toggleSidebar = useCallback(() => {
+    onSidebarInteraction();
+    setSidebarOpen((prev) => !prev);
+  }, [onSidebarInteraction]);
 
   useKeyboardShortcuts({
     onSave: () => { void handleSave('shortcut'); },
@@ -175,7 +187,7 @@ export default function App() {
           onDownloadMarkdown: handleDownloadMarkdown,
           onCopyLink: () => { void copyLink('button'); },
           onCopyMarkdown: () => { void copyMarkdown(); },
-          onToggleSidebar: () => setSidebarOpen((prev) => !prev),
+          onToggleSidebar: toggleSidebar,
           onShowQr: openQr,
           onImportPdf: handleImportPdf,
           onOpenCommandPalette: () => setCommandPaletteOpen(true),
@@ -292,7 +304,7 @@ export default function App() {
             onShowQr: openQr,
             onDownloadMarkdown: handleDownloadMarkdown,
             onExportPdf: handleExportPdf,
-            onToggleSidebar: () => setSidebarOpen((prev) => !prev),
+            onToggleSidebar: toggleSidebar,
             onSignIn: () => setSignInOpen(true),
             onSignOut: signOut,
             onOpenShortcutHelp: () => { setCommandPaletteOpen(false); setShortcutHelpOpen(true); },
@@ -309,7 +321,7 @@ export default function App() {
           onSave: () => { void handleSave('button'); },
           onCopyLink: () => { void copyLink('button'); },
           onNewDoc: () => { window.location.href = '/mreader/'; },
-          onToggleSidebar: () => setSidebarOpen((prev) => !prev),
+          onToggleSidebar: toggleSidebar,
           onImportPdf: handleImportPdf,
           onExportPdf: handleExportPdf,
           onDownloadMarkdown: handleDownloadMarkdown,
@@ -334,6 +346,8 @@ export default function App() {
           <Preview content={markdownText} />
         )}
       </main>
+
+      <OnboardingTooltips visible={tooltipsVisible} onDismiss={dismissTooltip} />
     </div>
   );
 }

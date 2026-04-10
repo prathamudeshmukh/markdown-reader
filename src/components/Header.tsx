@@ -337,6 +337,7 @@ export default function Header({
                 aria-label={user
                   ? (sidebarOpen ? 'Hide collections' : 'Show collections')
                   : (sidebarOpen ? 'Hide recent docs' : 'Show recent docs')}
+                data-onboarding="sidebar"
                 className={`${TOOL_BTN} ${sidebarOpen ? '!text-[var(--accent)]' : ''}`}
               >
                 {user ? (
@@ -356,6 +357,7 @@ export default function Header({
                 onClick={onCopyLink}
                 title="Copy link  Ctrl+Shift+C"
                 aria-label="Copy link"
+                data-onboarding="copy-link"
                 disabled={slug === null}
                 className={`${TOOL_BTN} ${TOOL_BTN_DISABLED}`}
               >
@@ -396,6 +398,7 @@ export default function Header({
                 onClick={onShowQr}
                 title="Show QR code"
                 aria-label="Show QR code"
+                data-onboarding="qr-code"
                 disabled={slug === null}
                 className={`${TOOL_BTN} ${TOOL_BTN_DISABLED}`}
               >
