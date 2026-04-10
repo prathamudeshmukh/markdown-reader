@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useMarkdownState } from './hooks/useMarkdownState';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useRecentDocs } from './hooks/useRecentDocs';
@@ -43,15 +43,6 @@ export default function App() {
   const [copied, setCopied] = useState(false);
   const [copiedMarkdown, setCopiedMarkdown] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const hasAutoOpenedSidebar = useRef(false);
-
-  useEffect(() => {
-    if (isAuthLoading || hasAutoOpenedSidebar.current) return;
-    if (user) {
-      setSidebarOpen(window.innerWidth >= 640);
-      hasAutoOpenedSidebar.current = true;
-    }
-  }, [user, isAuthLoading]);
   const [qrOpen, setQrOpen] = useState(false);
   const [isPdfImporting, setIsPdfImporting] = useState(false);
   const [pdfImportProgress, setPdfImportProgress] = useState<{ current: number; total: number } | null>(null);

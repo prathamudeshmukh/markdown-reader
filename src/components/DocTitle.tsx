@@ -8,7 +8,7 @@ export default function DocTitle({ title, mode, onChange }: DocTitleProps) {
   if (mode === 'preview') {
     if (!title) return null;
     return (
-      <div className="max-w-2xl mx-auto w-full px-6 sm:px-10 pt-10 pb-4">
+      <div className="max-w-3xl mx-auto w-full px-3 sm:px-10 pt-10 pb-4">
         <h1
           className="text-2xl font-bold font-sans"
           style={{ color: 'var(--text-primary)' }}
@@ -20,7 +20,7 @@ export default function DocTitle({ title, mode, onChange }: DocTitleProps) {
   }
 
   return (
-    <div className="w-full max-w-2xl mx-auto px-8 sm:px-12 pt-10 pb-4">
+    <div className="w-full max-w-3xl mx-auto px-8 sm:px-12 pt-10 pb-4">
       <input
         type="text"
         value={title ?? ''}
