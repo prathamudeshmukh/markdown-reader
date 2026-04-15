@@ -6,6 +6,7 @@ interface Env {
   ASSETS: { fetch(request: Request): Promise<Response> };
   SUPABASE_URL: string;
   SUPABASE_ANON_KEY: string;
+  SUPABASE_SERVICE_ROLE_KEY: string;
   PDF_BUCKET: R2Bucket;
   PDF2MARKDOWN_API_URL: string;
 }
@@ -22,9 +23,15 @@ export default {
     }
 
     // Validate required secrets are bound
-    if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
-      console.error({ error: `Missing env: ${!env.SUPABASE_URL ? 'SUPABASE_URL' : 'SUPABASE_ANON_KEY'}` })
-        
+    if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY || !env.SUPABASE_SERVICE_ROLE_KEY) {
+      const missing = ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY']
+        .filter((k) => !env[k as keyof Env])
+        .join(', ');
+      console.error(`Missing env: ${missing}`);
+      return new Response(JSON.stringify({ error: `Server misconfigured: missing ${missing}` }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     // PDF routes — checked before docs API

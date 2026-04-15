@@ -3,6 +3,10 @@ import type { User } from '@supabase/supabase-js';
 import { getSupabaseClient } from '../realtime/supabaseRealtimeClient';
 import { setAuthToken } from '../api/authToken';
 
+function signInRedirectUrl(): string {
+  return window.location.href;
+}
+
 interface AuthContextValue {
   user: User | null;
   isAuthLoading: boolean;
@@ -35,6 +39,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(data.session?.user ?? null);
       setAuthToken(data.session?.access_token);
       setIsAuthLoading(false);
+    }).catch(() => {
+      setIsAuthLoading(false);
     });
 
     const {
@@ -54,11 +60,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       return { error: null };
     }
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: window.location.href },
-    });
-    return { error: error?.message ?? null };
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: signInRedirectUrl() },
+      });
+      return { error: error?.message ?? null };
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : 'Sign in failed' };
+    }
   }, []);
 
   const signOut = useCallback(() => {

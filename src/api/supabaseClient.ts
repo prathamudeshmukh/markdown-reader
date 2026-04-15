@@ -1,6 +1,9 @@
 export interface SupabaseEnv {
   SUPABASE_URL: string;
   SUPABASE_ANON_KEY: string;
+  // Service role key bypasses RLS — used only for trusted server-side reads (getDoc).
+  // Never expose this to the client.
+  SUPABASE_SERVICE_ROLE_KEY: string;
 }
 
 export interface Doc {
@@ -78,13 +81,19 @@ export async function createDoc(env: SupabaseEnv, slug: string, fields: CreateDo
   return rows[0];
 }
 
-export async function getDoc(env: SupabaseEnv, slug: string, userJwt?: string): Promise<Doc | null> {
+// getDoc uses the service role key to bypass RLS so any doc can be fetched by slug.
+// The slug is the capability token for sharing; access control for enumeration is
+// enforced by the restrictive RLS policies that apply to direct REST API callers.
+export async function getDoc(env: SupabaseEnv, slug: string): Promise<Doc | null> {
+  if (!env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_ROLE_KEY.split('.').length !== 3) {
+    throw new Error('getDoc failed: SUPABASE_SERVICE_ROLE_KEY is missing or not a valid JWT');
+  }
+
   const url = `${env.SUPABASE_URL}/rest/v1/docs?slug=eq.${encodeURIComponent(slug)}&select=slug,content,title,user_id,collection_id`;
-  const token = userJwt ?? env.SUPABASE_ANON_KEY;
   const res = await fetch(url, {
     headers: {
       apikey: env.SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
     },
   });
 

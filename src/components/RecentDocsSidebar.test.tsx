@@ -33,12 +33,12 @@ describe('RecentDocsSidebar', () => {
 
   it('shows mobile backdrop when open', () => {
     render(<RecentDocsSidebar docs={[]} isOpen={true} onClose={onClose} />);
-    expect(document.querySelector('[aria-hidden="true"]')).toBeInTheDocument();
+    expect(screen.getByTestId('mobile-backdrop')).toBeInTheDocument();
   });
 
   it('hides mobile backdrop when closed', () => {
     render(<RecentDocsSidebar docs={[]} isOpen={false} onClose={onClose} />);
-    expect(document.querySelector('[aria-hidden="true"]')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('mobile-backdrop')).not.toBeInTheDocument();
   });
 
   it('calls onDocOpen when a doc is opened', () => {

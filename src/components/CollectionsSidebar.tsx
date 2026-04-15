@@ -5,7 +5,8 @@ import CollectionNodeComponent, { type CollectionNodeActions } from './Collectio
 import VirtualUnsortedNode from './VirtualUnsortedNode';
 import { ListIcon, PlusIcon, CloseIcon } from './SidebarIcons';
 import { SidebarButton } from './SidebarIconButton';
-import { INDENT_BASE, INDENT_STEP, INLINE_CREATE_OFFSET } from './sidebar.constants';
+import { INDENT_BASE, INDENT_STEP, INLINE_CREATE_OFFSET, SIDEBAR_BACKDROP_COLOR } from './sidebar.constants';
+import MobileSheetChrome from './MobileSheetChrome';
 
 interface CollectionsSidebarProps {
   tree: CollectionTree;
@@ -82,6 +83,13 @@ export default function CollectionsSidebar({
     const id = setTimeout(() => setEnableTransition(true), 0);
     return () => clearTimeout(id);
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [isOpen, onClose]);
 
   // Auto-expand the collection containing the current doc
   useEffect(() => {
@@ -180,12 +188,28 @@ export default function CollectionsSidebar({
     !pendingCreate;
 
   return (
+    <>
+      {/* Backdrop — mobile only */}
+      {isOpen && (
+        <div
+          className="sm:hidden fixed inset-0 z-30"
+          style={{ backgroundColor: SIDEBAR_BACKDROP_COLOR }}
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Sidebar panel — bottom sheet on mobile, right panel on desktop */}
     <aside
       className={[
-        'fixed inset-y-0 right-0 z-40 w-64 pt-[57px]',
+        'fixed inset-x-0 z-40',
+        'bottom-[calc(56px+env(safe-area-inset-bottom))] max-h-[80vh] rounded-t-2xl',
+        'sm:inset-x-auto sm:inset-y-0 sm:right-0 sm:w-64 sm:pt-[57px] sm:max-h-none sm:rounded-none',
         'flex flex-col overflow-hidden',
         enableTransition ? 'transition-transform duration-200 ease-in-out' : '',
-        isOpen ? 'translate-x-0' : 'translate-x-full',
+        isOpen
+          ? 'translate-y-0 sm:translate-x-0 sm:translate-y-0'
+          : 'translate-y-full sm:translate-x-full sm:translate-y-0',
       ].join(' ')}
       style={{
         backgroundColor: 'var(--bg-secondary)',
@@ -193,6 +217,8 @@ export default function CollectionsSidebar({
       }}
       aria-label="My Collections"
     >
+        <MobileSheetChrome />
+
       {/* Header */}
       <div
         className="px-3 py-2.5 flex items-center justify-between shrink-0"
@@ -319,5 +345,6 @@ export default function CollectionsSidebar({
         </button>
       </div>
     </aside>
+    </>
   );
 }

@@ -7,6 +7,7 @@ export interface Doc {
   slug: string;
   content: string;
   title: string | null;
+  user_id: string | null;
 }
 
 export interface DocSummary {

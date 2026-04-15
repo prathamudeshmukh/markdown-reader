@@ -11,6 +11,7 @@ type Mode = 'editor' | 'preview';
 interface MarkdownState {
   markdownText: string;
   title: string | null;
+  docUserId: string | null;
   mode: Mode;
   isLoading: boolean;
   isSaving: boolean;
@@ -31,14 +32,43 @@ export function useMarkdownState({ isAuthLoading = false }: { isAuthLoading?: bo
     slug ? null : getCollectionIdFromQuery(),
   );
 
-  const [state, setState] = useState<MarkdownState>({
-    markdownText: getInitialMarkdownText(slug === null),
-    title: null,
-    mode: slug !== null ? 'preview' : 'editor',
-    isLoading: slug !== null,
-    isSaving: false,
-    error: null,
-    presenceCount: 0,
+  const [state, setState] = useState<MarkdownState>(() => {
+    if (slug !== null) {
+      return {
+        markdownText: '',
+        title: null,
+        docUserId: null,
+        mode: 'preview',
+        isLoading: true,
+        isSaving: false,
+        error: null,
+        presenceCount: 0,
+      };
+    }
+    const forked = sessionStorage.getItem('mreader:fork');
+    if (forked) {
+      sessionStorage.removeItem('mreader:fork');
+      return {
+        markdownText: forked,
+        title: null,
+        docUserId: null,
+        mode: 'editor',
+        isLoading: false,
+        isSaving: false,
+        error: null,
+        presenceCount: 0,
+      };
+    }
+    return {
+      markdownText: getInitialMarkdownText(true),
+      title: null,
+      docUserId: null,
+      mode: 'editor',
+      isLoading: false,
+      isSaving: false,
+      error: null,
+      presenceCount: 0,
+    };
   });
 
   const handleRemoteContent = useCallback((content: string) => {
@@ -70,7 +100,7 @@ export function useMarkdownState({ isAuthLoading = false }: { isAuthLoading?: bo
           has_slug: true,
           content_length_bucket: getContentLengthBucket(doc.content),
         });
-        setState((prev) => ({ ...prev, markdownText: doc.content, title: doc.title, isLoading: false }));
+        setState((prev) => ({ ...prev, markdownText: doc.content, title: doc.title, docUserId: doc.user_id, isLoading: false }));
       })
       .catch((err: Error) =>
         setState((prev) => ({ ...prev, isLoading: false, error: err.message })),
@@ -138,6 +168,7 @@ export function useMarkdownState({ isAuthLoading = false }: { isAuthLoading?: bo
     setState({
       markdownText: '',
       title: null,
+      docUserId: null,
       mode: 'preview',
       isLoading: true,
       isSaving: false,

@@ -150,14 +150,14 @@ describe('useMarkdownState', () => {
     });
 
     it('starts in loading state with correct slug', () => {
-      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null });
+      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null });
       const { result } = renderHook(() => useMarkdownState());
       expect(result.current.isLoading).toBe(true);
       expect(result.current.slug).toBe('abc1234');
     });
 
     it('fetches doc and populates markdownText and title', async () => {
-      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: 'My Doc' });
+      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: 'My Doc', user_id: null });
       const { result } = renderHook(() => useMarkdownState());
 
       await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -182,7 +182,7 @@ describe('useMarkdownState', () => {
     });
 
     it('calls fetchDoc once auth finishes loading', async () => {
-      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null });
+      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null });
       const { rerender } = renderHook(
         ({ isAuthLoading }) => useMarkdownState({ isAuthLoading }),
         { initialProps: { isAuthLoading: true } },
@@ -197,7 +197,7 @@ describe('useMarkdownState', () => {
 
     it('calls updateDoc debounced on text change', async () => {
       vi.useFakeTimers();
-      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null });
+      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null });
       vi.mocked(updateDoc).mockResolvedValue(undefined);
 
       const { result } = renderHook(() => useMarkdownState());
@@ -213,7 +213,7 @@ describe('useMarkdownState', () => {
 
     it('calls updateDoc debounced on title change', async () => {
       vi.useFakeTimers();
-      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null });
+      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null });
       vi.mocked(updateDoc).mockResolvedValue(undefined);
 
       const { result } = renderHook(() => useMarkdownState());
@@ -229,7 +229,7 @@ describe('useMarkdownState', () => {
 
     it('sets error when updateDoc fails', async () => {
       vi.useFakeTimers();
-      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null });
+      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null });
       vi.mocked(updateDoc).mockRejectedValueOnce(new Error('Save failed'));
 
       const { result } = renderHook(() => useMarkdownState());
@@ -249,8 +249,8 @@ describe('useMarkdownState', () => {
     });
 
     it('updates URL, sets new slug, and resets state to loading', async () => {
-      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Old', title: null });
-      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'xyz5678', content: '# New', title: null });
+      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Old', title: null, user_id: null });
+      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'xyz5678', content: '# New', title: null, user_id: null });
       const { result } = renderHook(() => useMarkdownState());
       await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -264,8 +264,8 @@ describe('useMarkdownState', () => {
     });
 
     it('fetches and loads the new doc content after navigation', async () => {
-      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Old', title: null });
-      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'xyz5678', content: '# New', title: 'New Doc' });
+      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Old', title: null, user_id: null });
+      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'xyz5678', content: '# New', title: 'New Doc', user_id: null });
       const { result } = renderHook(() => useMarkdownState());
       await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -279,7 +279,7 @@ describe('useMarkdownState', () => {
 
     it('cancels pending text debounce so updateDoc is not called for the old slug', async () => {
       vi.useFakeTimers();
-      vi.mocked(fetchDoc).mockResolvedValue({ slug: 'abc1234', content: '# Hello', title: null });
+      vi.mocked(fetchDoc).mockResolvedValue({ slug: 'abc1234', content: '# Hello', title: null, user_id: null });
       vi.mocked(updateDoc).mockResolvedValue(undefined);
 
       const { result } = renderHook(() => useMarkdownState());
@@ -295,7 +295,7 @@ describe('useMarkdownState', () => {
 
     it('cancels pending title debounce so updateDoc is not called for the old slug', async () => {
       vi.useFakeTimers();
-      vi.mocked(fetchDoc).mockResolvedValue({ slug: 'abc1234', content: '# Hello', title: null });
+      vi.mocked(fetchDoc).mockResolvedValue({ slug: 'abc1234', content: '# Hello', title: null, user_id: null });
       vi.mocked(updateDoc).mockResolvedValue(undefined);
 
       const { result } = renderHook(() => useMarkdownState());
@@ -312,7 +312,7 @@ describe('useMarkdownState', () => {
     it('clears savedLocallyRef so fetchDoc fires for the new slug after a prior save', async () => {
       vi.mocked(getSlugFromPath).mockReturnValue(null);
       vi.mocked(saveDoc).mockResolvedValueOnce({ slug: 'new1234' });
-      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'xyz5678', content: '# Other', title: null });
+      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'xyz5678', content: '# Other', title: null, user_id: null });
 
       const { result } = renderHook(() => useMarkdownState());
       act(() => result.current.setMarkdownText('# Hello'));

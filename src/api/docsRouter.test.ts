@@ -16,7 +16,8 @@ import { createDoc, getDoc, updateDoc, getUserDocs } from './supabaseClient';
 
 const env = {
   SUPABASE_URL: 'https://test.supabase.co',
-  SUPABASE_ANON_KEY: 'test-key',
+  SUPABASE_ANON_KEY: 'test-anon-key',
+  SUPABASE_SERVICE_ROLE_KEY: 'test-service-key',
 };
 
 // Minimal JWT with sub=user-uuid
@@ -144,23 +145,12 @@ describe('handleDocsRequest', () => {
       expect(await res?.json()).toEqual({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null });
     });
 
-    it('forwards user JWT to getDoc when Authorization header is present', async () => {
+    it('calls getDoc with env and slug only (service role handles auth)', async () => {
       vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId, collection_id: null });
-
-      await handleDocsRequest(
-        makeRequest('GET', '/mreader/api/docs/abc1234', undefined, { Authorization: `Bearer ${fakeJwt}` }),
-        env,
-      );
-
-      expect(getDoc).toHaveBeenCalledWith(env, 'abc1234', fakeJwt);
-    });
-
-    it('passes undefined JWT to getDoc when no Authorization header', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null });
 
       await handleDocsRequest(makeRequest('GET', '/mreader/api/docs/abc1234'), env);
 
-      expect(getDoc).toHaveBeenCalledWith(env, 'abc1234', undefined);
+      expect(getDoc).toHaveBeenCalledWith(env, 'abc1234');
     });
 
     it('returns 404 when doc does not exist', async () => {

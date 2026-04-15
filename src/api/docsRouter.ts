@@ -50,9 +50,8 @@ async function handlePost(request: Request, env: RouterEnv): Promise<Response> {
   return json({ error: 'Failed to generate unique slug' }, 500);
 }
 
-async function handleGet(slug: string, env: RouterEnv, request: Request): Promise<Response> {
-  const userJwt = extractBearerToken(request);
-  const doc = await getDoc(env, slug, userJwt);
+async function handleGet(slug: string, env: RouterEnv): Promise<Response> {
+  const doc = await getDoc(env, slug);
   if (!doc) return json({ error: 'Not found' }, 404);
   return json(doc);
 }
@@ -112,7 +111,7 @@ export async function handleDocsRequest(
   if (pathname.startsWith(`${API_PREFIX}/`)) {
     const slug = pathname.slice(API_PREFIX.length + 1);
     if (!slug) return json({ error: 'Not found' }, 404);
-    if (method === 'GET') return handleGet(slug, env, request);
+    if (method === 'GET') return handleGet(slug, env);
     if (method === 'PUT') return handlePut(request, slug, env);
     return json({ error: 'Method not allowed' }, 405);
   }

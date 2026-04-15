@@ -51,6 +51,7 @@ const baseState = {
   toggleMode: vi.fn(),
   onSave: vi.fn(),
   navigateToDoc: vi.fn(),
+  docUserId: null as string | null,
 };
 
 describe('App', () => {

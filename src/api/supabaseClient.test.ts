@@ -3,7 +3,8 @@ import { createDoc, getDoc, updateDoc, getUserDocs } from './supabaseClient';
 
 const env = {
   SUPABASE_URL: 'https://test.supabase.co',
-  SUPABASE_ANON_KEY: 'test-key',
+  SUPABASE_ANON_KEY: 'test-anon-key',
+  SUPABASE_SERVICE_ROLE_KEY: 'test-header.test-payload.test-sig',
 };
 
 describe('supabaseClient', () => {
@@ -25,7 +26,7 @@ describe('supabaseClient', () => {
         'https://test.supabase.co/rest/v1/docs',
         expect.objectContaining({
           method: 'POST',
-          headers: expect.objectContaining({ apikey: 'test-key' }),
+          headers: expect.objectContaining({ apikey: 'test-anon-key' }),
         }),
       );
     });
@@ -113,27 +114,9 @@ describe('supabaseClient', () => {
       );
     });
 
-    it('uses userJwt in Authorization header when provided', async () => {
+    it('uses service role key in Authorization header to bypass RLS', async () => {
       vi.mocked(fetch).mockResolvedValueOnce(
         new Response(JSON.stringify([{ slug: 'abc1234', content: '# Hello', title: null, user_id: 'uid' }]), { status: 200 }),
-      );
-
-      const payload = btoa(JSON.stringify({ sub: 'uid' }));
-      const fakeJwt = `header.${payload}.sig`;
-
-      await getDoc(env, 'abc1234', fakeJwt);
-
-      expect(fetch).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          headers: expect.objectContaining({ Authorization: `Bearer ${fakeJwt}` }),
-        }),
-      );
-    });
-
-    it('falls back to anon key when userJwt is not provided', async () => {
-      vi.mocked(fetch).mockResolvedValueOnce(
-        new Response(JSON.stringify([]), { status: 200 }),
       );
 
       await getDoc(env, 'abc1234');
@@ -141,7 +124,7 @@ describe('supabaseClient', () => {
       expect(fetch).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
-          headers: expect.objectContaining({ Authorization: `Bearer ${env.SUPABASE_ANON_KEY}` }),
+          headers: expect.objectContaining({ Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` }),
         }),
       );
     });

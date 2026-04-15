@@ -14,6 +14,7 @@ import CollectionsSidebar from './components/CollectionsSidebar';
 import DocTitle from './components/DocTitle';
 import QrModal from './components/QrModal';
 import EmailSignInModal from './components/EmailSignInModal';
+import EditBlockedModal from './components/EditBlockedModal';
 import ShortcutHelpModal from './components/ShortcutHelpModal';
 import CommandPalette from './components/CommandPalette';
 import { useAuth } from './auth/AuthContext';
@@ -29,8 +30,11 @@ const PDF_IMPORT_UNKNOWN_ERROR = 'Failed to import PDF. Please try again.';
 
 export default function App() {
   const { user, isAuthLoading, signInWithEmail, signOut } = useAuth();
-  const { markdownText, title, slug, mode, isLoading, isSaving, error, presenceCount, setMarkdownText, setTitle, toggleMode, onSave, navigateToDoc } =
+  const { markdownText, title, slug, docUserId, mode, isLoading, isSaving, error, presenceCount, setMarkdownText, setTitle, toggleMode, onSave, navigateToDoc } =
     useMarkdownState({ isAuthLoading });
+
+  // A doc is editable if it has no slug (new, unsaved), has no owner (anonymous), or the current user owns it.
+  const canEdit = !slug || !docUserId || docUserId === user?.id;
 
   const collectionsHook = useCollections();
   const collectionsTree = collectionsHook.state.status === 'ready'
@@ -47,6 +51,7 @@ export default function App() {
     useOnboarding(slug === null);
 
   const [signInOpen, setSignInOpen] = useState(false);
+  const [editBlockedOpen, setEditBlockedOpen] = useState(false);
   const [shortcutHelpOpen, setShortcutHelpOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -140,7 +145,7 @@ export default function App() {
 
   useKeyboardShortcuts({
     onSave: () => { void handleSave('shortcut'); },
-    onToggleMode: () => toggleMode('shortcut'),
+    onToggleMode: () => { if (canEdit || mode === 'editor') toggleMode('shortcut'); },
     onCopyLink: () => { void copyLink('shortcut'); },
     onNewDoc: () => { window.location.href = '/mreader/'; },
     onOpenCommandPalette: () => setCommandPaletteOpen(true),
@@ -180,7 +185,13 @@ export default function App() {
         document={{ slug, markdownText, presenceCount }}
         ui={{ mode, isSaving, isLoading, copied, copiedMarkdown, sidebarOpen, isPdfImporting }}
         actions={{
-          onToggle: () => toggleMode('button'),
+          onToggle: () => {
+            if (canEdit || mode === 'editor') {
+              toggleMode('button');
+            } else {
+              setEditBlockedOpen(true);
+            }
+          },
           onSave: () => { void handleSave('button'); },
           onNewDoc: () => { window.location.href = '/mreader/'; },
           onExportPdf: handleExportPdf,
@@ -258,6 +269,20 @@ export default function App() {
         />
       )}
 
+      {editBlockedOpen && (
+        <EditBlockedModal
+          onClose={() => setEditBlockedOpen(false)}
+          onFork={() => {
+            sessionStorage.setItem('mreader:fork', markdownText);
+            window.location.href = '/mreader/';
+          }}
+          onSignIn={() => {
+            setEditBlockedOpen(false);
+            setSignInOpen(true);
+          }}
+        />
+      )}
+
       {user ? (
         <CollectionsSidebar
           tree={collectionsTree}
@@ -317,7 +342,13 @@ export default function App() {
         document={{ slug, markdownText, presenceCount }}
         ui={{ mode, isSaving, isLoading, copied, copiedMarkdown, sidebarOpen, isPdfImporting }}
         actions={{
-          onToggle: () => toggleMode('button'),
+          onToggle: () => {
+            if (canEdit || mode === 'editor') {
+              toggleMode('button');
+            } else {
+              setEditBlockedOpen(true);
+            }
+          },
           onSave: () => { void handleSave('button'); },
           onCopyLink: () => { void copyLink('button'); },
           onNewDoc: () => { window.location.href = '/mreader/'; },
@@ -341,7 +372,7 @@ export default function App() {
             aria-label="Loading document"
           />
         ) : mode === 'editor' ? (
-          <Editor value={markdownText} onChange={setMarkdownText} />
+          <Editor value={markdownText} onChange={setMarkdownText} readOnly={!canEdit} />
         ) : (
           <Preview content={markdownText} />
         )}

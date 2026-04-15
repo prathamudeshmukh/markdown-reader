@@ -1,4 +1,7 @@
+import { useEffect } from 'react';
 import type { DisplayDoc } from '../hooks/useRecentDocs';
+import { SIDEBAR_BACKDROP_COLOR } from './sidebar.constants';
+import MobileSheetChrome from './MobileSheetChrome';
 
 interface RecentDocsSidebarProps {
   docs: DisplayDoc[];
@@ -17,25 +20,37 @@ function formatDate(iso: string): string {
 }
 
 export default function RecentDocsSidebar({ docs, isOpen, onClose, onDocOpen }: RecentDocsSidebarProps) {
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [isOpen, onClose]);
+
   return (
     <>
       {/* Backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-30"
-          style={{ backgroundColor: 'rgba(0,0,0,0.18)' }}
+          data-testid="mobile-backdrop"
+          className="sm:hidden fixed inset-0 z-30"
+          style={{ backgroundColor: SIDEBAR_BACKDROP_COLOR }}
           onClick={onClose}
           aria-hidden="true"
         />
       )}
 
-      {/* Sidebar panel */}
+      {/* Sidebar panel — bottom sheet on mobile, right panel on desktop */}
       <aside
         className={[
-          'fixed inset-y-0 right-0 z-40 w-56 pt-[57px]',
-          'flex flex-col overflow-y-auto',
+          'fixed inset-x-0 z-40',
+          'bottom-[calc(56px+env(safe-area-inset-bottom))] max-h-[72vh] rounded-t-2xl',
+          'sm:inset-x-auto sm:inset-y-0 sm:right-0 sm:w-56 sm:pt-[57px] sm:max-h-none sm:rounded-none',
+          'flex flex-col overflow-hidden',
           'transition-transform duration-200 ease-in-out',
-          isOpen ? 'translate-x-0' : 'translate-x-full',
+          isOpen
+            ? 'translate-y-0 sm:translate-x-0 sm:translate-y-0'
+            : 'translate-y-full sm:translate-x-full sm:translate-y-0',
         ].join(' ')}
         style={{
           backgroundColor: 'var(--bg-secondary)',
@@ -43,6 +58,8 @@ export default function RecentDocsSidebar({ docs, isOpen, onClose, onDocOpen }: 
         }}
         aria-label="Recent docs"
       >
+        <MobileSheetChrome />
+
         <div
           className="px-4 py-3 flex items-center justify-between"
           style={{ borderBottom: '1px solid var(--border-light)' }}
@@ -82,7 +99,7 @@ export default function RecentDocsSidebar({ docs, isOpen, onClose, onDocOpen }: 
             No saved docs yet
           </p>
         ) : (
-          <ul className="py-1">
+          <ul className="py-1 overflow-y-auto flex-1">
             {docs.map((doc) => (
               <li key={doc.slug}>
                 <button
