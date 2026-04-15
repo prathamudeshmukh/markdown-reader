@@ -53,8 +53,10 @@ jobs:
           secrets: |
             SUPABASE_URL
             SUPABASE_ANON_KEY
+            SUPABASE_SERVICE_ROLE_KEY
             PDF_BUCKET_URL
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           PDF_BUCKET_URL: ${{ secrets.PDF_BUCKET_URL }}
