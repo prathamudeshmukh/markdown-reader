@@ -26,7 +26,7 @@ function getCollectionIdFromQuery(): string | null {
   return params.get('collection');
 }
 
-export function useMarkdownState({ isAuthLoading = false }: { isAuthLoading?: boolean } = {}) {
+export function useMarkdownState() {
   const [slug, setSlug] = useState<string | null>(() => getSlugFromPath());
   const [collectionId, setCollectionId] = useState<string | null>(() =>
     slug ? null : getCollectionIdFromQuery(),
@@ -91,8 +91,11 @@ export function useMarkdownState({ isAuthLoading = false }: { isAuthLoading?: bo
   }, [slug]);
 
   useEffect(() => {
-    if (!slug || isAuthLoading || savedLocallyRef.current) return;
+    if (!slug || savedLocallyRef.current) return;
 
+    // Auth is not required here: the Worker's GET handler uses the service role
+    // key and bypasses RLS entirely — the slug itself is the capability token.
+    // Write operations (updateDoc/saveDoc) still enforce ownership via RLS.
     fetchDoc(slug)
       .then((doc) => {
         addRecentDoc(slug, doc.title);
@@ -105,7 +108,7 @@ export function useMarkdownState({ isAuthLoading = false }: { isAuthLoading?: bo
       .catch((err: Error) =>
         setState((prev) => ({ ...prev, isLoading: false, error: err.message })),
       );
-  }, [slug, isAuthLoading]);
+  }, [slug]);
 
   const setMarkdownText = useCallback(
     (text: string) => {

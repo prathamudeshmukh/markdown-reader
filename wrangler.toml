@@ -17,6 +17,9 @@ bucket_name = "markdown-reader-pdf-temp"
 [vars]
 PDF2MARKDOWN_API_URL = "https://pdf2html.templify.cloud"
 
+[placement]
+mode = "smart"
+
 [observability]
 [observability.logs]
 enabled = true

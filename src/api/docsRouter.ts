@@ -50,10 +50,41 @@ async function handlePost(request: Request, env: RouterEnv): Promise<Response> {
   return json({ error: 'Failed to generate unique slug' }, 500);
 }
 
-async function handleGet(slug: string, env: RouterEnv): Promise<Response> {
+function docCacheKey(url: string): Request {
+  return new Request(url, { method: 'GET' });
+}
+
+// Lazily accessed so tests can mock `caches` before the first call.
+// caches.default is a Cloudflare Workers extension not in standard lib types.
+function cfCache(): Cache {
+  return (caches as unknown as { default: Cache }).default;
+}
+
+async function handleGet(request: Request, slug: string, env: RouterEnv): Promise<Response> {
+  const cacheKey = docCacheKey(request.url);
+  let cached: Response | undefined;
+  try {
+    cached = await cfCache().match(cacheKey) ?? undefined;
+  } catch {
+    // Cache unavailable — fall through to DB
+  }
+  if (cached) return cached;
+
   const doc = await getDoc(env, slug);
   if (!doc) return json({ error: 'Not found' }, 404);
-  return json(doc);
+
+  const response = new Response(JSON.stringify(doc), {
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=300',
+    },
+  });
+  try {
+    await cfCache().put(cacheKey, response.clone());
+  } catch {
+    // Cache write failure is non-fatal
+  }
+  return response;
 }
 
 async function handleGetUserDocs(request: Request, env: RouterEnv): Promise<Response> {
@@ -86,12 +117,22 @@ async function handlePut(request: Request, slug: string, env: RouterEnv): Promis
   const collectionId = parseCollectionId(body.collection_id);
   const userJwt = extractBearerToken(request);
 
+  // Invalidate before the DB write so concurrent GETs bypass the cache
+  // and read DB directly during the update window.
+  try {
+    const { origin } = new URL(request.url);
+    await cfCache().delete(docCacheKey(`${origin}${API_PREFIX}/${slug}`));
+  } catch {
+    // Cache invalidation failure is non-fatal — DB is source of truth
+  }
+
   const doc = await updateDoc(env, slug, {
     content: body.content as string | undefined,
     title,
     userJwt,
     collectionId,
   });
+
   return json({ slug: doc.slug });
 }
 
@@ -111,7 +152,7 @@ export async function handleDocsRequest(
   if (pathname.startsWith(`${API_PREFIX}/`)) {
     const slug = pathname.slice(API_PREFIX.length + 1);
     if (!slug) return json({ error: 'Not found' }, 404);
-    if (method === 'GET') return handleGet(slug, env);
+    if (method === 'GET') return handleGet(request, slug, env);
     if (method === 'PUT') return handlePut(request, slug, env);
     return json({ error: 'Method not allowed' }, 405);
   }

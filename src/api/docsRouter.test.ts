@@ -14,6 +14,18 @@ vi.mock('nanoid', () => ({
 import { handleDocsRequest } from './docsRouter';
 import { createDoc, getDoc, updateDoc, getUserDocs } from './supabaseClient';
 
+const mockCache = {
+  match: vi.fn().mockResolvedValue(undefined),
+  put: vi.fn().mockResolvedValue(undefined),
+  delete: vi.fn().mockResolvedValue(true),
+};
+
+Object.defineProperty(global, 'caches', {
+  value: { default: mockCache },
+  writable: true,
+  configurable: true,
+});
+
 const env = {
   SUPABASE_URL: 'https://test.supabase.co',
   SUPABASE_ANON_KEY: 'test-anon-key',
@@ -36,6 +48,9 @@ function makeRequest(method: string, path: string, body?: unknown, headers?: Rec
 describe('handleDocsRequest', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockCache.match.mockResolvedValue(undefined);
+    mockCache.put.mockResolvedValue(undefined);
+    mockCache.delete.mockResolvedValue(true);
   });
 
   it('returns null for non-API paths', async () => {
@@ -159,6 +174,25 @@ describe('handleDocsRequest', () => {
       const res = await handleDocsRequest(makeRequest('GET', '/mreader/api/docs/missing'), env);
       expect(res?.status).toBe(404);
     });
+
+    it('returns 200 and falls through to DB when cache.match throws', async () => {
+      mockCache.match.mockRejectedValueOnce(new Error('cache unavailable'));
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null });
+
+      const res = await handleDocsRequest(makeRequest('GET', '/mreader/api/docs/abc1234'), env);
+
+      expect(res?.status).toBe(200);
+      expect(getDoc).toHaveBeenCalledWith(env, 'abc1234');
+    });
+
+    it('returns 200 even when cache.put throws', async () => {
+      mockCache.put.mockRejectedValueOnce(new Error('cache write failed'));
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null });
+
+      const res = await handleDocsRequest(makeRequest('GET', '/mreader/api/docs/abc1234'), env);
+
+      expect(res?.status).toBe(200);
+    });
   });
 
   describe('PUT /mreader/api/docs/:slug', () => {
@@ -203,6 +237,19 @@ describe('handleDocsRequest', () => {
         'abc1234',
         expect.objectContaining({ content: undefined, title: 'New Title' }),
       );
+    });
+
+    it('still calls updateDoc and returns 200 when cache.delete throws', async () => {
+      mockCache.delete.mockRejectedValueOnce(new Error('cache delete failed'));
+      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Updated', title: null, user_id: null, collection_id: null });
+
+      const res = await handleDocsRequest(
+        makeRequest('PUT', '/mreader/api/docs/abc1234', { content: '# Updated' }),
+        env,
+      );
+
+      expect(res?.status).toBe(200);
+      expect(updateDoc).toHaveBeenCalled();
     });
 
     it('returns 400 when neither content nor title is provided', async () => {

@@ -31,7 +31,7 @@ const PDF_IMPORT_UNKNOWN_ERROR = 'Failed to import PDF. Please try again.';
 export default function App() {
   const { user, isAuthLoading, signInWithEmail, signOut } = useAuth();
   const { markdownText, title, slug, docUserId, mode, isLoading, isSaving, error, presenceCount, setMarkdownText, setTitle, toggleMode, onSave, navigateToDoc } =
-    useMarkdownState({ isAuthLoading });
+    useMarkdownState();
 
   // A doc is editable if it has no slug (new, unsaved), has no owner (anonymous), or the current user owns it.
   const canEdit = !slug || (!user && !docUserId) || docUserId === user?.id;

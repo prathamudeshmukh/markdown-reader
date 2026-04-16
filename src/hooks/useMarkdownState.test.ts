@@ -176,22 +176,10 @@ describe('useMarkdownState', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    it('does not call fetchDoc while auth is loading', () => {
-      renderHook(() => useMarkdownState({ isAuthLoading: true }));
-      expect(fetchDoc).not.toHaveBeenCalled();
-    });
-
-    it('calls fetchDoc once auth finishes loading', async () => {
+    it('calls fetchDoc immediately on mount without waiting for any auth state', async () => {
       vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null });
-      const { rerender } = renderHook(
-        ({ isAuthLoading }) => useMarkdownState({ isAuthLoading }),
-        { initialProps: { isAuthLoading: true } },
-      );
-
-      expect(fetchDoc).not.toHaveBeenCalled();
-
-      rerender({ isAuthLoading: false });
-
+      renderHook(() => useMarkdownState());
+      // fetchDoc must fire on the first render tick, before any auth resolves
       await waitFor(() => expect(fetchDoc).toHaveBeenCalledWith('abc1234'));
     });
 
