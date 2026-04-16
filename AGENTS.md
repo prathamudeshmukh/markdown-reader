@@ -16,7 +16,7 @@ npm run lint            # Lint TypeScript files
 
 Run a single test file:
 ```bash
-npx vitest run src/utils/encoding.test.ts
+npx vitest run src/hooks/useMarkdownState.test.ts
 ```
 
 ### Pre-commit hooks
@@ -25,26 +25,23 @@ Husky runs three checks in parallel on every commit: TypeScript type-check (`tsc
 
 ## Architecture
 
-React + Vite + TypeScript frontend with a **Cloudflare Worker backend**. Documents can be shared via two mechanisms: URL-hash encoding (no backend, local only) or server-persisted slugs (Supabase).
+React + Vite + TypeScript frontend with a **Cloudflare Worker backend**. All documents are persisted to Supabase — there is no local-only hash mode.
 
 ### Routing modes
 
 | URL pattern | Behavior |
 |-------------|----------|
-| `/mreader/` | New document — editor mode, hash-based state |
-| `/mreader/d/:slug` | Shared document — fetched from Supabase, realtime collaboration active |
+| `/mreader/` | New document — editor mode, in-memory until explicitly saved |
+| `/mreader/d/:slug` | Saved document — fetched from Supabase, realtime collaboration active |
 
 The slug is extracted from the path by [src/utils/route.ts](src/utils/route.ts). Presence of a slug drives the initial mode (`preview`) and triggers `fetchDoc`.
 
 ### Document persistence
 
-- **Hash mode** (no slug): URL hash stores Base64 URL-safe encoded markdown. `history.replaceState` updates it on every debounced change (250ms). Logic lives in [src/utils/encoding.ts](src/utils/encoding.ts) and [src/utils/url.ts](src/utils/url.ts).
-- **Slug mode**: Documents are stored in Supabase. The Cloudflare Worker exposes `POST/GET/PUT /mreader/api/docs[/:slug]` via [src/api/docsRouter.ts](src/api/docsRouter.ts). The frontend client is [src/api/docsApi.ts](src/api/docsApi.ts). Saving a new doc navigates to `/mreader/d/:slug`.
+All documents are stored in Supabase. The Cloudflare Worker exposes `POST/GET/PUT /mreader/api/docs[/:slug]` via [src/api/docsRouter.ts](src/api/docsRouter.ts). The frontend client is [src/api/docsApi.ts](src/api/docsApi.ts).
 
-### Encoding details
-- `+` → `-`, `/` → `_`, trailing `=` stripped (URL-safe alphabet)
-- Invalid Base64 in the hash → caught, app falls back to empty editor with a warning banner
-- Content warning shown when encoded bytes exceed ~8 KB (practical URL length risk)
+- **New doc** (no slug): lives in memory until the user hits Save, which POSTs to the Worker and navigates to `/mreader/d/:slug`.
+- **Saved doc** (slug present): auto-saves on every debounced change (250ms) via `PUT /mreader/api/docs/:slug`.
 
 ### Realtime collaboration
 
@@ -91,8 +88,6 @@ PostHog integration lives in [src/telemetry/](src/telemetry/). `initTelemetry()`
 | [src/realtime/useDocChannel.ts](src/realtime/useDocChannel.ts) | Supabase Realtime channel for live collaboration |
 | [src/realtime/supabaseRealtimeClient.ts](src/realtime/supabaseRealtimeClient.ts) | Singleton Supabase client for realtime (throws if env vars missing) |
 | [src/utils/collectionTree.ts](src/utils/collectionTree.ts) | Builds nested tree from flat collections + docs rows |
-| [src/utils/encoding.ts](src/utils/encoding.ts) | Unicode-safe, URL-safe Base64 encode/decode |
-| [src/utils/url.ts](src/utils/url.ts) | `readHash()` / `writeHash()` — thin wrappers around `window.location.hash` |
 | [src/utils/route.ts](src/utils/route.ts) | Extracts slug from URL path |
 | [src/utils/recentDocs.ts](src/utils/recentDocs.ts) | localStorage-backed recent documents list (not synced; collections are server-synced) |
 | [src/hooks/useKeyboardShortcuts.ts](src/hooks/useKeyboardShortcuts.ts) | Global keyboard shortcuts (Ctrl+S save, Ctrl+/ toggle mode, Ctrl+Shift+C copy link) |
@@ -120,7 +115,7 @@ PDF2MARKDOWN_API_URL=...        # required when PDF API route is used; external 
 # PDF_BUCKET — R2 bucket binding configured in wrangler.toml (not an env var)
 ```
 
-Missing `VITE_SUPABASE_*` vars → hash-only mode works fine, slug routes 404, realtime disabled.  
+Missing `VITE_SUPABASE_*` vars → new docs cannot be saved, slug routes 404, realtime disabled.  
 Missing `PDF2MARKDOWN_API_URL` → PDF Worker route will fail at conversion step (R2 upload still occurs, then temp file is deleted).
 
 ### Error handling
@@ -134,7 +129,6 @@ Missing `PDF2MARKDOWN_API_URL` → PDF Worker route will fail at conversion step
 | PDF too large (>20 MB) | `pdfRouter.ts` | 413 `PDF file exceeds the 20 MB limit` |
 | R2 upload failure | `pdfRouter.ts` | 500 `Failed to store PDF for conversion` |
 | External PDF conversion failure | `pdfRouter.ts` | 422 or 500 with descriptive message; R2 temp file deleted in `finally` |
-| Invalid Base64 in URL hash | `encoding.ts` | Decode error caught; app falls back to empty editor with warning banner |
 | Supabase env vars missing | `supabaseRealtimeClient.ts` | Throws; caught in `useDocChannel.ts`; realtime silently disabled |
 
 Worker API responses always follow the envelope: `{ error: string }` on failure, typed payload on success.

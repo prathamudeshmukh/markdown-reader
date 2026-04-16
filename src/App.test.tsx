@@ -4,6 +4,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 vi.mock('./hooks/useMarkdownState');
 vi.mock('./hooks/useKeyboardShortcuts', () => ({ useKeyboardShortcuts: vi.fn() }));
 vi.mock('./hooks/useRecentDocs', () => ({ useRecentDocs: vi.fn(() => ({ status: 'ready', docs: [] })) }));
+vi.mock('./hooks/useCollections', () => ({ useCollections: vi.fn(() => ({ state: { status: 'idle' }, refresh: vi.fn(), createCollection: vi.fn(), renameCollection: vi.fn(), deleteCollection: vi.fn(), moveDocToCollection: vi.fn() })) }));
+vi.mock('./auth/AuthContext', () => ({ useAuth: vi.fn(() => ({ user: null, isAuthLoading: false, signInWithEmail: vi.fn(), signOut: vi.fn() })) }));
 vi.mock('./telemetry', () => ({
   track: vi.fn(),
   getContentLengthBucket: vi.fn(() => 'xs'),
@@ -32,6 +34,7 @@ vi.mock('./components/QrModal', () => ({
 import App from './App';
 import { useMarkdownState } from './hooks/useMarkdownState';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import { useAuth } from './auth/AuthContext';
 import { track } from './telemetry';
 import { PdfImportError } from './utils/pdfToMarkdown';
 import { PdfApiError } from './utils/pdfApiClient';
@@ -282,6 +285,21 @@ describe('App', () => {
       fireEvent.change(input, { target: { files: [makeFile()] } });
 
       await vi.waitFor(() => expect(screen.getByText(/failed to import/i)).toBeInTheDocument());
+    });
+  });
+
+  describe('canEdit — access control', () => {
+    it('anon visitor on unowned doc can edit', () => {
+      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, slug: 'abc1234', docUserId: null });
+      render(<App />);
+      expect(screen.getByPlaceholderText('Start writing…')).not.toHaveAttribute('readonly');
+    });
+
+    it('authenticated user on unowned doc is blocked from editing', () => {
+      vi.mocked(useAuth).mockReturnValue({ user: { id: 'user-b' } as never, isAuthLoading: false, signInWithEmail: vi.fn(), signOut: vi.fn() });
+      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, slug: 'abc1234', docUserId: null });
+      render(<App />);
+      expect(screen.getByPlaceholderText('Start writing…')).toHaveAttribute('readonly');
     });
   });
 

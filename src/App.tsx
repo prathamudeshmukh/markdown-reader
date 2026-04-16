@@ -34,7 +34,7 @@ export default function App() {
     useMarkdownState({ isAuthLoading });
 
   // A doc is editable if it has no slug (new, unsaved), has no owner (anonymous), or the current user owns it.
-  const canEdit = !slug || !docUserId || docUserId === user?.id;
+  const canEdit = !slug || (!user && !docUserId) || docUserId === user?.id;
 
   const collectionsHook = useCollections();
   const collectionsTree = collectionsHook.state.status === 'ready'
