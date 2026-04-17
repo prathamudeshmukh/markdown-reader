@@ -62,8 +62,8 @@ describe('handleDocsRequest', () => {
   });
 
   describe('POST /mreader/api/docs', () => {
-    it('creates a doc and returns 201 with slug', async () => {
-      vi.mocked(createDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null });
+    it('creates a doc and returns 201 with slug and creatorToken', async () => {
+      vi.mocked(createDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null, creator_token: 'tok' });
 
       const res = await handleDocsRequest(
         makeRequest('POST', '/mreader/api/docs', { content: '# Hello' }),
@@ -71,11 +71,29 @@ describe('handleDocsRequest', () => {
       );
 
       expect(res?.status).toBe(201);
-      expect(await res?.json()).toEqual({ slug: 'abc1234' });
+      const body = await res?.json() as { slug: string; creatorToken: string };
+      expect(body.slug).toBe('abc1234');
+      expect(typeof body.creatorToken).toBe('string');
+      expect(body.creatorToken.length).toBeGreaterThan(0);
+    });
+
+    it('passes creatorToken to createDoc', async () => {
+      vi.mocked(createDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null, creator_token: 'tok' });
+
+      await handleDocsRequest(
+        makeRequest('POST', '/mreader/api/docs', { content: '# Hello' }),
+        env,
+      );
+
+      expect(createDoc).toHaveBeenCalledWith(
+        env,
+        'abc1234',
+        expect.objectContaining({ creatorToken: expect.any(String) }),
+      );
     });
 
     it('passes title to createDoc when provided', async () => {
-      vi.mocked(createDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: 'My Doc', user_id: null, collection_id: null });
+      vi.mocked(createDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: 'My Doc', user_id: null, collection_id: null, creator_token: null });
 
       await handleDocsRequest(
         makeRequest('POST', '/mreader/api/docs', { content: '# Hello', title: 'My Doc' }),
@@ -90,7 +108,7 @@ describe('handleDocsRequest', () => {
     });
 
     it('passes userJwt to createDoc when Authorization header present', async () => {
-      vi.mocked(createDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId, collection_id: null });
+      vi.mocked(createDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId, collection_id: null, creator_token: null });
 
       await handleDocsRequest(
         makeRequest('POST', '/mreader/api/docs', { content: '# Hello' }, { Authorization: `Bearer ${fakeJwt}` }),
@@ -152,16 +170,16 @@ describe('handleDocsRequest', () => {
 
   describe('GET /mreader/api/docs/:slug', () => {
     it('returns 200 with doc when found', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null, creator_token: null });
 
       const res = await handleDocsRequest(makeRequest('GET', '/mreader/api/docs/abc1234'), env);
 
       expect(res?.status).toBe(200);
-      expect(await res?.json()).toEqual({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null });
+      expect(await res?.json()).toEqual({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null, creator_token: null });
     });
 
     it('calls getDoc with env and slug only (service role handles auth)', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId, collection_id: null });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId, collection_id: null, creator_token: null });
 
       await handleDocsRequest(makeRequest('GET', '/mreader/api/docs/abc1234'), env);
 
@@ -177,7 +195,7 @@ describe('handleDocsRequest', () => {
 
     it('returns 200 and falls through to DB when cache.match throws', async () => {
       mockCache.match.mockRejectedValueOnce(new Error('cache unavailable'));
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null, creator_token: null });
 
       const res = await handleDocsRequest(makeRequest('GET', '/mreader/api/docs/abc1234'), env);
 
@@ -187,7 +205,7 @@ describe('handleDocsRequest', () => {
 
     it('returns 200 even when cache.put throws', async () => {
       mockCache.put.mockRejectedValueOnce(new Error('cache write failed'));
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null, creator_token: null });
 
       const res = await handleDocsRequest(makeRequest('GET', '/mreader/api/docs/abc1234'), env);
 
@@ -197,7 +215,7 @@ describe('handleDocsRequest', () => {
 
   describe('PUT /mreader/api/docs/:slug', () => {
     it('returns 200 with slug on successful update', async () => {
-      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Updated', title: null, user_id: null, collection_id: null });
+      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Updated', title: null, user_id: null, collection_id: null, creator_token: null });
 
       const res = await handleDocsRequest(
         makeRequest('PUT', '/mreader/api/docs/abc1234', { content: '# Updated' }),
@@ -209,7 +227,7 @@ describe('handleDocsRequest', () => {
     });
 
     it('passes title to updateDoc when provided', async () => {
-      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Updated', title: 'New Title', user_id: null, collection_id: null });
+      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Updated', title: 'New Title', user_id: null, collection_id: null, creator_token: null });
 
       await handleDocsRequest(
         makeRequest('PUT', '/mreader/api/docs/abc1234', { content: '# Updated', title: 'New Title' }),
@@ -224,7 +242,7 @@ describe('handleDocsRequest', () => {
     });
 
     it('returns 200 for title-only update', async () => {
-      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: 'New Title', user_id: null, collection_id: null });
+      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: 'New Title', user_id: null, collection_id: null, creator_token: null });
 
       const res = await handleDocsRequest(
         makeRequest('PUT', '/mreader/api/docs/abc1234', { title: 'New Title' }),
@@ -241,7 +259,7 @@ describe('handleDocsRequest', () => {
 
     it('still calls updateDoc and returns 200 when cache.delete throws', async () => {
       mockCache.delete.mockRejectedValueOnce(new Error('cache delete failed'));
-      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Updated', title: null, user_id: null, collection_id: null });
+      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Updated', title: null, user_id: null, collection_id: null, creator_token: null });
 
       const res = await handleDocsRequest(
         makeRequest('PUT', '/mreader/api/docs/abc1234', { content: '# Updated' }),
@@ -258,6 +276,73 @@ describe('handleDocsRequest', () => {
         env,
       );
       expect(res?.status).toBe(400);
+    });
+  });
+
+  describe('PUT /mreader/api/docs/:slug — claim', () => {
+    it('returns 401 when claim=true but no Authorization header', async () => {
+      const res = await handleDocsRequest(
+        makeRequest('PUT', '/mreader/api/docs/abc1234', { claim: true, creatorToken: 'valid-token' }),
+        env,
+      );
+      expect(res?.status).toBe(401);
+    });
+
+    it('returns 403 when creatorToken does not match', async () => {
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null, creator_token: 'correct-token' });
+
+      const res = await handleDocsRequest(
+        makeRequest('PUT', '/mreader/api/docs/abc1234', { claim: true, creatorToken: 'wrong-token' }, { Authorization: `Bearer ${fakeJwt}` }),
+        env,
+      );
+      expect(res?.status).toBe(403);
+      expect(updateDoc).not.toHaveBeenCalled();
+    });
+
+    it('returns 403 when creator_token is already null (already claimed)', async () => {
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null, creator_token: null });
+
+      const res = await handleDocsRequest(
+        makeRequest('PUT', '/mreader/api/docs/abc1234', { claim: true, creatorToken: 'any-token' }, { Authorization: `Bearer ${fakeJwt}` }),
+        env,
+      );
+      expect(res?.status).toBe(403);
+      expect(updateDoc).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when claim=true but creatorToken is missing', async () => {
+      const res = await handleDocsRequest(
+        makeRequest('PUT', '/mreader/api/docs/abc1234', { claim: true }, { Authorization: `Bearer ${fakeJwt}` }),
+        env,
+      );
+      expect(res?.status).toBe(400);
+    });
+
+    it('returns 404 when doc does not exist during claim', async () => {
+      vi.mocked(getDoc).mockResolvedValueOnce(null);
+
+      const res = await handleDocsRequest(
+        makeRequest('PUT', '/mreader/api/docs/missing', { claim: true, creatorToken: 'tok' }, { Authorization: `Bearer ${fakeJwt}` }),
+        env,
+      );
+      expect(res?.status).toBe(404);
+    });
+
+    it('returns 200 and calls updateDoc with userId and clearCreatorToken on valid claim', async () => {
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null, creator_token: 'correct-token' });
+      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId, collection_id: null, creator_token: null });
+
+      const res = await handleDocsRequest(
+        makeRequest('PUT', '/mreader/api/docs/abc1234', { claim: true, creatorToken: 'correct-token' }, { Authorization: `Bearer ${fakeJwt}` }),
+        env,
+      );
+
+      expect(res?.status).toBe(200);
+      expect(updateDoc).toHaveBeenCalledWith(
+        env,
+        'abc1234',
+        expect.objectContaining({ userId, clearCreatorToken: true }),
+      );
     });
   });
 

@@ -5,6 +5,7 @@ import { fetchDoc, saveDoc, updateDoc } from '../api/docsApi';
 import { addRecentDoc } from '../utils/recentDocs';
 import { useDocChannel } from '../realtime/useDocChannel';
 import { getContentLengthBucket, getErrorType, track, type InteractionSource } from '../telemetry';
+import { saveCreatorToken, loadCreatorToken, clearCreatorToken } from '../utils/creatorTokens';
 
 type Mode = 'editor' | 'preview';
 
@@ -26,7 +27,7 @@ function getCollectionIdFromQuery(): string | null {
   return params.get('collection');
 }
 
-export function useMarkdownState() {
+export function useMarkdownState({ userId }: { userId?: string } = {}) {
   const [slug, setSlug] = useState<string | null>(() => getSlugFromPath());
   const [collectionId, setCollectionId] = useState<string | null>(() =>
     slug ? null : getCollectionIdFromQuery(),
@@ -82,6 +83,8 @@ export function useMarkdownState() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const titleDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedLocallyRef = useRef(false);
+  const userIdRef = useRef<string | undefined>(userId);
+  useEffect(() => { userIdRef.current = userId; }, [userId]);
 
   useEffect(() => {
     track('app_opened', {
@@ -119,12 +122,31 @@ export function useMarkdownState() {
 
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {
-        setState((prev) => ({ ...prev, isSaving: true }));
-        updateDoc(slug, { content: text })
-          .then(() => setState((prev) => ({ ...prev, isSaving: false })))
-          .catch((err: Error) =>
-            setState((prev) => ({ ...prev, isSaving: false, error: err.message })),
-          );
+        // Read userId from ref so we always get the value current at execution
+        // time, not the stale value captured when setMarkdownText was created.
+        const currentUserId = userIdRef.current;
+        setState((prev) => {
+          const creatorToken = currentUserId && !prev.docUserId ? loadCreatorToken(slug) : null;
+          const isClaim = !!creatorToken;
+
+          updateDoc(slug, {
+            content: text,
+            ...(isClaim ? { claim: true, creatorToken } : {}),
+          })
+            .then(() => {
+              if (isClaim && creatorToken) {
+                clearCreatorToken(slug);
+                setState((s) => ({ ...s, isSaving: false, docUserId: currentUserId ?? null }));
+              } else {
+                setState((s) => ({ ...s, isSaving: false }));
+              }
+            })
+            .catch((err: Error) =>
+              setState((s) => ({ ...s, isSaving: false, error: err.message })),
+            );
+
+          return { ...prev, isSaving: true };
+        });
       }, DEBOUNCE_MS);
     },
     [slug, broadcastContent],
@@ -190,11 +212,12 @@ export function useMarkdownState() {
 
     setState((prev) => ({ ...prev, isSaving: true }));
     try {
-      const { slug: newSlug } = await saveDoc({
+      const { slug: newSlug, creatorToken } = await saveDoc({
         content: state.markdownText,
         title: state.title ?? undefined,
         collectionId,
       });
+      saveCreatorToken(newSlug, creatorToken);
       addRecentDoc(newSlug, state.title);
       track('doc_save_succeeded', { slug_created: true });
       history.pushState({}, '', `/mreader/d/${newSlug}`);

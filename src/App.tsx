@@ -19,6 +19,7 @@ import ShortcutHelpModal from './components/ShortcutHelpModal';
 import CommandPalette from './components/CommandPalette';
 import { useAuth } from './auth/AuthContext';
 import { getContentLengthBucket, track, type InteractionSource } from './telemetry';
+import { loadCreatorToken } from './utils/creatorTokens';
 import { pdfToMarkdown, PdfImportError } from './utils/pdfToMarkdown';
 import { pdfFileToMarkdown, PdfApiError } from './utils/pdfApiClient';
 import { readFeatureFlags } from './config/features';
@@ -31,10 +32,18 @@ const PDF_IMPORT_UNKNOWN_ERROR = 'Failed to import PDF. Please try again.';
 export default function App() {
   const { user, isAuthLoading, signInWithEmail, signOut } = useAuth();
   const { markdownText, title, slug, docUserId, mode, isLoading, isSaving, error, presenceCount, setMarkdownText, setTitle, toggleMode, onSave, navigateToDoc } =
-    useMarkdownState();
+    useMarkdownState({ userId: user?.id });
 
-  // A doc is editable if it has no slug (new, unsaved), has no owner (anonymous), or the current user owns it.
-  const canEdit = !slug || (!user && !docUserId) || docUserId === user?.id;
+  // True when this authenticated user holds the creator token for an unowned doc —
+  // they created it anonymously and can silently claim it on first auto-save.
+  const hasCreatorToken = !!slug && !!user && !docUserId && !!loadCreatorToken(slug);
+
+  // A doc is editable if:
+  //   - no slug yet (new, unsaved)
+  //   - authenticated user holds the creator token (will claim on first save)
+  //   - anonymous user on an unowned doc
+  //   - authenticated user who owns the doc
+  const canEdit = !slug || hasCreatorToken || (!user && !docUserId) || docUserId === user?.id;
 
   const collectionsHook = useCollections();
   const collectionsTree = collectionsHook.state.status === 'ready'
@@ -271,6 +280,7 @@ export default function App() {
 
       {editBlockedOpen && (
         <EditBlockedModal
+          isUnowned={!!slug && !docUserId}
           onClose={() => setEditBlockedOpen(false)}
           onFork={() => {
             sessionStorage.setItem('mreader:fork', markdownText);

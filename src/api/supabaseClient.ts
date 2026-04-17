@@ -12,6 +12,7 @@ export interface Doc {
   title: string | null;
   user_id: string | null;
   collection_id: string | null;
+  creator_token: string | null;
 }
 
 export interface DocSummary {
@@ -55,16 +56,18 @@ interface CreateDocFields {
   title?: string;
   userJwt?: string;
   collectionId?: string | null;
+  creatorToken?: string;
 }
 
 export async function createDoc(env: SupabaseEnv, slug: string, fields: CreateDocFields): Promise<Doc> {
-  const { content, title, userJwt, collectionId } = fields;
+  const { content, title, userJwt, collectionId, creatorToken } = fields;
   const userId = userJwt ? extractUserIdFromJwt(userJwt) : undefined;
 
   const body: Record<string, unknown> = { slug, content };
   if (title !== undefined) body.title = title;
   if (userId !== undefined) body.user_id = userId;
   if (collectionId !== undefined) body.collection_id = collectionId;
+  if (creatorToken !== undefined) body.creator_token = creatorToken;
 
   const res = await fetch(`${env.SUPABASE_URL}/rest/v1/docs`, {
     method: 'POST',
@@ -89,7 +92,7 @@ export async function getDoc(env: SupabaseEnv, slug: string): Promise<Doc | null
     throw new Error('getDoc failed: SUPABASE_SERVICE_ROLE_KEY is missing or not a valid JWT');
   }
 
-  const url = `${env.SUPABASE_URL}/rest/v1/docs?slug=eq.${encodeURIComponent(slug)}&select=slug,content,title,user_id,collection_id`;
+  const url = `${env.SUPABASE_URL}/rest/v1/docs?slug=eq.${encodeURIComponent(slug)}&select=slug,content,title,user_id,collection_id,creator_token`;
   const res = await fetch(url, {
     headers: {
       apikey: env.SUPABASE_ANON_KEY,
@@ -111,16 +114,20 @@ interface UpdateDocFields {
   title?: string;
   userJwt?: string;
   collectionId?: string | null;
+  userId?: string;
+  clearCreatorToken?: boolean;
 }
 
 export async function updateDoc(env: SupabaseEnv, slug: string, fields: UpdateDocFields): Promise<Doc> {
-  const { content, title, userJwt, collectionId } = fields;
+  const { content, title, userJwt, collectionId, userId, clearCreatorToken } = fields;
   const url = `${env.SUPABASE_URL}/rest/v1/docs?slug=eq.${encodeURIComponent(slug)}`;
 
   const body: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (content !== undefined) body.content = content;
   if (title !== undefined) body.title = title;
   if (collectionId !== undefined) body.collection_id = collectionId;
+  if (userId !== undefined) body.user_id = userId;
+  if (clearCreatorToken) body.creator_token = null;
 
   const res = await fetch(url, {
     method: 'PATCH',

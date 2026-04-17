@@ -6,6 +6,7 @@ vi.mock('./hooks/useKeyboardShortcuts', () => ({ useKeyboardShortcuts: vi.fn() }
 vi.mock('./hooks/useRecentDocs', () => ({ useRecentDocs: vi.fn(() => ({ status: 'ready', docs: [] })) }));
 vi.mock('./hooks/useCollections', () => ({ useCollections: vi.fn(() => ({ state: { status: 'idle' }, refresh: vi.fn(), createCollection: vi.fn(), renameCollection: vi.fn(), deleteCollection: vi.fn(), moveDocToCollection: vi.fn() })) }));
 vi.mock('./auth/AuthContext', () => ({ useAuth: vi.fn(() => ({ user: null, isAuthLoading: false, signInWithEmail: vi.fn(), signOut: vi.fn() })) }));
+vi.mock('./utils/creatorTokens', () => ({ loadCreatorToken: vi.fn(() => null) }));
 vi.mock('./telemetry', () => ({
   track: vi.fn(),
   getContentLengthBucket: vi.fn(() => 'xs'),
@@ -35,6 +36,7 @@ import App from './App';
 import { useMarkdownState } from './hooks/useMarkdownState';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useAuth } from './auth/AuthContext';
+import { loadCreatorToken } from './utils/creatorTokens';
 import { track } from './telemetry';
 import { PdfImportError } from './utils/pdfToMarkdown';
 import { PdfApiError } from './utils/pdfApiClient';
@@ -289,17 +291,72 @@ describe('App', () => {
   });
 
   describe('canEdit — access control', () => {
+    // Flow A: new unsaved doc — always editable
+    it('new unsaved doc (no slug) is always editable', () => {
+      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, slug: null, docUserId: null });
+      render(<App />);
+      expect(screen.getByPlaceholderText('Start writing…')).not.toHaveAttribute('readonly');
+    });
+
+    // Flow B/G: anon on unowned doc — editable
     it('anon visitor on unowned doc can edit', () => {
       vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, slug: 'abc1234', docUserId: null });
       render(<App />);
       expect(screen.getByPlaceholderText('Start writing…')).not.toHaveAttribute('readonly');
     });
 
-    it('authenticated user on unowned doc is blocked from editing', () => {
+    // Flow B (after sign-up): auth user with creator token on unowned doc — editable
+    it('authenticated user with creator token on unowned doc can edit', () => {
+      vi.mocked(useAuth).mockReturnValue({ user: { id: 'user-a' } as never, isAuthLoading: false, signInWithEmail: vi.fn(), signOut: vi.fn() });
+      vi.mocked(loadCreatorToken).mockReturnValue('valid-token');
+      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, slug: 'abc1234', docUserId: null });
+      render(<App />);
+      expect(screen.getByPlaceholderText('Start writing…')).not.toHaveAttribute('readonly');
+    });
+
+    // Flow E: auth user without creator token on unowned doc — blocked
+    it('authenticated user without creator token on unowned doc is blocked', () => {
       vi.mocked(useAuth).mockReturnValue({ user: { id: 'user-b' } as never, isAuthLoading: false, signInWithEmail: vi.fn(), signOut: vi.fn() });
+      vi.mocked(loadCreatorToken).mockReturnValue(null);
       vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, slug: 'abc1234', docUserId: null });
       render(<App />);
       expect(screen.getByPlaceholderText('Start writing…')).toHaveAttribute('readonly');
+    });
+
+    // Flow C: owner can edit their own doc
+    it('authenticated owner of a doc can edit', () => {
+      vi.mocked(useAuth).mockReturnValue({ user: { id: 'user-a' } as never, isAuthLoading: false, signInWithEmail: vi.fn(), signOut: vi.fn() });
+      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, slug: 'abc1234', docUserId: 'user-a' });
+      render(<App />);
+      expect(screen.getByPlaceholderText('Start writing…')).not.toHaveAttribute('readonly');
+    });
+
+    // Flow D: different auth user on owned doc — blocked
+    it('authenticated non-owner on someone else\'s doc is blocked', () => {
+      vi.mocked(useAuth).mockReturnValue({ user: { id: 'user-b' } as never, isAuthLoading: false, signInWithEmail: vi.fn(), signOut: vi.fn() });
+      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, slug: 'abc1234', docUserId: 'user-a' });
+      render(<App />);
+      expect(screen.getByPlaceholderText('Start writing…')).toHaveAttribute('readonly');
+    });
+  });
+
+  describe('EditBlockedModal — isUnowned prop', () => {
+    it('shows "no owner" copy when doc is unowned', () => {
+      vi.mocked(useAuth).mockReturnValue({ user: { id: 'user-b' } as never, isAuthLoading: false, signInWithEmail: vi.fn(), signOut: vi.fn() });
+      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, slug: 'abc1234', docUserId: null, mode: 'preview' });
+      render(<App />);
+      fireEvent.click(screen.getAllByRole('button', { name: /edit/i })[0]);
+      expect(screen.getByText(/this document has no owner/i)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /sign in to edit/i })).not.toBeInTheDocument();
+    });
+
+    it('shows "someone else\'s document" copy and sign-in button when doc is owned by another', () => {
+      vi.mocked(useAuth).mockReturnValue({ user: { id: 'user-b' } as never, isAuthLoading: false, signInWithEmail: vi.fn(), signOut: vi.fn() });
+      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, slug: 'abc1234', docUserId: 'user-a', mode: 'preview' });
+      render(<App />);
+      fireEvent.click(screen.getAllByRole('button', { name: /edit/i })[0]);
+      expect(screen.getByText(/someone else/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /sign in to edit/i })).toBeInTheDocument();
     });
   });
 

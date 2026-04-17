@@ -8,6 +8,7 @@ const API_PREFIX = '/mreader/api/docs';
 const MAX_CONTENT_BYTES = 500_000;
 const MAX_TITLE_CHARS = 300;
 const SLUG_LENGTH = 7;
+const CREATOR_TOKEN_LENGTH = 21;
 
 function parseTitle(raw: unknown): string | undefined {
   if (typeof raw !== 'string') return undefined;
@@ -36,11 +37,13 @@ async function handlePost(request: Request, env: RouterEnv): Promise<Response> {
   const collectionId = parseCollectionId(body.collection_id);
   const userJwt = extractBearerToken(request);
 
+  const creatorToken = nanoid(CREATOR_TOKEN_LENGTH);
+
   for (let attempt = 0; attempt < 2; attempt++) {
     const slug = nanoid(SLUG_LENGTH);
     try {
-      const doc = await createDoc(env, slug, { content: body.content, title, userJwt, collectionId });
-      return json({ slug: doc.slug }, 201);
+      const doc = await createDoc(env, slug, { content: body.content, title, userJwt, collectionId, creatorToken });
+      return json({ slug: doc.slug, creatorToken }, 201);
     } catch (err) {
       const isDuplicate = err instanceof Error && err.message.includes('duplicate');
       if (attempt === 1 || !isDuplicate) throw err;
@@ -99,7 +102,44 @@ async function handleGetUserDocs(request: Request, env: RouterEnv): Promise<Resp
 }
 
 async function handlePut(request: Request, slug: string, env: RouterEnv): Promise<Response> {
-  const body = (await request.json()) as { content?: unknown; title?: unknown; collection_id?: unknown };
+  const body = (await request.json()) as {
+    content?: unknown;
+    title?: unknown;
+    collection_id?: unknown;
+    claim?: unknown;
+    creatorToken?: unknown;
+  };
+
+  const isClaim = body.claim === true;
+
+  if (isClaim) {
+    const userJwt = extractBearerToken(request);
+    if (!userJwt) return json({ error: 'Unauthorized' }, 401);
+
+    const userId = extractUserIdFromJwt(userJwt);
+    if (!userId) return json({ error: 'Invalid token' }, 401);
+
+    if (typeof body.creatorToken !== 'string') {
+      return json({ error: 'creatorToken is required for claim' }, 400);
+    }
+
+    const existing = await getDoc(env, slug);
+    if (!existing) return json({ error: 'Not found' }, 404);
+
+    if (!existing.creator_token || existing.creator_token !== body.creatorToken) {
+      return json({ error: 'Invalid creator token' }, 403);
+    }
+
+    try {
+      const { origin } = new URL(request.url);
+      await cfCache().delete(docCacheKey(`${origin}${API_PREFIX}/${slug}`));
+    } catch {
+      // Cache invalidation failure is non-fatal
+    }
+
+    const doc = await updateDoc(env, slug, { userJwt, userId, clearCreatorToken: true });
+    return json({ slug: doc.slug });
+  }
 
   if (body.content !== undefined && typeof body.content !== 'string') {
     return json({ error: 'content must be a string' }, 400);

@@ -7,6 +7,11 @@ vi.mock('../api/docsApi', () => ({
   saveDoc: vi.fn(),
   updateDoc: vi.fn(),
 }));
+vi.mock('../utils/creatorTokens', () => ({
+  saveCreatorToken: vi.fn(),
+  loadCreatorToken: vi.fn(() => null),
+  clearCreatorToken: vi.fn(),
+}));
 vi.mock('../utils/recentDocs', () => ({ addRecentDoc: vi.fn() }));
 vi.mock('../realtime/useDocChannel', () => ({
   useDocChannel: vi.fn(() => ({ broadcastContent: vi.fn(), presenceCount: 1 })),
@@ -27,6 +32,7 @@ import { fetchDoc, saveDoc, updateDoc } from '../api/docsApi';
 import { addRecentDoc } from '../utils/recentDocs';
 import { track } from '../telemetry';
 import { getInitialMarkdownText, SAMPLE_DOC } from '../utils/onboarding';
+import { saveCreatorToken, loadCreatorToken, clearCreatorToken } from '../utils/creatorTokens';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -81,8 +87,18 @@ describe('useMarkdownState', () => {
       expect(saveDoc).not.toHaveBeenCalled();
     });
 
+    it('onSave stores creator token after successful save', async () => {
+      vi.mocked(saveDoc).mockResolvedValueOnce({ slug: 'new1234', creatorToken: 'tok-abc' });
+      const { result } = renderHook(() => useMarkdownState());
+
+      act(() => result.current.setMarkdownText('# Hello'));
+      await act(() => result.current.onSave());
+
+      expect(saveCreatorToken).toHaveBeenCalledWith('new1234', 'tok-abc');
+    });
+
     it('onSave calls saveDoc, updates URL and slug in-place on success', async () => {
-      vi.mocked(saveDoc).mockResolvedValueOnce({ slug: 'new1234' });
+      vi.mocked(saveDoc).mockResolvedValueOnce({ slug: 'new1234', creatorToken: 'tok-abc' });
       const { result } = renderHook(() => useMarkdownState());
 
       act(() => result.current.setMarkdownText('# Hello'));
@@ -102,7 +118,7 @@ describe('useMarkdownState', () => {
     });
 
     it('onSave includes title when set', async () => {
-      vi.mocked(saveDoc).mockResolvedValueOnce({ slug: 'new1234' });
+      vi.mocked(saveDoc).mockResolvedValueOnce({ slug: 'new1234', creatorToken: 'tok-abc' });
       const { result } = renderHook(() => useMarkdownState());
 
       act(() => result.current.setMarkdownText('# Hello'));
@@ -229,6 +245,81 @@ describe('useMarkdownState', () => {
       expect(result.current.error).toBe('Save failed');
       vi.useRealTimers();
     });
+
+    describe('ownership claim via auto-save', () => {
+      it('sends claim payload and clears token when user has creator token for unowned doc', async () => {
+        vi.useFakeTimers();
+        vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null });
+        vi.mocked(loadCreatorToken).mockReturnValue('my-token');
+        vi.mocked(updateDoc).mockResolvedValue(undefined);
+
+        const { result } = renderHook(() => useMarkdownState({ userId: 'user-uuid' }));
+        await act(() => vi.runAllTimersAsync());
+
+        act(() => result.current.setMarkdownText('# Updated'));
+        await act(() => vi.runAllTimersAsync());
+
+        expect(updateDoc).toHaveBeenCalledWith('abc1234', expect.objectContaining({
+          content: '# Updated',
+          claim: true,
+          creatorToken: 'my-token',
+        }));
+        expect(clearCreatorToken).toHaveBeenCalledWith('abc1234');
+        expect(result.current.docUserId).toBe('user-uuid');
+        vi.useRealTimers();
+      });
+
+      it('does not send claim payload when doc is already owned', async () => {
+        vi.useFakeTimers();
+        vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: 'user-uuid' });
+        vi.mocked(loadCreatorToken).mockReturnValue('my-token');
+        vi.mocked(updateDoc).mockResolvedValue(undefined);
+
+        const { result } = renderHook(() => useMarkdownState({ userId: 'user-uuid' }));
+        await act(() => vi.runAllTimersAsync());
+
+        act(() => result.current.setMarkdownText('# Updated'));
+        await act(() => vi.runAllTimersAsync());
+
+        expect(updateDoc).toHaveBeenCalledWith('abc1234', expect.objectContaining({ content: '# Updated' }));
+        expect(updateDoc).not.toHaveBeenCalledWith('abc1234', expect.objectContaining({ claim: true }));
+        vi.useRealTimers();
+      });
+
+      it('does not send claim payload when user is not authenticated', async () => {
+        vi.useFakeTimers();
+        vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null });
+        vi.mocked(loadCreatorToken).mockReturnValue('my-token');
+        vi.mocked(updateDoc).mockResolvedValue(undefined);
+
+        const { result } = renderHook(() => useMarkdownState());
+        await act(() => vi.runAllTimersAsync());
+
+        act(() => result.current.setMarkdownText('# Updated'));
+        await act(() => vi.runAllTimersAsync());
+
+        expect(updateDoc).toHaveBeenCalledWith('abc1234', expect.objectContaining({ content: '# Updated' }));
+        expect(updateDoc).not.toHaveBeenCalledWith('abc1234', expect.objectContaining({ claim: true }));
+        vi.useRealTimers();
+      });
+
+      it('does not send claim payload when no creator token in storage', async () => {
+        vi.useFakeTimers();
+        vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null });
+        vi.mocked(loadCreatorToken).mockReturnValue(null);
+        vi.mocked(updateDoc).mockResolvedValue(undefined);
+
+        const { result } = renderHook(() => useMarkdownState({ userId: 'user-uuid' }));
+        await act(() => vi.runAllTimersAsync());
+
+        act(() => result.current.setMarkdownText('# Updated'));
+        await act(() => vi.runAllTimersAsync());
+
+        expect(updateDoc).toHaveBeenCalledWith('abc1234', expect.objectContaining({ content: '# Updated' }));
+        expect(updateDoc).not.toHaveBeenCalledWith('abc1234', expect.objectContaining({ claim: true }));
+        vi.useRealTimers();
+      });
+    });
   });
 
   describe('navigateToDoc', () => {
@@ -299,7 +390,7 @@ describe('useMarkdownState', () => {
 
     it('clears savedLocallyRef so fetchDoc fires for the new slug after a prior save', async () => {
       vi.mocked(getSlugFromPath).mockReturnValue(null);
-      vi.mocked(saveDoc).mockResolvedValueOnce({ slug: 'new1234' });
+      vi.mocked(saveDoc).mockResolvedValueOnce({ slug: 'new1234', creatorToken: 'tok-abc' });
       vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'xyz5678', content: '# Other', title: null, user_id: null });
 
       const { result } = renderHook(() => useMarkdownState());

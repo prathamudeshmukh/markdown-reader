@@ -27,6 +27,8 @@ export interface UpdateDocInput {
   content?: string;
   title?: string;
   collectionId?: string | null;
+  claim?: boolean;
+  creatorToken?: string;
 }
 
 async function parseResponse<T>(res: Response): Promise<T> {
@@ -44,7 +46,7 @@ export async function fetchDoc(slug: string): Promise<Doc> {
   return parseResponse<Doc>(res);
 }
 
-export async function saveDoc(input: SaveDocInput): Promise<{ slug: string }> {
+export async function saveDoc(input: SaveDocInput): Promise<{ slug: string; creatorToken: string }> {
   const body: Record<string, unknown> = { content: input.content };
   if (input.title !== undefined) body.title = input.title;
   if (input.collectionId !== undefined) body.collection_id = input.collectionId;
@@ -54,7 +56,7 @@ export async function saveDoc(input: SaveDocInput): Promise<{ slug: string }> {
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(body),
   });
-  return parseResponse<{ slug: string }>(res);
+  return parseResponse<{ slug: string; creatorToken: string }>(res);
 }
 
 export async function updateDoc(slug: string, input: UpdateDocInput): Promise<void> {
@@ -62,6 +64,10 @@ export async function updateDoc(slug: string, input: UpdateDocInput): Promise<vo
   if (input.content !== undefined) body.content = input.content;
   if (input.title !== undefined) body.title = input.title;
   if (input.collectionId !== undefined) body.collection_id = input.collectionId;
+  if (input.claim) {
+    body.claim = true;
+    body.creatorToken = input.creatorToken;
+  }
 
   const res = await fetch(`${API_BASE}/${slug}`, {
     method: 'PUT',

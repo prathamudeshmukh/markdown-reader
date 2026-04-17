@@ -1,12 +1,13 @@
 import { useEffect } from 'react';
 
 interface Props {
+  isUnowned: boolean;
   onClose: () => void;
   onFork: () => void;
   onSignIn: () => void;
 }
 
-export default function EditBlockedModal({ onClose, onFork, onSignIn }: Props) {
+export default function EditBlockedModal({ isUnowned, onClose, onFork, onSignIn }: Props) {
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose();
@@ -33,10 +34,12 @@ export default function EditBlockedModal({ onClose, onFork, onSignIn }: Props) {
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
-          This document is read-only
+          {isUnowned ? 'This document has no owner' : 'This document is read-only'}
         </h2>
         <p className="text-sm mb-5" style={{ color: 'var(--text-muted)' }}>
-          You're viewing someone else's document. Make a copy to edit freely, or sign in as the owner.
+          {isUnowned
+            ? 'Make a copy to edit it freely.'
+            : "You're viewing someone else's document. Make a copy to edit freely, or sign in as the owner."}
         </p>
 
         <div className="flex flex-col gap-2">
@@ -48,18 +51,20 @@ export default function EditBlockedModal({ onClose, onFork, onSignIn }: Props) {
           >
             Make a copy
           </button>
-          <button
-            type="button"
-            className="w-full py-2 text-sm font-medium rounded-lg"
-            style={{
-              backgroundColor: 'transparent',
-              border: '1px solid var(--border)',
-              color: 'var(--text-primary)',
-            }}
-            onClick={onSignIn}
-          >
-            Sign in to edit
-          </button>
+          {!isUnowned && (
+            <button
+              type="button"
+              className="w-full py-2 text-sm font-medium rounded-lg"
+              style={{
+                backgroundColor: 'transparent',
+                border: '1px solid var(--border)',
+                color: 'var(--text-primary)',
+              }}
+              onClick={onSignIn}
+            >
+              Sign in to edit
+            </button>
+          )}
         </div>
       </div>
     </div>
