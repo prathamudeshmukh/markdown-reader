@@ -1,6 +1,7 @@
 export type RouteKind = 'root' | 'doc';
 export type InteractionSource = 'button' | 'shortcut';
 export type ContentLengthBucket = 'empty' | 'xs' | 'sm' | 'md' | 'lg';
+export type ToolbarAction = 'bold' | 'italic' | 'code' | 'heading' | 'quote' | 'list' | 'link' | 'table';
 
 export type TelemetryEventName =
   | 'app_opened'
@@ -22,7 +23,8 @@ export type TelemetryEventName =
   | 'auth_sign_out'
   | 'collection_created'
   | 'collection_deleted'
-  | 'doc_moved_to_collection';
+  | 'doc_moved_to_collection'
+  | 'toolbar_action';
 
 export interface TelemetrySharedProps {
   session_id: string;
@@ -84,4 +86,8 @@ export interface TelemetryPropsByEvent {
   collection_created: { has_parent: boolean };
   collection_deleted: Record<string, never>;
   doc_moved_to_collection: { to_root: boolean };
+  toolbar_action: {
+    action: ToolbarAction;
+    had_selection: boolean;
+  };
 }
