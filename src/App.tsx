@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useMarkdownState } from './hooks/useMarkdownState';
 import { useOnboarding } from './hooks/useOnboarding';
 import OnboardingTooltips from './components/OnboardingTooltips';
@@ -8,6 +8,7 @@ import { useCollections } from './hooks/useCollections';
 import Header from './components/Header';
 import BottomActionBar from './components/BottomActionBar';
 import Editor from './components/Editor';
+import FormattingToolbar from './components/FormattingToolbar';
 import Preview from './components/Preview';
 import RecentDocsSidebar from './components/RecentDocsSidebar';
 import CollectionsSidebar from './components/CollectionsSidebar';
@@ -44,6 +45,8 @@ export default function App() {
   //   - anonymous user on an unowned doc
   //   - authenticated user who owns the doc
   const canEdit = !slug || hasCreatorToken || (!user && !docUserId) || docUserId === user?.id;
+
+  const editorRef = useRef<HTMLTextAreaElement>(null);
 
   const collectionsHook = useCollections();
   const collectionsTree = collectionsHook.state.status === 'ready'
@@ -372,6 +375,14 @@ export default function App() {
         auth={{ user }}
       />
 
+      <FormattingToolbar
+        editorRef={editorRef}
+        mode={mode}
+        readOnly={!canEdit}
+        value={markdownText}
+        onTextChange={setMarkdownText}
+      />
+
       <DocTitle title={title} mode={mode} onChange={setTitle} />
 
       <main className="flex-1 flex flex-col overflow-hidden">
@@ -382,7 +393,7 @@ export default function App() {
             aria-label="Loading document"
           />
         ) : mode === 'editor' ? (
-          <Editor value={markdownText} onChange={setMarkdownText} readOnly={!canEdit} />
+          <Editor ref={editorRef} value={markdownText} onChange={setMarkdownText} readOnly={!canEdit} />
         ) : (
           <Preview content={markdownText} />
         )}
