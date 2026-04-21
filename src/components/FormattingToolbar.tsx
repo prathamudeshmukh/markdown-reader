@@ -14,8 +14,8 @@ import { track } from '../telemetry';
 import type { ToolbarAction } from '../telemetry/types';
 
 const TOOL_BTN =
-  'flex items-center justify-center w-7 h-7 rounded-md transition-all duration-150 ' +
-  'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-primary)] ' +
+  'flex items-center justify-center w-6 h-6 rounded-full transition-all duration-150 ' +
+  'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] ' +
   'disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-[var(--text-muted)]';
 
 interface FormattingToolbarProps {
@@ -142,18 +142,25 @@ export default function FormattingToolbar({
     setLinkUrl('');
   }
 
-  if (mode !== 'editor') return null;
+  const isEditor = mode === 'editor';
 
   return (
     <div
-      role="toolbar"
-      aria-label="Formatting toolbar"
-      className="hidden sm:flex items-center gap-0.5 px-4 py-1 animate-mode-enter"
-      style={{
-        backgroundColor: 'var(--bg-secondary)',
-        borderBottom: '1px solid var(--border)',
-      }}
+      className="hidden sm:flex justify-center px-4 pt-2 pb-1"
+      style={{ backgroundColor: 'var(--bg-primary)' }}
     >
+      <div
+        role="toolbar"
+        aria-label="Formatting toolbar"
+        className="flex items-center gap-0.5 rounded-full px-2 py-1 transition-opacity duration-150"
+        style={{
+          backgroundColor: 'var(--bg-secondary)',
+          border: '1px solid var(--border)',
+          boxShadow: '0 1px 6px rgba(0,0,0,0.10), 0 0 0 0.5px var(--border)',
+          opacity: isEditor ? 1 : 0,
+          pointerEvents: isEditor ? 'auto' : 'none',
+        }}
+      >
       {/* Bold */}
       <button
         type="button"
@@ -363,6 +370,7 @@ export default function FormattingToolbar({
             </div>
           </div>
         )}
+      </div>
       </div>
     </div>
   );

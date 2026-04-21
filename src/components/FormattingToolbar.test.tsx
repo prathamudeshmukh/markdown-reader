@@ -34,11 +34,10 @@ describe('FormattingToolbar visibility', () => {
     expect(screen.getByRole('toolbar')).toBeInTheDocument();
   });
 
-  it('returns null when mode is preview', () => {
-    const { container } = render(
-      <FormattingToolbar {...baseProps} mode="preview" editorRef={makeRef()} />,
-    );
-    expect(container.firstChild).toBeNull();
+  it('hides the pill when mode is preview (opacity 0, non-interactive)', () => {
+    render(<FormattingToolbar {...baseProps} mode="preview" editorRef={makeRef()} />);
+    const toolbar = screen.getByRole('toolbar');
+    expect(toolbar).toHaveStyle({ opacity: '0', pointerEvents: 'none' });
   });
 });
 
