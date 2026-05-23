@@ -7,19 +7,23 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.png', 'logo.png'],
+      includeAssets: ['favicon.png', 'logo-192.png', 'logo-512.png'],
       manifest: {
         name: 'Openmark',
         short_name: 'Openmark',
         description: 'A free, open, privacy-first online Markdown editor and viewer. Write, preview, and share Markdown documents instantly — no account needed.',
         theme_color: '#0f172a',
         background_color: '#0f172a',
+        lang: 'en',
+        dir: 'ltr',
         display: 'standalone',
+        display_override: ['window-controls-overlay', 'standalone'],
         start_url: '/',
         scope: '/',
+        categories: ['productivity', 'utilities'],
         icons: [
-          { src: 'logo.png', sizes: '192x192', type: 'image/png' },
-          { src: 'logo.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+          { src: 'logo-192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'logo-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
         ],
       },
       workbox: {
