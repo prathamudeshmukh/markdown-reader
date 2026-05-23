@@ -4,3 +4,6 @@ dist/
 .wrangler/
 .env*
 .claude/
+inputs/
+tasks/
+SPEC.md
