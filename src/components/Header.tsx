@@ -187,7 +187,7 @@ export default function Header({
               color: 'var(--text-primary)',
             }}
           >
-            Scripto<em style={{ color: 'var(--accent)', fontStyle: 'italic' }}>rium</em>
+            Open<em style={{ color: 'var(--accent)', fontStyle: 'italic' }}>mark</em>
           </h1>
         </div>
 
