@@ -11,15 +11,20 @@ interface Env {
   PDF2MARKDOWN_API_URL: string;
 }
 
-const PREFIX = '/mreader';
-const DOC_PATH_PREFIX = '/mreader/d/';
+const OLD_HOST = 'app.prathamesh.cloud';
+const OLD_PREFIX = '/mreader';
+const DOC_PATH_PREFIX = '/d/';
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
 
-    if (!url.pathname.startsWith(PREFIX)) {
-      return new Response('Not Found', { status: 404 });
+    // Redirect legacy domain to openmark.cc, stripping the /mreader prefix
+    if (url.hostname === OLD_HOST) {
+      const newPath = url.pathname.startsWith(OLD_PREFIX)
+        ? url.pathname.slice(OLD_PREFIX.length) || '/'
+        : url.pathname;
+      return Response.redirect(`https://openmark.cc${newPath}${url.search}`, 301);
     }
 
     // Validate required secrets are bound
@@ -45,7 +50,7 @@ export default {
     const apiResponse = await handleDocsRequest(request, env);
     if (apiResponse) return apiResponse;
 
-    // SPA rewrite: serve index.html for all /mreader/d/:slug paths
+    // SPA rewrite: serve index.html for all /d/:slug paths
     if (url.pathname.startsWith(DOC_PATH_PREFIX)) {
       const indexUrl = new URL(request.url);
       indexUrl.pathname = '/';
@@ -53,9 +58,6 @@ export default {
     }
 
     // Static assets
-    const stripped = url.pathname.slice(PREFIX.length) || '/';
-    const assetUrl = new URL(request.url);
-    assetUrl.pathname = stripped;
-    return env.ASSETS.fetch(new Request(assetUrl, request));
+    return env.ASSETS.fetch(request);
   },
 };

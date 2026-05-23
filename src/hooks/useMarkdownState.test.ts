@@ -38,7 +38,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(history, 'pushState').mockImplementation(() => {});
   Object.defineProperty(window, 'location', {
-    value: { pathname: '/mreader/' },
+    value: { pathname: '/' },
     writable: true,
   });
 });
@@ -111,7 +111,7 @@ describe('useMarkdownState', () => {
         expect.objectContaining({ source: 'button' }),
       );
       expect(track).toHaveBeenCalledWith('doc_save_succeeded', { slug_created: true });
-      expect(history.pushState).toHaveBeenCalledWith({}, '', '/mreader/d/new1234');
+      expect(history.pushState).toHaveBeenCalledWith({}, '', '/d/new1234');
       expect(result.current.slug).toBe('new1234');
       expect(result.current.mode).toBe('editor');
       expect(result.current.isSaving).toBe(false);
@@ -335,7 +335,7 @@ describe('useMarkdownState', () => {
 
       act(() => result.current.navigateToDoc('xyz5678'));
 
-      expect(history.pushState).toHaveBeenCalledWith({}, '', '/mreader/d/xyz5678');
+      expect(history.pushState).toHaveBeenCalledWith({}, '', '/d/xyz5678');
       expect(result.current.slug).toBe('xyz5678');
       expect(result.current.isLoading).toBe(true);
       expect(result.current.markdownText).toBe('');

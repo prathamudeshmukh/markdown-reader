@@ -1,4 +1,4 @@
-export const ONBOARDING_KEY = 'mreader:onboarding';
+export const ONBOARDING_KEY = 'openmark:onboarding';
 
 export interface OnboardingData {
   sampleDocShown: boolean;
@@ -11,7 +11,7 @@ export interface OnboardingData {
 
 export type TooltipId = keyof OnboardingData['tooltips'];
 
-export const SAMPLE_DOC = `# Welcome to Scriptorum
+export const SAMPLE_DOC = `# Welcome to Openmark
 
 > **This is a sample document.** Edit or delete it — it won't appear again.
 
@@ -19,7 +19,7 @@ export const SAMPLE_DOC = `# Welcome to Scriptorum
 
 ## What you can do
 
-Scriptorum is a **distraction-free markdown editor** that turns any document
+Openmark is a **distraction-free markdown editor** that turns any document
 into an instant shareable link — no account required.
 
 ### Formatting

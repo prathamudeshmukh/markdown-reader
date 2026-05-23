@@ -26,7 +26,7 @@ describe('pdfFileToMarkdown', () => {
 
     expect(fetchSpy).toHaveBeenCalledOnce();
     const [url, init] = fetchSpy.mock.calls[0]!;
-    expect(url).toBe('/mreader/api/pdf/convert');
+    expect(url).toBe('/api/pdf/convert');
     expect(init?.method).toBe('POST');
     expect(init?.body).toBeInstanceOf(FormData);
   });

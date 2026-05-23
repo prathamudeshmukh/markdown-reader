@@ -31,7 +31,7 @@ export async function pdfFileToMarkdown(file: File): Promise<PdfImportResult> {
 
   let response: Response;
   try {
-    response = await fetch('/mreader/api/pdf/convert', { method: 'POST', body: formData });
+    response = await fetch('/api/pdf/convert', { method: 'POST', body: formData });
   } catch {
     throw new PdfApiError('NETWORK_ERROR');
   }

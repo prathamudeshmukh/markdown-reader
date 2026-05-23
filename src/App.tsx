@@ -159,7 +159,7 @@ export default function App() {
     onSave: () => { void handleSave('shortcut'); },
     onToggleMode: () => { if (canEdit || mode === 'editor') toggleMode('shortcut'); },
     onCopyLink: () => { void copyLink('shortcut'); },
-    onNewDoc: () => { window.location.href = '/mreader/'; },
+    onNewDoc: () => { window.location.href = '/'; },
     onOpenCommandPalette: () => setCommandPaletteOpen(true),
     onOpenShortcutHelp: () => setShortcutHelpOpen(true),
   });
@@ -205,7 +205,7 @@ export default function App() {
             }
           },
           onSave: () => { void handleSave('button'); },
-          onNewDoc: () => { window.location.href = '/mreader/'; },
+          onNewDoc: () => { window.location.href = '/'; },
           onExportPdf: handleExportPdf,
           onDownloadMarkdown: handleDownloadMarkdown,
           onCopyLink: () => { void copyLink('button'); },
@@ -286,8 +286,8 @@ export default function App() {
           isUnowned={!!slug && !docUserId}
           onClose={() => setEditBlockedOpen(false)}
           onFork={() => {
-            sessionStorage.setItem('mreader:fork', markdownText);
-            window.location.href = '/mreader/';
+            sessionStorage.setItem('openmark:fork', markdownText);
+            window.location.href = '/';
           }}
           onSignIn={() => {
             setEditBlockedOpen(false);
@@ -308,7 +308,7 @@ export default function App() {
           onMoveDoc={collectionsHook.moveDocToCollection}
           onNavigateToDoc={navigateToDoc}
           onNewDocInCollection={(collectionId) => {
-            const url = collectionId ? `/mreader/?collection=${collectionId}` : '/mreader/';
+            const url = collectionId ? `/?collection=${collectionId}` : '/';
             window.location.href = url;
           }}
         />
@@ -334,7 +334,7 @@ export default function App() {
           recentDocs={recentDocs}
           currentSlug={slug}
           actions={{
-            onNewDoc: () => { window.location.href = '/mreader/'; },
+            onNewDoc: () => { window.location.href = '/'; },
             onToggleMode: () => toggleMode('button'),
             onSave: () => { void handleSave('button'); },
             onCopyLink: () => { void copyLink('button'); },
@@ -364,7 +364,7 @@ export default function App() {
           },
           onSave: () => { void handleSave('button'); },
           onCopyLink: () => { void copyLink('button'); },
-          onNewDoc: () => { window.location.href = '/mreader/'; },
+          onNewDoc: () => { window.location.href = '/'; },
           onToggleSidebar: toggleSidebar,
           onImportPdf: handleImportPdf,
           onExportPdf: handleExportPdf,

@@ -8,7 +8,7 @@ vi.mock('qrcode.react', () => ({
   ),
 }));
 
-const TEST_URL = 'https://example.com/mreader/abc1234';
+const TEST_URL = 'https://openmark.cc/d/abc1234';
 
 describe('QrModal', () => {
   it('renders a QR canvas with the correct URL', () => {

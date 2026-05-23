@@ -1,4 +1,4 @@
-const SLUG_PATH_PREFIX = '/mreader/d/';
+const SLUG_PATH_PREFIX = '/d/';
 
 export function getSlugFromPath(pathname = window.location.pathname): string | null {
   if (!pathname.startsWith(SLUG_PATH_PREFIX)) return null;

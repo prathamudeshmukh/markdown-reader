@@ -37,7 +37,7 @@ describe('RecentDocsDropdown', () => {
     });
     render(<RecentDocsDropdown docs={docs} onClose={vi.fn()} />);
     fireEvent.click(screen.getByText('My Doc'));
-    expect(window.location.href).toBe('/mreader/d/abc1234');
+    expect(window.location.href).toBe('/d/abc1234');
   });
 
   it('calls onClose when mousedown occurs outside the dropdown', () => {

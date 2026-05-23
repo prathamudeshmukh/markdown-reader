@@ -35,7 +35,7 @@ function makePdfRequest(method: string, path: string, body?: BodyInit, contentTy
 }
 
 function makeMultipartRequest(file: File): Request {
-  const req = new Request('https://app.prathamesh.cloud/mreader/api/pdf/convert', {
+  const req = new Request('https://app.prathamesh.cloud/api/pdf/convert', {
     method: 'POST',
   });
   // Avoid multipart parsing in jsdom: stub formData to return the file directly.
@@ -52,21 +52,21 @@ describe('handlePdfRequest', () => {
 
   it('returns null for non-PDF paths', async () => {
     const env = makeEnv();
-    const result = await handlePdfRequest(makePdfRequest('GET', '/mreader/api/docs'), env);
+    const result = await handlePdfRequest(makePdfRequest('GET', '/api/docs'), env);
     expect(result).toBeNull();
   });
 
-  it('returns null for the root mreader path', async () => {
+  it('returns null for the root path', async () => {
     const env = makeEnv();
-    const result = await handlePdfRequest(makePdfRequest('GET', '/mreader/'), env);
+    const result = await handlePdfRequest(makePdfRequest('GET', '/'), env);
     expect(result).toBeNull();
   });
 
-  describe('POST /mreader/api/pdf/convert', () => {
+  describe('POST /api/pdf/convert', () => {
     it('returns 400 when no pdf field is provided', async () => {
       const env = makeEnv();
       const fd = new FormData();
-      const req = new Request('https://app.prathamesh.cloud/mreader/api/pdf/convert', {
+      const req = new Request('https://app.prathamesh.cloud/api/pdf/convert', {
         method: 'POST',
         body: fd,
       });
@@ -120,12 +120,12 @@ describe('handlePdfRequest', () => {
 
     it('returns 405 for GET on the convert path', async () => {
       const env = makeEnv();
-      const res = await handlePdfRequest(makePdfRequest('GET', '/mreader/api/pdf/convert'), env);
+      const res = await handlePdfRequest(makePdfRequest('GET', '/api/pdf/convert'), env);
       expect(res?.status).toBe(405);
     });
   });
 
-  describe('GET /mreader/api/pdf/files/:key', () => {
+  describe('GET /api/pdf/files/:key', () => {
     it('returns the PDF body with correct content type when key exists', async () => {
       const env = makeEnv({
         put: vi.fn(),
@@ -134,7 +134,7 @@ describe('handlePdfRequest', () => {
       });
 
       const res = await handlePdfRequest(
-        makePdfRequest('GET', '/mreader/api/pdf/files/pdf-temp/123-abc'),
+        makePdfRequest('GET', '/api/pdf/files/pdf-temp/123-abc'),
         env,
       );
 
@@ -146,7 +146,7 @@ describe('handlePdfRequest', () => {
       const env = makeEnv({ get: vi.fn().mockResolvedValue(null), put: vi.fn(), delete: vi.fn() });
 
       const res = await handlePdfRequest(
-        makePdfRequest('GET', '/mreader/api/pdf/files/nonexistent'),
+        makePdfRequest('GET', '/api/pdf/files/nonexistent'),
         env,
       );
 
@@ -156,7 +156,7 @@ describe('handlePdfRequest', () => {
     it('returns 405 for POST on the files path', async () => {
       const env = makeEnv();
       const res = await handlePdfRequest(
-        makePdfRequest('POST', '/mreader/api/pdf/files/some-key'),
+        makePdfRequest('POST', '/api/pdf/files/some-key'),
         env,
       );
       expect(res?.status).toBe(405);

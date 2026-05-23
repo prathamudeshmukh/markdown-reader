@@ -47,7 +47,7 @@ export default function RecentDocsDropdown({ docs, onClose, onDocOpen }: RecentD
             key={doc.slug}
             onClick={() => {
               onDocOpen?.();
-              window.location.href = `/mreader/d/${doc.slug}`;
+              window.location.href = `/d/${doc.slug}`;
             }}
             className="w-full flex flex-col gap-0.5 px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left"
           >

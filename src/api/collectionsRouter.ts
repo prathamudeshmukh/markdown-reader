@@ -9,7 +9,7 @@ import { json, extractBearerToken, extractUserIdFromJwt } from './workerUtils';
 
 export type RouterEnv = SupabaseEnv;
 
-const API_PREFIX = '/mreader/api/collections';
+const API_PREFIX = '/api/collections';
 const MAX_NAME_CHARS = 200;
 
 function parseName(raw: unknown): string | undefined {

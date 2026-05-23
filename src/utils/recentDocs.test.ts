@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { readRecentDocs, addRecentDoc } from './recentDocs';
 
-const STORAGE_KEY = 'mreader:recentDocs';
+const STORAGE_KEY = 'openmark:recentDocs';
 
 beforeEach(() => {
   localStorage.clear();

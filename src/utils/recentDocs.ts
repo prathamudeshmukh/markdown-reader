@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'mreader:recentDocs';
+const STORAGE_KEY = 'openmark:recentDocs';
 
 export interface RecentDoc {
   slug: string;

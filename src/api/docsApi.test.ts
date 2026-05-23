@@ -19,7 +19,7 @@ describe('docsApi', () => {
       const result = await fetchDoc('abc1234');
 
       expect(result).toEqual(doc);
-      expect(fetch).toHaveBeenCalledWith('/mreader/api/docs/abc1234', expect.objectContaining({ headers: {} }));
+      expect(fetch).toHaveBeenCalledWith('/api/docs/abc1234', expect.objectContaining({ headers: {} }));
     });
 
     it('throws with error message on 404', async () => {
@@ -38,7 +38,7 @@ describe('docsApi', () => {
       await fetchDoc('abc1234');
 
       expect(fetch).toHaveBeenCalledWith(
-        '/mreader/api/docs/abc1234',
+        '/api/docs/abc1234',
         expect.objectContaining({
           headers: expect.objectContaining({ Authorization: 'Bearer user-jwt-token' }),
         }),
@@ -63,7 +63,7 @@ describe('docsApi', () => {
 
       expect(result).toEqual({ slug: 'new1234' });
       expect(fetch).toHaveBeenCalledWith(
-        '/mreader/api/docs',
+        '/api/docs',
         expect.objectContaining({
           method: 'POST',
           body: JSON.stringify({ content: '# Hello' }),
@@ -79,7 +79,7 @@ describe('docsApi', () => {
       await saveDoc({ content: '# Hello', title: 'My Doc' });
 
       expect(fetch).toHaveBeenCalledWith(
-        '/mreader/api/docs',
+        '/api/docs',
         expect.objectContaining({
           body: JSON.stringify({ content: '# Hello', title: 'My Doc' }),
         }),
@@ -95,7 +95,7 @@ describe('docsApi', () => {
       await saveDoc({ content: '# Hello' });
 
       expect(fetch).toHaveBeenCalledWith(
-        '/mreader/api/docs',
+        '/api/docs',
         expect.objectContaining({
           headers: expect.objectContaining({ Authorization: 'Bearer user-jwt-token' }),
         }),
@@ -118,7 +118,7 @@ describe('docsApi', () => {
 
       await expect(updateDoc('abc1234', { content: '# Updated' })).resolves.toBeUndefined();
       expect(fetch).toHaveBeenCalledWith(
-        '/mreader/api/docs/abc1234',
+        '/api/docs/abc1234',
         expect.objectContaining({
           method: 'PUT',
           body: JSON.stringify({ content: '# Updated' }),
@@ -134,7 +134,7 @@ describe('docsApi', () => {
       await updateDoc('abc1234', { title: 'New Title' });
 
       expect(fetch).toHaveBeenCalledWith(
-        '/mreader/api/docs/abc1234',
+        '/api/docs/abc1234',
         expect.objectContaining({
           body: JSON.stringify({ title: 'New Title' }),
         }),
@@ -161,7 +161,7 @@ describe('docsApi', () => {
 
       expect(result).toEqual(docs);
       expect(fetch).toHaveBeenCalledWith(
-        '/mreader/api/docs',
+        '/api/docs',
         expect.objectContaining({
           headers: expect.objectContaining({ Authorization: 'Bearer user-jwt-token' }),
         }),

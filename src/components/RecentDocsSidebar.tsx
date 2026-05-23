@@ -105,7 +105,7 @@ export default function RecentDocsSidebar({ docs, isOpen, onClose, onDocOpen }: 
                 <button
                   onClick={() => {
                     onDocOpen?.();
-                    window.location.href = `/mreader/d/${doc.slug}`;
+                    window.location.href = `/d/${doc.slug}`;
                   }}
                   className="w-full flex flex-col gap-0.5 px-4 py-2.5 text-left transition-colors"
                   style={{ color: 'var(--text-primary)' }}

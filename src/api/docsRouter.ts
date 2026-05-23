@@ -4,7 +4,7 @@ import { json, extractBearerToken, extractUserIdFromJwt } from './workerUtils';
 
 export type RouterEnv = SupabaseEnv;
 
-const API_PREFIX = '/mreader/api/docs';
+const API_PREFIX = '/api/docs';
 const MAX_CONTENT_BYTES = 500_000;
 const MAX_TITLE_CHARS = 300;
 const SLUG_LENGTH = 7;

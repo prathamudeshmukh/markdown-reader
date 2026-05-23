@@ -1,4 +1,4 @@
-const storageKey = (slug: string) => `mreader:creator-token:${slug}`;
+const storageKey = (slug: string) => `openmark:creator-token:${slug}`;
 
 export function saveCreatorToken(slug: string, token: string): void {
   localStorage.setItem(storageKey(slug), token);

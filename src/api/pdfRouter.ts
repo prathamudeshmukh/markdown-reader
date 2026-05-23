@@ -24,8 +24,8 @@ export interface PdfRouterEnv {
   PDF2MARKDOWN_API_URL: string;
 }
 
-const CONVERT_PATH = '/mreader/api/pdf/convert';
-const FILES_PREFIX = '/mreader/api/pdf/files/';
+const CONVERT_PATH = '/api/pdf/convert';
+const FILES_PREFIX = '/api/pdf/files/';
 
 const MAX_PDF_BYTES = 20_000_000; // 20 MB
 

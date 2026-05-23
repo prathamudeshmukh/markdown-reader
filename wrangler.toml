@@ -1,8 +1,9 @@
-name = "markdown-reader"
+name = "openmark"
 main = "worker.ts"
 compatibility_date = "2025-01-01"
 
 routes = [
+  { pattern = "openmark.cc/*", zone_name = "openmark.cc" },
   { pattern = "app.prathamesh.cloud/mreader*", zone_name = "prathamesh.cloud" }
 ]
 
@@ -12,7 +13,7 @@ binding = "ASSETS"
 
 [[r2_buckets]]
 binding = "PDF_BUCKET"
-bucket_name = "markdown-reader-pdf-temp"
+bucket_name = "openmark-pdf-temp"
 
 [vars]
 PDF2MARKDOWN_API_URL = "https://pdf2html.templify.cloud"

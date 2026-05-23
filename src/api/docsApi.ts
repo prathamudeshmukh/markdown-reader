@@ -1,7 +1,7 @@
 export { setAuthToken } from './authToken';
 import { authHeaders } from './authToken';
 
-const API_BASE = '/mreader/api/docs';
+const API_BASE = '/api/docs';
 
 export interface Doc {
   slug: string;

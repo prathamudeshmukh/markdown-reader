@@ -46,9 +46,9 @@ export function useMarkdownState({ userId }: { userId?: string } = {}) {
         presenceCount: 0,
       };
     }
-    const forked = sessionStorage.getItem('mreader:fork');
+    const forked = sessionStorage.getItem('openmark:fork');
     if (forked) {
-      sessionStorage.removeItem('mreader:fork');
+      sessionStorage.removeItem('openmark:fork');
       return {
         markdownText: forked,
         title: null,
@@ -187,7 +187,7 @@ export function useMarkdownState({ userId }: { userId?: string } = {}) {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (titleDebounceRef.current) clearTimeout(titleDebounceRef.current);
     savedLocallyRef.current = false;
-    history.pushState({}, '', `/mreader/d/${newSlug}`);
+    history.pushState({}, '', `/d/${newSlug}`);
     setSlug(newSlug);
     setCollectionId(null);
     setState({
@@ -220,7 +220,7 @@ export function useMarkdownState({ userId }: { userId?: string } = {}) {
       saveCreatorToken(newSlug, creatorToken);
       addRecentDoc(newSlug, state.title);
       track('doc_save_succeeded', { slug_created: true });
-      history.pushState({}, '', `/mreader/d/${newSlug}`);
+      history.pushState({}, '', `/d/${newSlug}`);
       savedLocallyRef.current = true;
       setSlug(newSlug);
       setCollectionId(null);

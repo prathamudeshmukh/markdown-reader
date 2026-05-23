@@ -1,6 +1,6 @@
 import type { ContentLengthBucket } from './types';
 
-const SESSION_STORAGE_KEY = 'mreader:telemetrySessionId';
+const SESSION_STORAGE_KEY = 'openmark:telemetrySessionId';
 
 export function getContentLengthBucket(content: string): ContentLengthBucket {
   const length = content.length;

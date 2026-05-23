@@ -1,7 +1,7 @@
 import { authHeaders } from './authToken';
 import type { Collection, CreateCollectionInput, UpdateCollectionInput } from '../types/collections';
 
-const API_BASE = '/mreader/api/collections';
+const API_BASE = '/api/collections';
 
 async function parseResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
