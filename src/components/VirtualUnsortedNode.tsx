@@ -14,6 +14,7 @@ interface VirtualUnsortedNodeProps {
   onToggle: () => void;
   onNavigateToDoc: (slug: string) => void;
   onMoveDoc: (slug: string, collectionId: string | null) => void;
+  onDeleteDoc?: (slug: string) => void;
 }
 
 export default function VirtualUnsortedNode({
@@ -24,6 +25,7 @@ export default function VirtualUnsortedNode({
   onToggle,
   onNavigateToDoc,
   onMoveDoc,
+  onDeleteDoc,
 }: VirtualUnsortedNodeProps) {
   const [movingDocSlug, setMovingDocSlug] = useState<string | null>(null);
 
@@ -87,6 +89,7 @@ export default function VirtualUnsortedNode({
                 depth={1}
                 onNavigateToDoc={onNavigateToDoc}
                 onMoveDoc={(slug) => setMovingDocSlug(slug)}
+                onDeleteDoc={onDeleteDoc}
               />
               {movingDocSlug === doc.slug && (
                 <MoveDocPopover

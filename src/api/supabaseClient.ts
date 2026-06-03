@@ -257,3 +257,19 @@ export async function deleteCollection(env: SupabaseEnv, id: string, userJwt: st
     throw new Error(`deleteCollection failed: ${res.status} ${text}`);
   }
 }
+
+export async function deleteDoc(env: SupabaseEnv, slug: string, userJwt: string): Promise<void> {
+  const url = `${env.SUPABASE_URL}/rest/v1/docs?slug=eq.${encodeURIComponent(slug)}`;
+  const res = await fetch(url, {
+    method: 'DELETE',
+    headers: {
+      apikey: env.SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${userJwt}`,
+    },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`deleteDoc failed: ${res.status} ${text}`);
+  }
+}

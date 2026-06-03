@@ -59,6 +59,13 @@ export default function App() {
     if (isNewDoc) collectionsHook.refresh();
   }, [slug, onSave, collectionsHook]);
 
+  const handleDeleteDoc = useCallback(async (deletedSlug: string) => {
+    await collectionsHook.deleteDoc(deletedSlug);
+    if (deletedSlug === slug) {
+      window.location.href = '/';
+    }
+  }, [collectionsHook, slug]);
+
   const { tooltipsVisible, dismissTooltip, onCopyLinkInteraction, onQrInteraction, onSidebarInteraction } =
     useOnboarding(slug === null);
 
@@ -311,6 +318,7 @@ export default function App() {
             const url = collectionId ? `/?collection=${collectionId}` : '/';
             window.location.href = url;
           }}
+          onDeleteDoc={handleDeleteDoc}
         />
       ) : (
         <RecentDocsSidebar

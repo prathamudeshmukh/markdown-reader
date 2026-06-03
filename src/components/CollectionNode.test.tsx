@@ -147,4 +147,20 @@ describe('CollectionNode', () => {
       expect(screen.getByText('Child Content')).toBeInTheDocument();
     });
   });
+
+  describe('onDeleteDoc threading', () => {
+    it('passes onDeleteDoc to DocRow when provided in actions', () => {
+      const onDeleteDoc = vi.fn();
+      render(<CollectionNode {...makeProps({ onDeleteDoc })} />);
+      // If onDeleteDoc is wired, the Delete option should appear in DocRow's kebab menu
+      fireEvent.click(screen.getByLabelText('Doc options'));
+      expect(screen.getByText(/^delete$/i)).toBeInTheDocument();
+    });
+
+    it('does not show Delete option in DocRow kebab when onDeleteDoc is absent', () => {
+      render(<CollectionNode {...makeProps()} />);
+      fireEvent.click(screen.getByLabelText('Doc options'));
+      expect(screen.queryByText(/^delete$/i)).not.toBeInTheDocument();
+    });
+  });
 });

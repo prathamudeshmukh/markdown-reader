@@ -6,7 +6,7 @@ import {
   updateCollection as apiUpdateCollection,
   deleteCollection as apiDeleteCollection,
 } from '../api/collectionsApi';
-import { fetchUserDocs } from '../api/docsApi';
+import { fetchUserDocs, deleteDoc as apiDeleteDoc } from '../api/docsApi';
 import { buildTree } from '../utils/collectionTree';
 import type { Collection, CollectionTree, CreateCollectionInput, UpdateCollectionInput } from '../types/collections';
 import type { DocSummary } from '../api/docsApi';
@@ -36,12 +36,17 @@ export function useCollections(): {
   moveCollection: (id: string, parentId: string | null) => Promise<void>;
   deleteCollection: (id: string) => Promise<void>;
   moveDocToCollection: (slug: string, collectionId: string | null) => Promise<void>;
+  deleteDoc: (slug: string) => Promise<void>;
   refresh: () => void;
 } {
   const { user } = useAuth();
   const [state, setState] = useState<CollectionsState>({ status: 'idle' });
+  const stateRef = useRef<CollectionsState>(state);
   const collectionsRef = useRef<Collection[]>([]);
   const docsRef = useRef<DocSummary[]>([]);
+
+  // Keep stateRef in sync so callbacks can read the latest state without depending on it
+  stateRef.current = state;
 
   const load = useCallback(() => {
     if (!user) {
@@ -73,7 +78,7 @@ export function useCollections(): {
 
   const renameCollection = useCallback(async (id: string, name: string) => {
     const prevCollections = collectionsRef.current;
-    const prevState = state;
+    const prevState = stateRef.current;
 
     const optimistic = prevCollections.map((c) =>
       c.id === id ? { ...c, name } : c,
@@ -88,11 +93,11 @@ export function useCollections(): {
       setState(prevState);
       throw err;
     }
-  }, [state]);
+  }, []);
 
   const moveCollection = useCallback(async (id: string, parentId: string | null) => {
     const prevCollections = collectionsRef.current;
-    const prevState = state;
+    const prevState = stateRef.current;
 
     const optimistic = prevCollections.map((c) =>
       c.id === id ? { ...c, parentId } : c,
@@ -107,14 +112,13 @@ export function useCollections(): {
       setState(prevState);
       throw err;
     }
-  }, [state]);
+  }, []);
 
   const deleteCollection = useCallback(async (id: string) => {
     const prevCollections = collectionsRef.current;
     const prevDocs = docsRef.current;
-    const prevState = state;
+    const prevState = stateRef.current;
 
-    // Collect all IDs to remove (the collection and its descendants)
     const toRemove = new Set<string>();
     function collectDescendants(targetId: string): void {
       toRemove.add(targetId);
@@ -140,11 +144,11 @@ export function useCollections(): {
       setState(prevState);
       throw err;
     }
-  }, [state]);
+  }, []);
 
   const moveDocToCollection = useCallback(async (slug: string, collectionId: string | null) => {
     const prevDocs = docsRef.current;
-    const prevState = state;
+    const prevState = stateRef.current;
 
     const optimistic = prevDocs.map((d) =>
       d.slug === slug ? { ...d, collectionId } : d,
@@ -160,7 +164,24 @@ export function useCollections(): {
       setState(prevState);
       throw err;
     }
-  }, [state]);
+  }, []);
+
+  const deleteDoc = useCallback(async (slug: string) => {
+    const prevDocs = docsRef.current;
+    const prevState = stateRef.current;
+
+    const optimistic = prevDocs.filter((d) => d.slug !== slug);
+    docsRef.current = optimistic;
+    setState({ status: 'ready', tree: buildTree(collectionsRef.current, optimistic) });
+
+    try {
+      await apiDeleteDoc(slug);
+    } catch (err) {
+      docsRef.current = prevDocs;
+      setState(prevState);
+      throw err;
+    }
+  }, []);
 
   return {
     state,
@@ -169,6 +190,7 @@ export function useCollections(): {
     moveCollection,
     deleteCollection,
     moveDocToCollection,
+    deleteDoc,
     refresh: load,
   };
 }

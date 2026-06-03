@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fetchDoc, saveDoc, updateDoc, fetchUserDocs, setAuthToken } from './docsApi';
+import { fetchDoc, saveDoc, updateDoc, fetchUserDocs, deleteDoc, setAuthToken } from './docsApi';
 
 describe('docsApi', () => {
   beforeEach(() => {
@@ -173,6 +173,45 @@ describe('docsApi', () => {
         new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }),
       );
       await expect(fetchUserDocs()).rejects.toThrow('Unauthorized');
+    });
+  });
+
+  describe('deleteDoc', () => {
+    it('issues DELETE to /api/docs/:slug with auth header', async () => {
+      setAuthToken('user-jwt');
+      vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+      await deleteDoc('abc1234');
+
+      expect(fetch).toHaveBeenCalledWith(
+        '/api/docs/abc1234',
+        expect.objectContaining({
+          method: 'DELETE',
+          headers: expect.objectContaining({ Authorization: 'Bearer user-jwt' }),
+        }),
+      );
+    });
+
+    it('resolves without a value on 204', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+      const result = await deleteDoc('abc1234');
+
+      expect(result).toBeUndefined();
+    });
+
+    it('throws with error message on 403', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403 }),
+      );
+
+      await expect(deleteDoc('abc1234')).rejects.toThrow('Forbidden');
+    });
+
+    it('throws with fallback message when response body is not JSON', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce(new Response('Internal Server Error', { status: 500 }));
+
+      await expect(deleteDoc('abc1234')).rejects.toThrow('HTTP 500');
     });
   });
 });

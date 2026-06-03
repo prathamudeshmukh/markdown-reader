@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createDoc, getDoc, updateDoc, getUserDocs } from './supabaseClient';
+import { createDoc, getDoc, updateDoc, getUserDocs, deleteDoc } from './supabaseClient';
 
 const env = {
   SUPABASE_URL: 'https://test.supabase.co',
@@ -194,6 +194,46 @@ describe('supabaseClient', () => {
     it('throws when response is not ok', async () => {
       vi.mocked(fetch).mockResolvedValueOnce(new Response('error', { status: 401 }));
       await expect(getUserDocs(env, 'uid', 'jwt')).rejects.toThrow('getUserDocs failed');
+    });
+  });
+
+  describe('deleteDoc', () => {
+    it('issues DELETE to the correct URL with the slug encoded in the query string', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+      await deleteDoc(env, 'abc1234', 'user-jwt');
+
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringContaining('slug=eq.abc1234'),
+        expect.objectContaining({ method: 'DELETE' }),
+      );
+    });
+
+    it('sends the user JWT as Bearer token in Authorization header', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+      await deleteDoc(env, 'abc1234', 'user-jwt');
+
+      expect(fetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          headers: expect.objectContaining({ Authorization: 'Bearer user-jwt' }),
+        }),
+      );
+    });
+
+    it('resolves without a value on 204', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+      const result = await deleteDoc(env, 'abc1234', 'user-jwt');
+
+      expect(result).toBeUndefined();
+    });
+
+    it('throws with status info when the response is not ok', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce(new Response('Forbidden', { status: 403 }));
+
+      await expect(deleteDoc(env, 'abc1234', 'user-jwt')).rejects.toThrow('deleteDoc failed');
     });
   });
 });

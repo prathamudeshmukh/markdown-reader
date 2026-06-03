@@ -19,6 +19,7 @@ interface CollectionsSidebarProps {
   onMoveDoc: (slug: string, collectionId: string | null) => Promise<void>;
   onNavigateToDoc: (slug: string) => void;
   onNewDocInCollection: (collectionId: string | null) => void;
+  onDeleteDoc?: (slug: string) => Promise<void>;
 }
 
 interface PendingCreate {
@@ -71,6 +72,7 @@ export default function CollectionsSidebar({
   onMoveDoc,
   onNavigateToDoc,
   onNewDocInCollection,
+  onDeleteDoc,
 }: CollectionsSidebarProps) {
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
   const [unsortedExpanded, setUnsortedExpanded] = useState(true);
@@ -151,6 +153,7 @@ export default function CollectionsSidebar({
       },
       onNavigateToDoc,
       onMoveDoc: (slug, collectionId) => void onMoveDoc(slug, collectionId),
+      onDeleteDoc,
     };
   }
 
@@ -289,6 +292,7 @@ export default function CollectionsSidebar({
                 onToggle={() => setUnsortedExpanded((prev) => !prev)}
                 onNavigateToDoc={onNavigateToDoc}
                 onMoveDoc={(slug, collectionId) => void onMoveDoc(slug, collectionId)}
+                onDeleteDoc={onDeleteDoc}
               />
             )}
 

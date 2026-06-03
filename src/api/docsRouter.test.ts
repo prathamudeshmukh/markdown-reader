@@ -5,6 +5,7 @@ vi.mock('./supabaseClient', () => ({
   getDoc: vi.fn(),
   updateDoc: vi.fn(),
   getUserDocs: vi.fn(),
+  deleteDoc: vi.fn(),
 }));
 
 vi.mock('nanoid', () => ({
@@ -12,7 +13,7 @@ vi.mock('nanoid', () => ({
 }));
 
 import { handleDocsRequest } from './docsRouter';
-import { createDoc, getDoc, updateDoc, getUserDocs } from './supabaseClient';
+import { createDoc, getDoc, updateDoc, getUserDocs, deleteDoc } from './supabaseClient';
 
 const mockCache = {
   match: vi.fn().mockResolvedValue(undefined),
@@ -346,16 +347,83 @@ describe('handleDocsRequest', () => {
     });
   });
 
-  describe('unsupported methods', () => {
-    it('returns 405 for DELETE on slug route', async () => {
+  describe('DELETE /api/docs/:slug', () => {
+    it('returns 204 on successful delete by the doc owner', async () => {
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId, collection_id: null, creator_token: null });
+      vi.mocked(deleteDoc).mockResolvedValueOnce(undefined);
+
+      const res = await handleDocsRequest(
+        makeRequest('DELETE', '/api/docs/abc1234', undefined, { Authorization: `Bearer ${fakeJwt}` }),
+        env,
+      );
+
+      expect(res?.status).toBe(204);
+      expect(deleteDoc).toHaveBeenCalledWith(env, 'abc1234', fakeJwt);
+    });
+
+    it('returns 401 when no Authorization header', async () => {
       const res = await handleDocsRequest(
         makeRequest('DELETE', '/api/docs/abc1234'),
         env,
       );
-      expect(res?.status).toBe(405);
+      expect(res?.status).toBe(401);
     });
 
-    it('returns 405 for PATCH on collection route', async () => {
+    it('returns 401 when JWT is malformed', async () => {
+      const res = await handleDocsRequest(
+        makeRequest('DELETE', '/api/docs/abc1234', undefined, { Authorization: 'Bearer not.a.valid.jwt' }),
+        env,
+      );
+      expect(res?.status).toBe(401);
+    });
+
+    it('returns 404 when doc does not exist', async () => {
+      vi.mocked(getDoc).mockResolvedValueOnce(null);
+
+      const res = await handleDocsRequest(
+        makeRequest('DELETE', '/api/docs/missing', undefined, { Authorization: `Bearer ${fakeJwt}` }),
+        env,
+      );
+      expect(res?.status).toBe(404);
+    });
+
+    it('returns 403 when doc is owned by a different user', async () => {
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: 'other-user', collection_id: null, creator_token: null });
+
+      const res = await handleDocsRequest(
+        makeRequest('DELETE', '/api/docs/abc1234', undefined, { Authorization: `Bearer ${fakeJwt}` }),
+        env,
+      );
+
+      expect(res?.status).toBe(403);
+      expect(deleteDoc).not.toHaveBeenCalled();
+    });
+
+    it('still returns 204 when cache invalidation throws (non-fatal)', async () => {
+      mockCache.delete.mockRejectedValueOnce(new Error('cache unavailable'));
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId, collection_id: null, creator_token: null });
+      vi.mocked(deleteDoc).mockResolvedValueOnce(undefined);
+
+      const res = await handleDocsRequest(
+        makeRequest('DELETE', '/api/docs/abc1234', undefined, { Authorization: `Bearer ${fakeJwt}` }),
+        env,
+      );
+
+      expect(res?.status).toBe(204);
+      expect(deleteDoc).toHaveBeenCalled();
+    });
+
+    it('returns 405 for DELETE on the base /api/docs path', async () => {
+      const res = await handleDocsRequest(
+        makeRequest('DELETE', '/api/docs'),
+        env,
+      );
+      expect(res?.status).toBe(405);
+    });
+  });
+
+  describe('unsupported methods', () => {
+    it('returns 405 for PATCH on base path', async () => {
       const res = await handleDocsRequest(
         makeRequest('PATCH', '/api/docs'),
         env,

@@ -84,3 +84,14 @@ export async function fetchUserDocs(): Promise<DocSummary[]> {
   const data = await parseResponse<{ docs: DocSummary[] }>(res);
   return data.docs;
 }
+
+export async function deleteDoc(slug: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/${slug}`, {
+    method: 'DELETE',
+    headers: { ...authHeaders() },
+  });
+  if (!res.ok && res.status !== 204) {
+    const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+    throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
+  }
+}

@@ -1,5 +1,5 @@
 import { nanoid } from 'nanoid';
-import { createDoc, getDoc, updateDoc, getUserDocs, type SupabaseEnv } from './supabaseClient';
+import { createDoc, getDoc, updateDoc, getUserDocs, deleteDoc, type SupabaseEnv } from './supabaseClient';
 import { json, extractBearerToken, extractUserIdFromJwt } from './workerUtils';
 
 export type RouterEnv = SupabaseEnv;
@@ -176,6 +176,29 @@ async function handlePut(request: Request, slug: string, env: RouterEnv): Promis
   return json({ slug: doc.slug });
 }
 
+async function handleDelete(request: Request, slug: string, env: RouterEnv): Promise<Response> {
+  const userJwt = extractBearerToken(request);
+  if (!userJwt) return json({ error: 'Unauthorized' }, 401);
+
+  const userId = extractUserIdFromJwt(userJwt);
+  if (!userId) return json({ error: 'Invalid token' }, 401);
+
+  const doc = await getDoc(env, slug);
+  if (!doc) return json({ error: 'Not found' }, 404);
+
+  if (doc.user_id !== userId) return json({ error: 'Forbidden' }, 403);
+
+  try {
+    const { origin } = new URL(request.url);
+    await cfCache().delete(docCacheKey(`${origin}${API_PREFIX}/${slug}`));
+  } catch {
+    // Cache invalidation failure is non-fatal
+  }
+
+  await deleteDoc(env, slug, userJwt);
+  return new Response(null, { status: 204 });
+}
+
 export async function handleDocsRequest(
   request: Request,
   env: RouterEnv,
@@ -194,6 +217,7 @@ export async function handleDocsRequest(
     if (!slug) return json({ error: 'Not found' }, 404);
     if (method === 'GET') return handleGet(request, slug, env);
     if (method === 'PUT') return handlePut(request, slug, env);
+    if (method === 'DELETE') return handleDelete(request, slug, env);
     return json({ error: 'Method not allowed' }, 405);
   }
 

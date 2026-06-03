@@ -132,4 +132,33 @@ describe('CollectionsSidebar', () => {
       expect(onNavigateToDoc).toHaveBeenCalledWith('root-doc');
     });
   });
+
+  describe('onDeleteDoc threading', () => {
+    it('threads onDeleteDoc to root docs via VirtualUnsortedNode', () => {
+      const onDeleteDoc = vi.fn().mockResolvedValue(undefined);
+      render(<CollectionsSidebar {...makeProps({ onDeleteDoc })} />);
+      const kebabs = screen.getAllByLabelText('Doc options');
+      // Click kebab for the root doc (first in the unsorted group)
+      fireEvent.click(kebabs[0]);
+      expect(screen.getByText(/^delete$/i)).toBeInTheDocument();
+    });
+
+    it('threads onDeleteDoc to collected docs via CollectionNode', () => {
+      const onDeleteDoc = vi.fn().mockResolvedValue(undefined);
+      // Open the collection to expose the collected doc
+      render(<CollectionsSidebar {...makeProps({ onDeleteDoc })} />);
+      fireEvent.click(screen.getByRole('button', { name: /work/i }));
+      const kebabs = screen.getAllByLabelText('Doc options');
+      // Find the collected doc's kebab
+      fireEvent.click(kebabs[kebabs.length - 1]);
+      expect(screen.getByText(/^delete$/i)).toBeInTheDocument();
+    });
+
+    it('does not show Delete in doc kebab menu when onDeleteDoc is not provided', () => {
+      render(<CollectionsSidebar {...makeProps({ onDeleteDoc: undefined })} />);
+      const kebabs = screen.getAllByLabelText('Doc options');
+      fireEvent.click(kebabs[0]);
+      expect(screen.queryByText(/^delete$/i)).not.toBeInTheDocument();
+    });
+  });
 });

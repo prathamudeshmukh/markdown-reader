@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import type { DocSummary } from '../api/docsApi';
-import { DocIcon, KebabIcon, MoveIcon } from './SidebarIcons';
+import { DocIcon, KebabIcon, MoveIcon, DeleteIcon } from './SidebarIcons';
 import { INDENT_BASE, INDENT_STEP } from './sidebar.constants';
+import DocDeleteModal from './DocDeleteModal';
 
 interface DocRowProps {
   doc: DocSummary;
@@ -9,6 +10,7 @@ interface DocRowProps {
   depth: number;
   onNavigateToDoc: (slug: string) => void;
   onMoveDoc: (slug: string, collectionId: string | null) => void;
+  onDeleteDoc?: (slug: string) => void;
 }
 
 function formatDate(iso: string): string {
@@ -20,9 +22,22 @@ function formatDate(iso: string): string {
   }).format(new Date(iso));
 }
 
-export default function DocRow({ doc, isActive, depth, onNavigateToDoc, onMoveDoc }: DocRowProps) {
+export default function DocRow({ doc, isActive, depth, onNavigateToDoc, onMoveDoc, onDeleteDoc }: DocRowProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const paddingLeft = INDENT_BASE + depth * INDENT_STEP;
+
+  async function handleConfirmDelete() {
+    if (!onDeleteDoc) return;
+    setIsDeleting(true);
+    try {
+      await onDeleteDoc(doc.slug);
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteModal(false);
+    }
+  }
 
   return (
     <div className="relative group">
@@ -90,21 +105,35 @@ export default function DocRow({ doc, isActive, depth, onNavigateToDoc, onMoveDo
       </button>
 
       {menuOpen && (
-        <MoveMenu
+        <DocContextMenu
+          showDelete={!!onDeleteDoc}
           onMove={(collectionId) => { onMoveDoc(doc.slug, collectionId); setMenuOpen(false); }}
+          onDelete={() => { setMenuOpen(false); setShowDeleteModal(true); }}
           onClose={() => setMenuOpen(false)}
+        />
+      )}
+
+      {showDeleteModal && (
+        <DocDeleteModal
+          docTitle={doc.title}
+          docSlug={doc.slug}
+          isDeleting={isDeleting}
+          onConfirm={() => { void handleConfirmDelete(); }}
+          onCancel={() => setShowDeleteModal(false)}
         />
       )}
     </div>
   );
 }
 
-interface MoveMenuProps {
+interface DocContextMenuProps {
+  showDelete: boolean;
   onMove: (collectionId: string | null) => void;
+  onDelete: () => void;
   onClose: () => void;
 }
 
-function MoveMenu({ onMove, onClose }: MoveMenuProps) {
+function DocContextMenu({ showDelete, onMove, onDelete, onClose }: DocContextMenuProps) {
   return (
     <>
       <div className="fixed inset-0 z-40" onClick={onClose} aria-hidden="true" />
@@ -126,6 +155,21 @@ function MoveMenu({ onMove, onClose }: MoveMenuProps) {
           <span style={{ opacity: 0.65 }}><MoveIcon /></span>
           Move to…
         </button>
+        {showDelete && (
+          <>
+            <div style={{ height: '1px', backgroundColor: 'var(--border-light)', margin: '4px 8px' }} />
+            <button
+              onClick={onDelete}
+              className="w-full px-3 py-1.5 text-xs text-left transition-colors flex items-center gap-2.5"
+              style={{ color: '#dc2626' }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(220,38,38,0.06)'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; }}
+            >
+              <span><DeleteIcon /></span>
+              Delete
+            </button>
+          </>
+        )}
       </div>
     </>
   );

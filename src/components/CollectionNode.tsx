@@ -17,6 +17,7 @@ export interface CollectionNodeActions {
   onNewSubCollection: (input: CreateCollectionInput) => void;
   onNavigateToDoc: (slug: string) => void;
   onMoveDoc: (slug: string, collectionId: string | null) => void;
+  onDeleteDoc?: (slug: string) => void;
 }
 
 interface CollectionNodeProps {
@@ -227,6 +228,7 @@ export default function CollectionNode({
                 depth={depth + 1}
                 onNavigateToDoc={actions.onNavigateToDoc}
                 onMoveDoc={(slug) => setMovingDocSlug(slug)}
+                onDeleteDoc={actions.onDeleteDoc}
               />
               {movingDocSlug === doc.slug && (
                 <MoveDocPopover

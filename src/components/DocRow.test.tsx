@@ -24,6 +24,7 @@ function makeProps(overrides: Partial<Parameters<typeof DocRow>[0]> = {}) {
     depth: 0,
     onNavigateToDoc: vi.fn(),
     onMoveDoc: vi.fn(),
+    onDeleteDoc: undefined,
     ...overrides,
   };
 }
@@ -90,6 +91,52 @@ describe('DocRow', () => {
       render(<DocRow {...makeProps({ isActive: false })} />);
       const button = screen.getByRole('button', { name: /my doc/i });
       expect(button.style.borderLeft).toContain('transparent');
+    });
+  });
+
+  describe('delete behaviour', () => {
+    it('does not show Delete option in kebab menu when onDeleteDoc is not provided', () => {
+      render(<DocRow {...makeProps({ onDeleteDoc: undefined })} />);
+      fireEvent.click(screen.getByLabelText('Doc options'));
+      expect(screen.queryByText(/delete/i)).not.toBeInTheDocument();
+    });
+
+    it('shows Delete option in kebab menu when onDeleteDoc is provided', () => {
+      render(<DocRow {...makeProps({ onDeleteDoc: vi.fn() })} />);
+      fireEvent.click(screen.getByLabelText('Doc options'));
+      expect(screen.getByText(/^delete$/i)).toBeInTheDocument();
+    });
+
+    it('still shows Move to… in the kebab menu when onDeleteDoc is provided', () => {
+      render(<DocRow {...makeProps({ onDeleteDoc: vi.fn() })} />);
+      fireEvent.click(screen.getByLabelText('Doc options'));
+      expect(screen.getByText(/move to/i)).toBeInTheDocument();
+    });
+
+    it('opens the delete modal when Delete is clicked', () => {
+      render(<DocRow {...makeProps({ onDeleteDoc: vi.fn() })} />);
+      fireEvent.click(screen.getByLabelText('Doc options'));
+      fireEvent.click(screen.getByText(/^delete$/i));
+      expect(screen.getByRole('dialog', { name: /delete document/i })).toBeInTheDocument();
+    });
+
+    it('calls onDeleteDoc with the doc slug when modal is confirmed', async () => {
+      const onDeleteDoc = vi.fn().mockResolvedValue(undefined);
+      render(<DocRow {...makeProps({ onDeleteDoc })} />);
+      fireEvent.click(screen.getByLabelText('Doc options'));
+      fireEvent.click(screen.getByText(/^delete$/i));
+      fireEvent.click(screen.getByRole('button', { name: /^delete$/i }));
+      expect(onDeleteDoc).toHaveBeenCalledWith('abc1234');
+    });
+
+    it('closes the modal when Cancel is clicked without calling onDeleteDoc', () => {
+      const onDeleteDoc = vi.fn();
+      render(<DocRow {...makeProps({ onDeleteDoc })} />);
+      fireEvent.click(screen.getByLabelText('Doc options'));
+      fireEvent.click(screen.getByText(/^delete$/i));
+      fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+      expect(onDeleteDoc).not.toHaveBeenCalled();
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
   });
 });
