@@ -5,11 +5,13 @@ import OnboardingTooltips from './components/OnboardingTooltips';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useRecentDocs } from './hooks/useRecentDocs';
 import { useCollections } from './hooks/useCollections';
+import { useBeautify } from './hooks/useBeautify';
 import Header from './components/Header';
 import BottomActionBar from './components/BottomActionBar';
 import Editor from './components/Editor';
 import FormattingToolbar from './components/FormattingToolbar';
 import Preview from './components/Preview';
+import BeautifyView from './components/BeautifyView';
 import RecentDocsSidebar from './components/RecentDocsSidebar';
 import CollectionsSidebar from './components/CollectionsSidebar';
 import DocTitle from './components/DocTitle';
@@ -21,6 +23,7 @@ import CommandPalette from './components/CommandPalette';
 import { useAuth } from './auth/AuthContext';
 import { getContentLengthBucket, track, type InteractionSource } from './telemetry';
 import { loadCreatorToken } from './utils/creatorTokens';
+import { updateDoc } from './api/docsApi';
 import { pdfToMarkdown, PdfImportError } from './utils/pdfToMarkdown';
 import { pdfFileToMarkdown, PdfApiError } from './utils/pdfApiClient';
 import { readFeatureFlags } from './config/features';
@@ -32,8 +35,20 @@ const PDF_IMPORT_UNKNOWN_ERROR = 'Failed to import PDF. Please try again.';
 
 export default function App() {
   const { user, isAuthLoading, signInWithEmail, signOut } = useAuth();
-  const { markdownText, title, slug, docUserId, mode, isLoading, isSaving, error, presenceCount, setMarkdownText, setTitle, toggleMode, onSave, navigateToDoc } =
+  const { markdownText, title, slug, docUserId, mode, isLoading, isSaving, error, presenceCount, setMarkdownText, setTitle, toggleMode, setMode, onSave, navigateToDoc, initialBeautifyResult, initialBeautifyHash } =
     useMarkdownState({ userId: user?.id });
+
+  const beautify = useBeautify(markdownText, {
+    initialResult: initialBeautifyResult,
+    initialHash: initialBeautifyHash,
+    onSave: slug
+      ? (result, hash) => {
+          void updateDoc(slug, { beautifyResult: result, beautifyContentHash: hash }).catch(
+            (err: unknown) => { console.error('beautify persist failed', err); },
+          );
+        }
+      : undefined,
+  });
 
   // True when this authenticated user holds the creator token for an unowned doc —
   // they created it anonymously and can silently claim it on first auto-save.
@@ -162,6 +177,11 @@ export default function App() {
     setSidebarOpen((prev) => !prev);
   }, [onSidebarInteraction]);
 
+  const handleBeautify = useCallback(() => {
+    setMode('beautify', 'shortcut');
+    beautify.trigger();
+  }, [setMode, beautify]);
+
   useKeyboardShortcuts({
     onSave: () => { void handleSave('shortcut'); },
     onToggleMode: () => { if (canEdit || mode === 'editor') toggleMode('shortcut'); },
@@ -169,6 +189,7 @@ export default function App() {
     onNewDoc: () => { window.location.href = '/'; },
     onOpenCommandPalette: () => setCommandPaletteOpen(true),
     onOpenShortcutHelp: () => setShortcutHelpOpen(true),
+    onBeautify: user ? handleBeautify : undefined,
   });
 
   function handleDownloadMarkdown() {
@@ -211,6 +232,7 @@ export default function App() {
               setEditBlockedOpen(true);
             }
           },
+          onBeautify: user ? () => { setMode('beautify', 'button'); beautify.trigger(); } : undefined,
           onSave: () => { void handleSave('button'); },
           onNewDoc: () => { window.location.href = '/'; },
           onExportPdf: handleExportPdf,
@@ -370,6 +392,7 @@ export default function App() {
               setEditBlockedOpen(true);
             }
           },
+          onBeautify: user ? () => { setMode('beautify', 'button'); beautify.trigger(); } : undefined,
           onSave: () => { void handleSave('button'); },
           onCopyLink: () => { void copyLink('button'); },
           onNewDoc: () => { window.location.href = '/'; },
@@ -385,13 +408,13 @@ export default function App() {
 
       <FormattingToolbar
         editorRef={editorRef}
-        mode={mode}
+        mode={mode === 'beautify' ? 'preview' : mode}
         readOnly={!canEdit}
         value={markdownText}
         onTextChange={setMarkdownText}
       />
 
-      <DocTitle title={title} mode={mode} onChange={setTitle} />
+      <DocTitle title={title} mode={mode === 'beautify' ? 'preview' : mode} onChange={setTitle} />
 
       <main className="flex-1 flex flex-col overflow-hidden">
         {isLoading ? (
@@ -402,6 +425,15 @@ export default function App() {
           />
         ) : mode === 'editor' ? (
           <Editor ref={editorRef} value={markdownText} onChange={setMarkdownText} readOnly={!canEdit} />
+        ) : mode === 'beautify' ? (
+          <BeautifyView
+            result={beautify.result}
+            status={beautify.status}
+            error={beautify.error}
+            isStale={beautify.isStale}
+            user={user}
+            onRerun={beautify.rerun}
+          />
         ) : (
           <Preview content={markdownText} />
         )}

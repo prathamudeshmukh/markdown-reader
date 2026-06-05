@@ -13,6 +13,8 @@ export interface Doc {
   user_id: string | null;
   collection_id: string | null;
   creator_token: string | null;
+  beautify_result: unknown | null;
+  beautify_content_hash: string | null;
 }
 
 export interface DocSummary {
@@ -92,7 +94,7 @@ export async function getDoc(env: SupabaseEnv, slug: string): Promise<Doc | null
     throw new Error('getDoc failed: SUPABASE_SERVICE_ROLE_KEY is missing or not a valid JWT');
   }
 
-  const url = `${env.SUPABASE_URL}/rest/v1/docs?slug=eq.${encodeURIComponent(slug)}&select=slug,content,title,user_id,collection_id,creator_token`;
+  const url = `${env.SUPABASE_URL}/rest/v1/docs?slug=eq.${encodeURIComponent(slug)}&select=slug,content,title,user_id,collection_id,creator_token,beautify_result,beautify_content_hash`;
   const res = await fetch(url, {
     headers: {
       apikey: env.SUPABASE_ANON_KEY,
@@ -116,10 +118,12 @@ interface UpdateDocFields {
   collectionId?: string | null;
   userId?: string;
   clearCreatorToken?: boolean;
+  beautifyResult?: unknown;
+  beautifyContentHash?: string;
 }
 
 export async function updateDoc(env: SupabaseEnv, slug: string, fields: UpdateDocFields): Promise<Doc> {
-  const { content, title, userJwt, collectionId, userId, clearCreatorToken } = fields;
+  const { content, title, userJwt, collectionId, userId, clearCreatorToken, beautifyResult, beautifyContentHash } = fields;
   const url = `${env.SUPABASE_URL}/rest/v1/docs?slug=eq.${encodeURIComponent(slug)}`;
 
   const body: Record<string, unknown> = { updated_at: new Date().toISOString() };
@@ -128,6 +132,8 @@ export async function updateDoc(env: SupabaseEnv, slug: string, fields: UpdateDo
   if (collectionId !== undefined) body.collection_id = collectionId;
   if (userId !== undefined) body.user_id = userId;
   if (clearCreatorToken) body.creator_token = null;
+  if (beautifyResult !== undefined) body.beautify_result = beautifyResult;
+  if (beautifyContentHash !== undefined) body.beautify_content_hash = beautifyContentHash;
 
   const res = await fetch(url, {
     method: 'PATCH',

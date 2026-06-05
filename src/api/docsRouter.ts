@@ -108,6 +108,8 @@ async function handlePut(request: Request, slug: string, env: RouterEnv): Promis
     collection_id?: unknown;
     claim?: unknown;
     creatorToken?: unknown;
+    beautify_result?: unknown;
+    beautify_content_hash?: unknown;
   };
 
   const isClaim = body.claim === true;
@@ -145,8 +147,13 @@ async function handlePut(request: Request, slug: string, env: RouterEnv): Promis
     return json({ error: 'content must be a string' }, 400);
   }
 
-  if (body.content === undefined && body.title === undefined && body.collection_id === undefined) {
-    return json({ error: 'content, title, or collection_id is required' }, 400);
+  if (
+    body.content === undefined &&
+    body.title === undefined &&
+    body.collection_id === undefined &&
+    body.beautify_result === undefined
+  ) {
+    return json({ error: 'content, title, collection_id, or beautify_result is required' }, 400);
   }
 
   if (typeof body.content === 'string' && new TextEncoder().encode(body.content).length > MAX_CONTENT_BYTES) {
@@ -166,11 +173,17 @@ async function handlePut(request: Request, slug: string, env: RouterEnv): Promis
     // Cache invalidation failure is non-fatal — DB is source of truth
   }
 
+  const beautifyResult = body.beautify_result !== undefined ? body.beautify_result : undefined;
+  const beautifyContentHash =
+    typeof body.beautify_content_hash === 'string' ? body.beautify_content_hash : undefined;
+
   const doc = await updateDoc(env, slug, {
     content: body.content as string | undefined,
     title,
     userJwt,
     collectionId,
+    beautifyResult,
+    beautifyContentHash,
   });
 
   return json({ slug: doc.slug });

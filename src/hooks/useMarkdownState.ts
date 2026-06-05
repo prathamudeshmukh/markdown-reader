@@ -6,8 +6,9 @@ import { addRecentDoc } from '../utils/recentDocs';
 import { useDocChannel } from '../realtime/useDocChannel';
 import { getContentLengthBucket, getErrorType, track, type InteractionSource } from '../telemetry';
 import { saveCreatorToken, loadCreatorToken, clearCreatorToken } from '../utils/creatorTokens';
+import type { BeautifyResult } from '../ai/beautifyTypes';
 
-type Mode = 'editor' | 'preview';
+export type Mode = 'editor' | 'preview' | 'beautify';
 
 interface MarkdownState {
   markdownText: string;
@@ -18,6 +19,8 @@ interface MarkdownState {
   isSaving: boolean;
   error: string | null;
   presenceCount: number;
+  initialBeautifyResult: BeautifyResult | undefined;
+  initialBeautifyHash: string | undefined;
 }
 
 const DEBOUNCE_MS = 250;
@@ -44,6 +47,8 @@ export function useMarkdownState({ userId }: { userId?: string } = {}) {
         isSaving: false,
         error: null,
         presenceCount: 0,
+        initialBeautifyResult: undefined,
+        initialBeautifyHash: undefined,
       };
     }
     const forked = sessionStorage.getItem('openmark:fork');
@@ -58,6 +63,8 @@ export function useMarkdownState({ userId }: { userId?: string } = {}) {
         isSaving: false,
         error: null,
         presenceCount: 0,
+        initialBeautifyResult: undefined,
+        initialBeautifyHash: undefined,
       };
     }
     return {
@@ -69,6 +76,8 @@ export function useMarkdownState({ userId }: { userId?: string } = {}) {
       isSaving: false,
       error: null,
       presenceCount: 0,
+      initialBeautifyResult: undefined,
+      initialBeautifyHash: undefined,
     };
   });
 
@@ -106,7 +115,15 @@ export function useMarkdownState({ userId }: { userId?: string } = {}) {
           has_slug: true,
           content_length_bucket: getContentLengthBucket(doc.content),
         });
-        setState((prev) => ({ ...prev, markdownText: doc.content, title: doc.title, docUserId: doc.user_id, isLoading: false }));
+        setState((prev) => ({
+          ...prev,
+          markdownText: doc.content,
+          title: doc.title,
+          docUserId: doc.user_id,
+          isLoading: false,
+          initialBeautifyResult: (doc.beautify_result as BeautifyResult) ?? undefined,
+          initialBeautifyHash: doc.beautify_content_hash ?? undefined,
+        }));
       })
       .catch((err: Error) =>
         setState((prev) => ({ ...prev, isLoading: false, error: err.message })),
@@ -173,13 +190,22 @@ export function useMarkdownState({ userId }: { userId?: string } = {}) {
 
   const toggleMode = useCallback((source: InteractionSource = 'button') => {
     setState((prev) => {
-      const nextMode = prev.mode === 'editor' ? 'preview' : 'editor';
+      const cycle: Mode[] = ['editor', 'preview', 'beautify'];
+      const nextMode = cycle[(cycle.indexOf(prev.mode) + 1) % cycle.length];
       track('mode_toggled', {
         from_mode: prev.mode,
         to_mode: nextMode,
         source,
       });
       return { ...prev, mode: nextMode };
+    });
+  }, []);
+
+  const setMode = useCallback((next: Mode, source: InteractionSource = 'button') => {
+    setState((prev) => {
+      if (prev.mode === next) return prev;
+      track('mode_toggled', { from_mode: prev.mode, to_mode: next, source });
+      return { ...prev, mode: next };
     });
   }, []);
 
@@ -199,6 +225,8 @@ export function useMarkdownState({ userId }: { userId?: string } = {}) {
       isSaving: false,
       error: null,
       presenceCount: 0,
+      initialBeautifyResult: undefined,
+      initialBeautifyHash: undefined,
     });
   }, []);
 
@@ -231,5 +259,5 @@ export function useMarkdownState({ userId }: { userId?: string } = {}) {
     }
   }, [state.markdownText, state.title, collectionId]);
 
-  return { ...state, slug, collectionId, presenceCount, setMarkdownText, setTitle, toggleMode, onSave, navigateToDoc };
+  return { ...state, slug, collectionId, presenceCount, setMarkdownText, setTitle, toggleMode, setMode, onSave, navigateToDoc, initialBeautifyResult: state.initialBeautifyResult, initialBeautifyHash: state.initialBeautifyHash };
 }
