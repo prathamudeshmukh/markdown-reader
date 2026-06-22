@@ -7,6 +7,7 @@ interface ShortcutHandlers {
   onNewDoc: () => void;
   onOpenCommandPalette: () => void;
   onOpenShortcutHelp: () => void;
+  onBeautify?: () => void;
 }
 
 function isTypingTarget(el: Element | null): boolean {
@@ -22,6 +23,7 @@ export function useKeyboardShortcuts({
   onNewDoc,
   onOpenCommandPalette,
   onOpenShortcutHelp,
+  onBeautify,
 }: ShortcutHandlers) {
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -52,6 +54,13 @@ export function useKeyboardShortcuts({
         return;
       }
 
+      // Ctrl+Shift+B — jump to Beautify mode (no-op if handler not provided)
+      if (mod && e.shiftKey && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        onBeautify?.();
+        return;
+      }
+
       // Ctrl+K / Cmd+K — command palette
       if (mod && e.key === 'k') {
         e.preventDefault();
@@ -68,5 +77,5 @@ export function useKeyboardShortcuts({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onSave, onToggleMode, onCopyLink, onNewDoc, onOpenCommandPalette, onOpenShortcutHelp]);
+  }, [onSave, onToggleMode, onCopyLink, onNewDoc, onOpenCommandPalette, onOpenShortcutHelp, onBeautify]);
 }

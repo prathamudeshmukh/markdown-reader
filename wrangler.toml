@@ -1,6 +1,7 @@
 name = "openmark"
 main = "worker.ts"
 compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
 
 routes = [
   { pattern = "openmark.cc/*", zone_name = "openmark.cc" }

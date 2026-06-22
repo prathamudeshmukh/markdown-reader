@@ -3,7 +3,7 @@ import type { DocumentState, UiState, HeaderActions, AuthState } from './Header'
 interface BottomActionBarProps {
   document: DocumentState;
   ui: UiState;
-  actions: Pick<HeaderActions, 'onToggle' | 'onSave' | 'onCopyLink' | 'onNewDoc' | 'onToggleSidebar' | 'onImportPdf' | 'onExportPdf' | 'onDownloadMarkdown' | 'onShowQr' | 'onCopyMarkdown'>;
+  actions: Pick<HeaderActions, 'onToggle' | 'onBeautify' | 'onSave' | 'onCopyLink' | 'onNewDoc' | 'onToggleSidebar' | 'onImportPdf' | 'onExportPdf' | 'onDownloadMarkdown' | 'onShowQr' | 'onCopyMarkdown'>;
   auth: Pick<AuthState, 'user'>;
 }
 
@@ -62,7 +62,7 @@ function BarButton({ onClick, disabled = false, active = false, accent = false, 
 export default function BottomActionBar({
   document: { slug, markdownText },
   ui: { mode, isSaving, isLoading, copied, sidebarOpen },
-  actions: { onToggle, onSave, onCopyLink, onNewDoc, onToggleSidebar },
+  actions: { onToggle, onBeautify, onSave, onCopyLink, onNewDoc, onToggleSidebar },
   auth: { user },
 }: BottomActionBarProps) {
   const isNewDoc = slug === null;
@@ -108,8 +108,9 @@ export default function BottomActionBar({
         {/* Mode toggle — accent-tinted to draw the eye */}
         <BarButton
           onClick={onToggle}
-          accent={true}
-          label={mode === 'editor' ? 'Preview' : 'Edit'}
+          accent={mode !== 'editor'}
+          active={mode === 'preview'}
+          label={mode === 'editor' ? 'Preview' : mode === 'beautify' ? 'Edit' : 'Edit'}
         >
           {mode === 'editor' ? (
             <svg xmlns="http://www.w3.org/2000/svg" className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
@@ -122,6 +123,19 @@ export default function BottomActionBar({
             </svg>
           )}
         </BarButton>
+
+        {/* AI Beautify — only for signed-in users */}
+        {user && onBeautify && (
+          <BarButton
+            onClick={onBeautify}
+            active={mode === 'beautify'}
+            label="AI"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
+            </svg>
+          </BarButton>
+        )}
 
         {/* Save — centre focal point */}
         <div className="flex flex-col items-center justify-center flex-1 py-2">

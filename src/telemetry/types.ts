@@ -24,7 +24,11 @@ export type TelemetryEventName =
   | 'collection_created'
   | 'collection_deleted'
   | 'doc_moved_to_collection'
-  | 'toolbar_action';
+  | 'toolbar_action'
+  | 'beautify_triggered'
+  | 'beautify_succeeded'
+  | 'beautify_failed'
+  | 'beautify_rerun';
 
 export interface TelemetrySharedProps {
   session_id: string;
@@ -52,8 +56,8 @@ export interface TelemetryPropsByEvent {
     error_type: string;
   };
   mode_toggled: {
-    from_mode: 'editor' | 'preview';
-    to_mode: 'editor' | 'preview';
+    from_mode: 'editor' | 'preview' | 'beautify';
+    to_mode: 'editor' | 'preview' | 'beautify';
     source: InteractionSource;
   };
   link_copied: {
@@ -67,7 +71,7 @@ export interface TelemetryPropsByEvent {
     has_slug: boolean;
   };
   pdf_exported: {
-    mode_at_export: 'editor' | 'preview';
+    mode_at_export: 'editor' | 'preview' | 'beautify';
   };
   markdown_downloaded: {
     content_length_bucket: ContentLengthBucket;
@@ -89,5 +93,22 @@ export interface TelemetryPropsByEvent {
   toolbar_action: {
     action: ToolbarAction;
     had_selection: boolean;
+  };
+  beautify_triggered: {
+    content_length_bucket: ContentLengthBucket;
+    source: InteractionSource;
+    from_cache: boolean;
+  };
+  beautify_succeeded: {
+    content_length_bucket: ContentLengthBucket;
+    theme: string;
+    node_count: number;
+  };
+  beautify_failed: {
+    content_length_bucket: ContentLengthBucket;
+    error_type: string;
+  };
+  beautify_rerun: {
+    content_length_bucket: ContentLengthBucket;
   };
 }
