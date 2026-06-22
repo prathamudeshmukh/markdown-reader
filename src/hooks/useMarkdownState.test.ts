@@ -156,6 +156,9 @@ describe('useMarkdownState', () => {
       );
 
       act(() => result.current.toggleMode());
+      expect(result.current.mode).toBe('beautify');
+
+      act(() => result.current.toggleMode());
       expect(result.current.mode).toBe('editor');
     });
   });

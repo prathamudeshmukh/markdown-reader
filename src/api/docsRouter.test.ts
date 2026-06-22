@@ -38,6 +38,20 @@ const userId = 'user-uuid-1234';
 const jwtPayload = btoa(JSON.stringify({ sub: userId }));
 const fakeJwt = `header.${jwtPayload}.sig`;
 
+function makeDoc(overrides: Record<string, unknown> = {}) {
+  return {
+    slug: 'abc1234',
+    content: '# Hello',
+    title: null,
+    user_id: null,
+    collection_id: null,
+    creator_token: null,
+    beautify_result: null,
+    beautify_content_hash: null,
+    ...overrides,
+  };
+}
+
 function makeRequest(method: string, path: string, body?: unknown, headers?: Record<string, string>): Request {
   return new Request(`https://app.prathamesh.cloud${path}`, {
     method,
@@ -45,6 +59,12 @@ function makeRequest(method: string, path: string, body?: unknown, headers?: Rec
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
 }
+
+const validBeautifyResult = {
+  theme: 'technical',
+  accent: '#6366f1',
+  nodes: [{ type: 'hero', title: 'Hello' }],
+};
 
 describe('handleDocsRequest', () => {
   beforeEach(() => {
@@ -64,7 +84,7 @@ describe('handleDocsRequest', () => {
 
   describe('POST /api/docs', () => {
     it('creates a doc and returns 201 with slug and creatorToken', async () => {
-      vi.mocked(createDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null, creator_token: 'tok' });
+      vi.mocked(createDoc).mockResolvedValueOnce(makeDoc({ content: '# Hello' }) as ReturnType<typeof makeDoc>);
 
       const res = await handleDocsRequest(
         makeRequest('POST', '/api/docs', { content: '# Hello' }),
@@ -79,7 +99,7 @@ describe('handleDocsRequest', () => {
     });
 
     it('passes creatorToken to createDoc', async () => {
-      vi.mocked(createDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null, creator_token: 'tok' });
+      vi.mocked(createDoc).mockResolvedValueOnce(makeDoc() as ReturnType<typeof makeDoc>);
 
       await handleDocsRequest(
         makeRequest('POST', '/api/docs', { content: '# Hello' }),
@@ -94,7 +114,7 @@ describe('handleDocsRequest', () => {
     });
 
     it('passes title to createDoc when provided', async () => {
-      vi.mocked(createDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: 'My Doc', user_id: null, collection_id: null, creator_token: null });
+      vi.mocked(createDoc).mockResolvedValueOnce(makeDoc({ title: 'My Doc' }) as ReturnType<typeof makeDoc>);
 
       await handleDocsRequest(
         makeRequest('POST', '/api/docs', { content: '# Hello', title: 'My Doc' }),
@@ -109,7 +129,7 @@ describe('handleDocsRequest', () => {
     });
 
     it('passes userJwt to createDoc when Authorization header present', async () => {
-      vi.mocked(createDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId, collection_id: null, creator_token: null });
+      vi.mocked(createDoc).mockResolvedValueOnce(makeDoc({ user_id: userId }) as ReturnType<typeof makeDoc>);
 
       await handleDocsRequest(
         makeRequest('POST', '/api/docs', { content: '# Hello' }, { Authorization: `Bearer ${fakeJwt}` }),
@@ -171,16 +191,29 @@ describe('handleDocsRequest', () => {
 
   describe('GET /api/docs/:slug', () => {
     it('returns 200 with doc when found', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null, creator_token: null });
+      const doc = makeDoc();
+      vi.mocked(getDoc).mockResolvedValueOnce(doc as ReturnType<typeof makeDoc>);
 
       const res = await handleDocsRequest(makeRequest('GET', '/api/docs/abc1234'), env);
 
       expect(res?.status).toBe(200);
-      expect(await res?.json()).toEqual({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null, creator_token: null });
+      expect(await res?.json()).toEqual(doc);
+    });
+
+    it('includes beautify_result and beautify_content_hash in GET response', async () => {
+      const doc = makeDoc({ beautify_result: validBeautifyResult, beautify_content_hash: 'hash123' });
+      vi.mocked(getDoc).mockResolvedValueOnce(doc as ReturnType<typeof makeDoc>);
+
+      const res = await handleDocsRequest(makeRequest('GET', '/api/docs/abc1234'), env);
+
+      expect(res?.status).toBe(200);
+      const body = await res?.json() as typeof doc;
+      expect(body.beautify_result).toEqual(validBeautifyResult);
+      expect(body.beautify_content_hash).toBe('hash123');
     });
 
     it('calls getDoc with env and slug only (service role handles auth)', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId, collection_id: null, creator_token: null });
+      vi.mocked(getDoc).mockResolvedValueOnce(makeDoc({ user_id: userId }) as ReturnType<typeof makeDoc>);
 
       await handleDocsRequest(makeRequest('GET', '/api/docs/abc1234'), env);
 
@@ -196,7 +229,7 @@ describe('handleDocsRequest', () => {
 
     it('returns 200 and falls through to DB when cache.match throws', async () => {
       mockCache.match.mockRejectedValueOnce(new Error('cache unavailable'));
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null, creator_token: null });
+      vi.mocked(getDoc).mockResolvedValueOnce(makeDoc() as ReturnType<typeof makeDoc>);
 
       const res = await handleDocsRequest(makeRequest('GET', '/api/docs/abc1234'), env);
 
@@ -206,7 +239,7 @@ describe('handleDocsRequest', () => {
 
     it('returns 200 even when cache.put throws', async () => {
       mockCache.put.mockRejectedValueOnce(new Error('cache write failed'));
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null, creator_token: null });
+      vi.mocked(getDoc).mockResolvedValueOnce(makeDoc() as ReturnType<typeof makeDoc>);
 
       const res = await handleDocsRequest(makeRequest('GET', '/api/docs/abc1234'), env);
 
@@ -216,7 +249,7 @@ describe('handleDocsRequest', () => {
 
   describe('PUT /api/docs/:slug', () => {
     it('returns 200 with slug on successful update', async () => {
-      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Updated', title: null, user_id: null, collection_id: null, creator_token: null });
+      vi.mocked(updateDoc).mockResolvedValueOnce(makeDoc({ content: '# Updated' }) as ReturnType<typeof makeDoc>);
 
       const res = await handleDocsRequest(
         makeRequest('PUT', '/api/docs/abc1234', { content: '# Updated' }),
@@ -228,7 +261,7 @@ describe('handleDocsRequest', () => {
     });
 
     it('passes title to updateDoc when provided', async () => {
-      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Updated', title: 'New Title', user_id: null, collection_id: null, creator_token: null });
+      vi.mocked(updateDoc).mockResolvedValueOnce(makeDoc({ title: 'New Title' }) as ReturnType<typeof makeDoc>);
 
       await handleDocsRequest(
         makeRequest('PUT', '/api/docs/abc1234', { content: '# Updated', title: 'New Title' }),
@@ -243,7 +276,7 @@ describe('handleDocsRequest', () => {
     });
 
     it('returns 200 for title-only update', async () => {
-      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: 'New Title', user_id: null, collection_id: null, creator_token: null });
+      vi.mocked(updateDoc).mockResolvedValueOnce(makeDoc({ title: 'New Title' }) as ReturnType<typeof makeDoc>);
 
       const res = await handleDocsRequest(
         makeRequest('PUT', '/api/docs/abc1234', { title: 'New Title' }),
@@ -260,7 +293,7 @@ describe('handleDocsRequest', () => {
 
     it('still calls updateDoc and returns 200 when cache.delete throws', async () => {
       mockCache.delete.mockRejectedValueOnce(new Error('cache delete failed'));
-      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Updated', title: null, user_id: null, collection_id: null, creator_token: null });
+      vi.mocked(updateDoc).mockResolvedValueOnce(makeDoc({ content: '# Updated' }) as ReturnType<typeof makeDoc>);
 
       const res = await handleDocsRequest(
         makeRequest('PUT', '/api/docs/abc1234', { content: '# Updated' }),
@@ -271,12 +304,62 @@ describe('handleDocsRequest', () => {
       expect(updateDoc).toHaveBeenCalled();
     });
 
-    it('returns 400 when neither content nor title is provided', async () => {
+    it('returns 400 when no updatable field is provided', async () => {
       const res = await handleDocsRequest(
         makeRequest('PUT', '/api/docs/abc1234', {}),
         env,
       );
       expect(res?.status).toBe(400);
+    });
+
+    it('persists beautify_result and beautify_content_hash when provided', async () => {
+      vi.mocked(updateDoc).mockResolvedValueOnce(
+        makeDoc({ beautify_result: validBeautifyResult, beautify_content_hash: 'hash123' }) as ReturnType<typeof makeDoc>,
+      );
+
+      const res = await handleDocsRequest(
+        makeRequest('PUT', '/api/docs/abc1234', {
+          beautify_result: validBeautifyResult,
+          beautify_content_hash: 'hash123',
+        }),
+        env,
+      );
+
+      expect(res?.status).toBe(200);
+      expect(updateDoc).toHaveBeenCalledWith(
+        env,
+        'abc1234',
+        expect.objectContaining({
+          beautifyResult: validBeautifyResult,
+          beautifyContentHash: 'hash123',
+        }),
+      );
+    });
+
+    it('omits beautifyResult from updateDoc when not in PUT body', async () => {
+      vi.mocked(updateDoc).mockResolvedValueOnce(makeDoc({ content: '# Updated' }) as ReturnType<typeof makeDoc>);
+
+      await handleDocsRequest(
+        makeRequest('PUT', '/api/docs/abc1234', { content: '# Updated' }),
+        env,
+      );
+
+      const callArgs = vi.mocked(updateDoc).mock.calls[0][2];
+      expect(callArgs.beautifyResult).toBeUndefined();
+      expect(callArgs.beautifyContentHash).toBeUndefined();
+    });
+
+    it('returns 200 for beautify_result-only update (no content/title required)', async () => {
+      vi.mocked(updateDoc).mockResolvedValueOnce(
+        makeDoc({ beautify_result: validBeautifyResult }) as ReturnType<typeof makeDoc>,
+      );
+
+      const res = await handleDocsRequest(
+        makeRequest('PUT', '/api/docs/abc1234', { beautify_result: validBeautifyResult }),
+        env,
+      );
+
+      expect(res?.status).toBe(200);
     });
   });
 
@@ -290,7 +373,7 @@ describe('handleDocsRequest', () => {
     });
 
     it('returns 403 when creatorToken does not match', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null, creator_token: 'correct-token' });
+      vi.mocked(getDoc).mockResolvedValueOnce(makeDoc({ creator_token: 'correct-token' }) as ReturnType<typeof makeDoc>);
 
       const res = await handleDocsRequest(
         makeRequest('PUT', '/api/docs/abc1234', { claim: true, creatorToken: 'wrong-token' }, { Authorization: `Bearer ${fakeJwt}` }),
@@ -301,7 +384,7 @@ describe('handleDocsRequest', () => {
     });
 
     it('returns 403 when creator_token is already null (already claimed)', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null, creator_token: null });
+      vi.mocked(getDoc).mockResolvedValueOnce(makeDoc() as ReturnType<typeof makeDoc>);
 
       const res = await handleDocsRequest(
         makeRequest('PUT', '/api/docs/abc1234', { claim: true, creatorToken: 'any-token' }, { Authorization: `Bearer ${fakeJwt}` }),
@@ -330,8 +413,8 @@ describe('handleDocsRequest', () => {
     });
 
     it('returns 200 and calls updateDoc with userId and clearCreatorToken on valid claim', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null, creator_token: 'correct-token' });
-      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId, collection_id: null, creator_token: null });
+      vi.mocked(getDoc).mockResolvedValueOnce(makeDoc({ creator_token: 'correct-token' }) as ReturnType<typeof makeDoc>);
+      vi.mocked(updateDoc).mockResolvedValueOnce(makeDoc({ user_id: userId }) as ReturnType<typeof makeDoc>);
 
       const res = await handleDocsRequest(
         makeRequest('PUT', '/api/docs/abc1234', { claim: true, creatorToken: 'correct-token' }, { Authorization: `Bearer ${fakeJwt}` }),
@@ -349,7 +432,7 @@ describe('handleDocsRequest', () => {
 
   describe('DELETE /api/docs/:slug', () => {
     it('returns 204 on successful delete by the doc owner', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId, collection_id: null, creator_token: null });
+      vi.mocked(getDoc).mockResolvedValueOnce(makeDoc({ user_id: userId }) as ReturnType<typeof makeDoc>);
       vi.mocked(deleteDoc).mockResolvedValueOnce(undefined);
 
       const res = await handleDocsRequest(
@@ -388,7 +471,7 @@ describe('handleDocsRequest', () => {
     });
 
     it('returns 403 when doc is owned by a different user', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: 'other-user', collection_id: null, creator_token: null });
+      vi.mocked(getDoc).mockResolvedValueOnce(makeDoc({ user_id: 'other-user' }) as ReturnType<typeof makeDoc>);
 
       const res = await handleDocsRequest(
         makeRequest('DELETE', '/api/docs/abc1234', undefined, { Authorization: `Bearer ${fakeJwt}` }),
@@ -401,7 +484,7 @@ describe('handleDocsRequest', () => {
 
     it('still returns 204 when cache invalidation throws (non-fatal)', async () => {
       mockCache.delete.mockRejectedValueOnce(new Error('cache unavailable'));
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId, collection_id: null, creator_token: null });
+      vi.mocked(getDoc).mockResolvedValueOnce(makeDoc({ user_id: userId }) as ReturnType<typeof makeDoc>);
       vi.mocked(deleteDoc).mockResolvedValueOnce(undefined);
 
       const res = await handleDocsRequest(

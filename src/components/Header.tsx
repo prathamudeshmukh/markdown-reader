@@ -10,7 +10,7 @@ export interface DocumentState {
 }
 
 export interface UiState {
-  mode: 'editor' | 'preview';
+  mode: 'editor' | 'preview' | 'beautify';
   isSaving: boolean;
   isLoading: boolean;
   copied: boolean;
@@ -21,6 +21,7 @@ export interface UiState {
 
 export interface HeaderActions {
   onToggle: () => void;
+  onBeautify?: () => void;
   onSave: () => void;
   onNewDoc: () => void;
   onExportPdf: () => void;
@@ -110,7 +111,7 @@ function ToolGroup({ children }: { children: React.ReactNode }) {
 export default function Header({
   document: { slug, markdownText, presenceCount },
   ui: { mode, isSaving, isLoading, copied, copiedMarkdown, sidebarOpen, isPdfImporting },
-  actions: { onToggle, onSave, onNewDoc, onExportPdf, onDownloadMarkdown, onCopyLink, onCopyMarkdown, onToggleSidebar, onShowQr, onImportPdf, onOpenCommandPalette, onOpenShortcutHelp },
+  actions: { onToggle, onBeautify, onSave, onNewDoc, onExportPdf, onDownloadMarkdown, onCopyLink, onCopyMarkdown, onToggleSidebar, onShowQr, onImportPdf, onOpenCommandPalette, onOpenShortcutHelp },
   auth: { user, isAuthLoading },
   authActions: { onSignInClick, onSignOut },
 }: HeaderProps) {
@@ -226,6 +227,20 @@ export default function Header({
               </svg>
               Preview
             </button>
+            {user && onBeautify && (
+              <button
+                onClick={mode !== 'beautify' ? onBeautify : undefined}
+                title="AI Beautify  Ctrl+Shift+B"
+                aria-label={mode !== 'beautify' ? 'Show AI Beautify' : 'AI Beautify'}
+                className="flex items-center gap-1.5 px-3.5 py-1 text-xs font-medium rounded-full transition-all duration-200"
+                style={mode === 'beautify' ? activeToggleStyle : { color: 'var(--text-muted)' }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
+                </svg>
+                AI
+              </button>
+            )}
           </div>
         </div>
 

@@ -54,9 +54,12 @@ const baseState = {
   setMarkdownText: vi.fn(),
   setTitle: vi.fn(),
   toggleMode: vi.fn(),
+  setMode: vi.fn(),
   onSave: vi.fn(),
   navigateToDoc: vi.fn(),
   docUserId: null as string | null,
+  initialBeautifyResult: undefined as undefined,
+  initialBeautifyHash: undefined as undefined,
 };
 
 describe('App', () => {

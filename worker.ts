@@ -1,6 +1,7 @@
 import { handleDocsRequest } from './src/api/docsRouter';
 import { handlePdfRequest } from './src/api/pdfRouter';
 import { handleCollectionsRequest } from './src/api/collectionsRouter';
+import { handleBeautifyRequest } from './src/api/beautifyRouter';
 
 interface Env {
   ASSETS: { fetch(request: Request): Promise<Response> };
@@ -9,6 +10,7 @@ interface Env {
   SUPABASE_SERVICE_ROLE_KEY: string;
   PDF_BUCKET: R2Bucket;
   PDF2MARKDOWN_API_URL: string;
+  ANTHROPIC_API_KEY: string;
 }
 
 const OLD_HOST = 'app.prathamesh.cloud';
@@ -38,6 +40,10 @@ export default {
         headers: { 'Content-Type': 'application/json' },
       });
     }
+
+    // Beautify route
+    const beautifyResponse = await handleBeautifyRequest(request, env);
+    if (beautifyResponse) return beautifyResponse;
 
     // PDF routes — checked before docs API
     const pdfResponse = await handlePdfRequest(request, env);

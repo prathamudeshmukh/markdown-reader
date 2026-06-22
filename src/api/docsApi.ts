@@ -1,5 +1,6 @@
 export { setAuthToken } from './authToken';
 import { authHeaders } from './authToken';
+import type { BeautifyResult } from '../ai/beautifyTypes';
 
 const API_BASE = '/api/docs';
 
@@ -8,6 +9,8 @@ export interface Doc {
   content: string;
   title: string | null;
   user_id: string | null;
+  beautify_result?: BeautifyResult | null;
+  beautify_content_hash?: string | null;
 }
 
 export interface DocSummary {
@@ -29,6 +32,8 @@ export interface UpdateDocInput {
   collectionId?: string | null;
   claim?: boolean;
   creatorToken?: string;
+  beautifyResult?: BeautifyResult;
+  beautifyContentHash?: string;
 }
 
 async function parseResponse<T>(res: Response): Promise<T> {
@@ -68,6 +73,8 @@ export async function updateDoc(slug: string, input: UpdateDocInput): Promise<vo
     body.claim = true;
     body.creatorToken = input.creatorToken;
   }
+  if (input.beautifyResult !== undefined) body.beautify_result = input.beautifyResult;
+  if (input.beautifyContentHash !== undefined) body.beautify_content_hash = input.beautifyContentHash;
 
   const res = await fetch(`${API_BASE}/${slug}`, {
     method: 'PUT',
