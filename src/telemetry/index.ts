@@ -3,6 +3,7 @@ export { getContentLengthBucket, getErrorType } from './utils';
 export type {
   ContentLengthBucket,
   InteractionSource,
+  MdFileOpenSource,
   RouteKind,
   TelemetryEventName,
   TelemetryPropsByEvent,

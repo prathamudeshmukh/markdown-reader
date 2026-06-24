@@ -15,6 +15,12 @@ const MOD = isMac ? '⌘' : 'Ctrl';
 
 const SHORTCUT_GROUPS: ShortcutGroup[] = [
   {
+    label: 'File',
+    shortcuts: [
+      { keys: [MOD, 'O'], description: 'Open markdown file' },
+    ],
+  },
+  {
     label: 'Document',
     shortcuts: [
       { keys: [MOD, 'S'], description: 'Save document' },

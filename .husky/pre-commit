@@ -1,5 +1,11 @@
 echo "Running pre-commit checks (tests + build in parallel)..."
 
+# Ensure nvm-managed Node is used (system Node may be too old for tsc/vitest)
+export NVM_DIR="$HOME/.nvm"
+# shellcheck disable=SC1091
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" --no-use
+[ -s "$NVM_DIR/alias/default" ] && nvm use "$(cat "$NVM_DIR/alias/default")" --silent 2>/dev/null || nvm use node --silent 2>/dev/null
+
 npm run test:run &
 TEST_PID=$!
 

@@ -22,6 +22,7 @@ interface CommandPaletteActions {
   onSignOut: () => void;
   onOpenShortcutHelp: () => void;
   onNavigateToDoc: (slug: string) => void;
+  onOpenMdFile: () => void;
 }
 
 interface RecentDoc {
@@ -50,6 +51,7 @@ function buildStaticCommands(
   const wrap = (fn: () => void) => () => { fn(); onClose(); };
 
   const commands: Command[] = [
+    { id: 'open-md-file', label: 'Open markdown file', group: 'Actions', shortcut: 'Ctrl+O', action: wrap(actions.onOpenMdFile) },
     { id: 'new-doc', label: 'New document', group: 'Actions', shortcut: 'Ctrl+Shift+N', action: wrap(actions.onNewDoc) },
     { id: 'toggle-mode', label: 'Toggle editor / preview', group: 'Actions', shortcut: 'Ctrl+P', action: wrap(actions.onToggleMode) },
     { id: 'save', label: 'Save document', group: 'Actions', shortcut: 'Ctrl+S', action: wrap(actions.onSave) },

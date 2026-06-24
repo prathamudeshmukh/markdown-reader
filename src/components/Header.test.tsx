@@ -30,6 +30,7 @@ const defaultActions: HeaderActions = {
   onToggleSidebar: vi.fn(),
   onShowQr: vi.fn(),
   onImportPdf: vi.fn(),
+  onOpenMdFile: vi.fn(),
 };
 
 const defaultAuth: AuthState = {

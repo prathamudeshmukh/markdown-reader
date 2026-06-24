@@ -4,10 +4,11 @@ import { getSlugFromPath } from '../utils/route';
 import { fetchDoc, saveDoc, updateDoc } from '../api/docsApi';
 import { addRecentDoc } from '../utils/recentDocs';
 import { useDocChannel } from '../realtime/useDocChannel';
-import { getContentLengthBucket, getErrorType, track, type InteractionSource } from '../telemetry';
+import { getContentLengthBucket, getErrorType, track, type InteractionSource, type MdFileOpenSource } from '../telemetry';
 import { saveCreatorToken, loadCreatorToken, clearCreatorToken } from '../utils/creatorTokens';
+import { readMdFile, MdFileError } from '../utils/mdFileReader';
 
-type Mode = 'editor' | 'preview';
+export type Mode = 'editor' | 'preview';
 
 interface MarkdownState {
   markdownText: string;
@@ -231,5 +232,71 @@ export function useMarkdownState({ userId }: { userId?: string } = {}) {
     }
   }, [state.markdownText, state.title, collectionId]);
 
-  return { ...state, slug, collectionId, presenceCount, setMarkdownText, setTitle, toggleMode, onSave, navigateToDoc };
+  const [openMdFileGuardOpen, setOpenMdFileGuardOpen] = useState(false);
+  const pendingMdFileRef = useRef<{ content: string; title: string } | null>(null);
+
+  const applyMdFileContent = useCallback((content: string, title: string) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (titleDebounceRef.current) clearTimeout(titleDebounceRef.current);
+    history.pushState({}, '', '/mreader/');
+    setSlug(null);
+    setCollectionId(null);
+    setState((prev) => ({
+      ...prev,
+      markdownText: content,
+      title,
+      docUserId: null,
+      mode: 'editor',
+      isLoading: false,
+      isSaving: false,
+      error: null,
+      presenceCount: 0,
+    }));
+  }, []);
+
+  const openMdFile = useCallback(async (file: File, _source: MdFileOpenSource) => {
+    let result: { content: string; title: string };
+    try {
+      result = await readMdFile(file);
+    } catch (err) {
+      const msg = err instanceof MdFileError ? err.userMessage : 'Could not open file.';
+      setState((prev) => ({ ...prev, error: msg }));
+      return;
+    }
+
+    const hasUnsavedContent = !slug && state.markdownText.length > 0;
+    if (hasUnsavedContent) {
+      pendingMdFileRef.current = result;
+      setOpenMdFileGuardOpen(true);
+      return;
+    }
+
+    applyMdFileContent(result.content, result.title);
+    track('md_file_opened', {
+      source: _source,
+      file_size_bytes: file.size,
+      had_unsaved_changes: false,
+    });
+  }, [slug, state.markdownText, applyMdFileContent]);
+
+  const confirmOpenMdFile = useCallback(async (action: 'save' | 'discard' | 'cancel') => {
+    setOpenMdFileGuardOpen(false);
+
+    if (action === 'cancel') {
+      pendingMdFileRef.current = null;
+      return;
+    }
+
+    if (action === 'save') {
+      await onSave();
+    }
+
+    const pending = pendingMdFileRef.current;
+    pendingMdFileRef.current = null;
+    if (pending) {
+      applyMdFileContent(pending.content, pending.title);
+    }
+  }, [onSave, applyMdFileContent]);
+
+  return { ...state, slug, collectionId, presenceCount, setMarkdownText, setTitle, toggleMode, onSave, navigateToDoc, openMdFile, confirmOpenMdFile, openMdFileGuardOpen };
 }

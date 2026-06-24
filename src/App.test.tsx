@@ -56,6 +56,9 @@ const baseState = {
   toggleMode: vi.fn(),
   onSave: vi.fn(),
   navigateToDoc: vi.fn(),
+  openMdFile: vi.fn(),
+  confirmOpenMdFile: vi.fn(),
+  openMdFileGuardOpen: false,
   docUserId: null as string | null,
 };
 

@@ -10,7 +10,7 @@ export interface DocumentState {
 }
 
 export interface UiState {
-  mode: 'editor' | 'preview';
+  mode: 'editor' | 'preview' | 'beautify';
   isSaving: boolean;
   isLoading: boolean;
   copied: boolean;
@@ -30,6 +30,7 @@ export interface HeaderActions {
   onToggleSidebar: () => void;
   onShowQr: () => void;
   onImportPdf: (file: File) => void;
+  onOpenMdFile: () => void;
   onOpenCommandPalette?: () => void;
   onOpenShortcutHelp?: () => void;
 }
@@ -110,7 +111,7 @@ function ToolGroup({ children }: { children: React.ReactNode }) {
 export default function Header({
   document: { slug, markdownText, presenceCount },
   ui: { mode, isSaving, isLoading, copied, copiedMarkdown, sidebarOpen, isPdfImporting },
-  actions: { onToggle, onSave, onNewDoc, onExportPdf, onDownloadMarkdown, onCopyLink, onCopyMarkdown, onToggleSidebar, onShowQr, onImportPdf, onOpenCommandPalette, onOpenShortcutHelp },
+  actions: { onToggle, onSave, onNewDoc, onExportPdf, onDownloadMarkdown, onCopyLink, onCopyMarkdown, onToggleSidebar, onShowQr, onImportPdf, onOpenMdFile, onOpenCommandPalette, onOpenShortcutHelp },
   auth: { user, isAuthLoading },
   authActions: { onSignInClick, onSignOut },
 }: HeaderProps) {
@@ -147,6 +148,7 @@ export default function Header({
     if (file) onImportPdf(file);
     e.target.value = '';
   }
+
 
   function handleMenuAction(fn: () => void) {
     setMoreOpen(false);
@@ -414,6 +416,21 @@ export default function Header({
 
             {/* File ops group */}
             <ToolGroup>
+              {/* Open MD file */}
+              <button
+                onClick={onOpenMdFile}
+                aria-label="Open markdown file"
+                title="Open markdown file  Ctrl+O"
+                className={TOOL_BTN}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="12" y1="18" x2="12" y2="12" />
+                  <line x1="9" y1="15" x2="15" y2="15" />
+                </svg>
+              </button>
+
               {/* Import PDF */}
               <button
                 onClick={() => fileInputRef.current?.click()}
@@ -525,6 +542,16 @@ export default function Header({
                 </MenuItem>
 
                 <div className="my-1 h-px" style={{ backgroundColor: 'var(--border-light)' }} />
+
+                <MenuItem onClick={() => handleMenuAction(onOpenMdFile)}>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="12" y1="18" x2="12" y2="12" />
+                    <line x1="9" y1="15" x2="15" y2="15" />
+                  </svg>
+                  Open markdown file
+                </MenuItem>
 
                 <MenuItem onClick={() => { handleMenuAction(() => {}); fileInputRef.current?.click(); }} disabled={isPdfImporting}>
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

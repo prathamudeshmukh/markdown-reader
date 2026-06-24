@@ -1,5 +1,8 @@
+import type { BeautifyTheme } from '../ai/beautifyTypes';
+
 export type RouteKind = 'root' | 'doc';
 export type InteractionSource = 'button' | 'shortcut';
+export type MdFileOpenSource = 'toolbar' | 'drag_drop' | 'keyboard' | 'command_palette';
 export type ContentLengthBucket = 'empty' | 'xs' | 'sm' | 'md' | 'lg';
 export type ToolbarAction = 'bold' | 'italic' | 'code' | 'heading' | 'quote' | 'list' | 'link' | 'table';
 
@@ -24,7 +27,12 @@ export type TelemetryEventName =
   | 'collection_created'
   | 'collection_deleted'
   | 'doc_moved_to_collection'
-  | 'toolbar_action';
+  | 'toolbar_action'
+  | 'md_file_opened'
+  | 'beautify_triggered'
+  | 'beautify_succeeded'
+  | 'beautify_failed'
+  | 'beautify_rerun';
 
 export interface TelemetrySharedProps {
   session_id: string;
@@ -52,8 +60,8 @@ export interface TelemetryPropsByEvent {
     error_type: string;
   };
   mode_toggled: {
-    from_mode: 'editor' | 'preview';
-    to_mode: 'editor' | 'preview';
+    from_mode: 'editor' | 'preview' | 'beautify';
+    to_mode: 'editor' | 'preview' | 'beautify';
     source: InteractionSource;
   };
   link_copied: {
@@ -89,5 +97,27 @@ export interface TelemetryPropsByEvent {
   toolbar_action: {
     action: ToolbarAction;
     had_selection: boolean;
+  };
+  md_file_opened: {
+    source: MdFileOpenSource;
+    file_size_bytes: number;
+    had_unsaved_changes: boolean;
+  };
+  beautify_triggered: {
+    content_length_bucket: ContentLengthBucket;
+    source: InteractionSource;
+    from_cache: boolean;
+  };
+  beautify_succeeded: {
+    content_length_bucket: ContentLengthBucket;
+    theme: BeautifyTheme;
+    node_count: number;
+  };
+  beautify_failed: {
+    content_length_bucket: ContentLengthBucket;
+    error_type: string;
+  };
+  beautify_rerun: {
+    content_length_bucket: ContentLengthBucket;
   };
 }

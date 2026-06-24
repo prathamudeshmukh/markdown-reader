@@ -18,6 +18,7 @@ import EmailSignInModal from './components/EmailSignInModal';
 import EditBlockedModal from './components/EditBlockedModal';
 import ShortcutHelpModal from './components/ShortcutHelpModal';
 import CommandPalette from './components/CommandPalette';
+import OpenMdFileGuardModal from './components/OpenMdFileGuardModal';
 import { useAuth } from './auth/AuthContext';
 import { getContentLengthBucket, track, type InteractionSource } from './telemetry';
 import { loadCreatorToken } from './utils/creatorTokens';
@@ -32,7 +33,7 @@ const PDF_IMPORT_UNKNOWN_ERROR = 'Failed to import PDF. Please try again.';
 
 export default function App() {
   const { user, isAuthLoading, signInWithEmail, signOut } = useAuth();
-  const { markdownText, title, slug, docUserId, mode, isLoading, isSaving, error, presenceCount, setMarkdownText, setTitle, toggleMode, onSave, navigateToDoc } =
+  const { markdownText, title, slug, docUserId, mode, isLoading, isSaving, error, presenceCount, setMarkdownText, setTitle, toggleMode, onSave, navigateToDoc, openMdFile, confirmOpenMdFile, openMdFileGuardOpen } =
     useMarkdownState({ userId: user?.id });
 
   // True when this authenticated user holds the creator token for an unowned doc —
@@ -47,6 +48,7 @@ export default function App() {
   const canEdit = !slug || hasCreatorToken || (!user && !docUserId) || docUserId === user?.id;
 
   const editorRef = useRef<HTMLTextAreaElement>(null);
+  const mdFileInputRef = useRef<HTMLInputElement>(null);
 
   const collectionsHook = useCollections();
   const collectionsTree = collectionsHook.state.status === 'ready'
@@ -169,6 +171,7 @@ export default function App() {
     onNewDoc: () => { window.location.href = '/'; },
     onOpenCommandPalette: () => setCommandPaletteOpen(true),
     onOpenShortcutHelp: () => setShortcutHelpOpen(true),
+    onOpenMdFile: () => mdFileInputRef.current?.click(),
   });
 
   function handleDownloadMarkdown() {
@@ -220,6 +223,7 @@ export default function App() {
           onToggleSidebar: toggleSidebar,
           onShowQr: openQr,
           onImportPdf: handleImportPdf,
+          onOpenMdFile: () => mdFileInputRef.current?.click(),
           onOpenCommandPalette: () => setCommandPaletteOpen(true),
           onOpenShortcutHelp: () => setShortcutHelpOpen(true),
         }}
@@ -355,6 +359,7 @@ export default function App() {
             onSignOut: signOut,
             onOpenShortcutHelp: () => { setCommandPaletteOpen(false); setShortcutHelpOpen(true); },
             onNavigateToDoc: navigateToDoc,
+            onOpenMdFile: () => { setCommandPaletteOpen(false); mdFileInputRef.current?.click(); },
           }}
         />
       )}
@@ -401,13 +406,41 @@ export default function App() {
             aria-label="Loading document"
           />
         ) : mode === 'editor' ? (
-          <Editor ref={editorRef} value={markdownText} onChange={setMarkdownText} readOnly={!canEdit} />
+          <Editor
+            ref={editorRef}
+            value={markdownText}
+            onChange={setMarkdownText}
+            readOnly={!canEdit}
+            onDropFile={(file) => { void openMdFile(file, 'drag_drop'); }}
+            onDropRejected={() => {}}
+          />
         ) : (
           <Preview content={markdownText} />
         )}
       </main>
 
       <OnboardingTooltips visible={tooltipsVisible} onDismiss={dismissTooltip} />
+
+      <OpenMdFileGuardModal
+        open={openMdFileGuardOpen}
+        onSaveAndOpen={() => { void confirmOpenMdFile('save'); }}
+        onDiscardAndOpen={() => { void confirmOpenMdFile('discard'); }}
+        onCancel={() => { void confirmOpenMdFile('cancel'); }}
+      />
+
+      <input
+        ref={mdFileInputRef}
+        type="file"
+        accept=".md,.markdown"
+        className="sr-only"
+        aria-hidden="true"
+        tabIndex={-1}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) void openMdFile(file, 'toolbar');
+          e.target.value = '';
+        }}
+      />
     </div>
   );
 }

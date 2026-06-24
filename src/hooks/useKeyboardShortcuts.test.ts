@@ -10,6 +10,7 @@ function makeHandlers() {
     onNewDoc: vi.fn(),
     onOpenCommandPalette: vi.fn(),
     onOpenShortcutHelp: vi.fn(),
+    onOpenMdFile: vi.fn(),
   };
 }
 
@@ -179,6 +180,29 @@ describe('useKeyboardShortcuts', () => {
       renderHook(() => useKeyboardShortcuts(handlers));
       fireKey('?', { ctrlKey: true });
       expect(handlers.onOpenShortcutHelp).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Ctrl+O / Cmd+O → onOpenMdFile', () => {
+    it('calls onOpenMdFile on Ctrl+O', () => {
+      const handlers = makeHandlers();
+      renderHook(() => useKeyboardShortcuts(handlers));
+      fireKey('o', { ctrlKey: true });
+      expect(handlers.onOpenMdFile).toHaveBeenCalledOnce();
+    });
+
+    it('calls onOpenMdFile on Cmd+O (metaKey)', () => {
+      const handlers = makeHandlers();
+      renderHook(() => useKeyboardShortcuts(handlers));
+      fireKey('o', { metaKey: true });
+      expect(handlers.onOpenMdFile).toHaveBeenCalledOnce();
+    });
+
+    it('does not call onOpenMdFile without modifier', () => {
+      const handlers = makeHandlers();
+      renderHook(() => useKeyboardShortcuts(handlers));
+      fireKey('o');
+      expect(handlers.onOpenMdFile).not.toHaveBeenCalled();
     });
   });
 

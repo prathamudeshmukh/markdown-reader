@@ -17,6 +17,7 @@ function makeActions() {
     onSignOut: vi.fn(),
     onOpenShortcutHelp: vi.fn(),
     onNavigateToDoc: vi.fn(),
+    onOpenMdFile: vi.fn(),
   };
 }
 
@@ -148,10 +149,9 @@ describe('CommandPalette', () => {
 
     it('executes the active command on Enter', () => {
       const { actions, onClose } = renderPalette();
-      // First command should be "New document" (Documents group empty)
+      // First command is "Open markdown file" when no recent docs
       fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Enter' });
-      // First action command is "New document" when no recent docs
-      expect(actions.onNewDoc).toHaveBeenCalledOnce();
+      expect(actions.onOpenMdFile).toHaveBeenCalledOnce();
       expect(onClose).toHaveBeenCalledOnce();
     });
   });

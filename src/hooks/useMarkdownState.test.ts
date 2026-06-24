@@ -144,7 +144,7 @@ describe('useMarkdownState', () => {
       expect(result.current.isSaving).toBe(false);
     });
 
-    it('toggleMode switches between editor and preview', () => {
+    it('toggleMode cycles editor → preview → editor', () => {
       const { result } = renderHook(() => useMarkdownState());
       expect(result.current.mode).toBe('editor');
 
@@ -401,6 +401,96 @@ describe('useMarkdownState', () => {
       act(() => result.current.navigateToDoc('xyz5678'));
 
       await waitFor(() => expect(fetchDoc).toHaveBeenCalledWith('xyz5678'));
+    });
+  });
+
+  describe('openMdFile', () => {
+    function makeFile(name: string, content: string): File {
+      const file = new File([content], name, { type: 'text/markdown' });
+      Object.defineProperty(file, 'text', { value: () => Promise.resolve(content) });
+      return file;
+    }
+
+    beforeEach(() => {
+      vi.mocked(getSlugFromPath).mockReturnValue(null);
+    });
+
+    it('loads content directly when current doc is empty', async () => {
+      const file = makeFile('notes.md', '# Title\n\nBody');
+      const { result } = renderHook(() => useMarkdownState());
+
+      await act(() => result.current.openMdFile(file, 'toolbar'));
+
+      expect(result.current.markdownText).toBe('# Title\n\nBody');
+      expect(result.current.mode).toBe('editor');
+      expect(result.current.slug).toBeNull();
+      expect(result.current.openMdFileGuardOpen).toBe(false);
+    });
+
+    it('loads content directly when current doc already has a slug', async () => {
+      vi.mocked(getSlugFromPath).mockReturnValue('abc1234');
+      vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Old', title: null, user_id: null });
+      const file = makeFile('new.md', '# New content');
+      const { result } = renderHook(() => useMarkdownState());
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      await act(() => result.current.openMdFile(file, 'toolbar'));
+
+      expect(result.current.markdownText).toBe('# New content');
+      expect(result.current.slug).toBeNull();
+      expect(result.current.openMdFileGuardOpen).toBe(false);
+    });
+
+    it('shows guard when current doc is unsaved and non-empty', async () => {
+      const { result } = renderHook(() => useMarkdownState());
+      act(() => result.current.setMarkdownText('Existing content'));
+
+      const file = makeFile('new.md', '# New');
+      await act(() => result.current.openMdFile(file, 'toolbar'));
+
+      expect(result.current.openMdFileGuardOpen).toBe(true);
+      expect(result.current.markdownText).toBe('Existing content');
+    });
+
+    it('discard path: replaces content and clears slug', async () => {
+      const { result } = renderHook(() => useMarkdownState());
+      act(() => result.current.setMarkdownText('Existing content'));
+
+      const file = makeFile('new.md', '# New content');
+      await act(() => result.current.openMdFile(file, 'toolbar'));
+      expect(result.current.openMdFileGuardOpen).toBe(true);
+
+      await act(() => result.current.confirmOpenMdFile('discard'));
+
+      expect(result.current.markdownText).toBe('# New content');
+      expect(result.current.mode).toBe('editor');
+      expect(result.current.slug).toBeNull();
+      expect(result.current.openMdFileGuardOpen).toBe(false);
+    });
+
+    it('cancel path: state unchanged, guard closed', async () => {
+      const { result } = renderHook(() => useMarkdownState());
+      act(() => result.current.setMarkdownText('Existing content'));
+
+      const file = makeFile('new.md', '# New');
+      await act(() => result.current.openMdFile(file, 'toolbar'));
+
+      await act(() => result.current.confirmOpenMdFile('cancel'));
+
+      expect(result.current.markdownText).toBe('Existing content');
+      expect(result.current.openMdFileGuardOpen).toBe(false);
+    });
+
+    it('sets error and does not change content when file is too large', async () => {
+      const file = makeFile('big.md', 'x');
+      Object.defineProperty(file, 'size', { value: 2_000_000 });
+
+      const { result } = renderHook(() => useMarkdownState());
+
+      await act(() => result.current.openMdFile(file, 'toolbar'));
+
+      expect(result.current.error).toMatch(/too large/i);
+      expect(result.current.markdownText).toBe('');
     });
   });
 });

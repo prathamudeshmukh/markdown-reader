@@ -7,6 +7,7 @@ interface ShortcutHandlers {
   onNewDoc: () => void;
   onOpenCommandPalette: () => void;
   onOpenShortcutHelp: () => void;
+  onOpenMdFile: () => void;
 }
 
 function isTypingTarget(el: Element | null): boolean {
@@ -22,6 +23,7 @@ export function useKeyboardShortcuts({
   onNewDoc,
   onOpenCommandPalette,
   onOpenShortcutHelp,
+  onOpenMdFile,
 }: ShortcutHandlers) {
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -59,6 +61,13 @@ export function useKeyboardShortcuts({
         return;
       }
 
+      // Ctrl+O / Cmd+O — open markdown file
+      if (mod && e.key === 'o') {
+        e.preventDefault();
+        onOpenMdFile();
+        return;
+      }
+
       // ? — shortcut help (skip when user is typing)
       if (e.key === '?' && !e.ctrlKey && !e.metaKey && !isTypingTarget(document.activeElement)) {
         e.preventDefault();
@@ -68,5 +77,5 @@ export function useKeyboardShortcuts({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onSave, onToggleMode, onCopyLink, onNewDoc, onOpenCommandPalette, onOpenShortcutHelp]);
+  }, [onSave, onToggleMode, onCopyLink, onNewDoc, onOpenCommandPalette, onOpenShortcutHelp, onOpenMdFile]);
 }
