@@ -422,7 +422,7 @@ describe('useMarkdownState', () => {
       await act(() => result.current.openMdFile(file, 'toolbar'));
 
       expect(result.current.markdownText).toBe('# Title\n\nBody');
-      expect(result.current.mode).toBe('editor');
+      expect(result.current.mode).toBe('preview');
       expect(result.current.slug).toBeNull();
       expect(result.current.openMdFileGuardOpen).toBe(false);
     });
@@ -463,7 +463,7 @@ describe('useMarkdownState', () => {
       await act(() => result.current.confirmOpenMdFile('discard'));
 
       expect(result.current.markdownText).toBe('# New content');
-      expect(result.current.mode).toBe('editor');
+      expect(result.current.mode).toBe('preview');
       expect(result.current.slug).toBeNull();
       expect(result.current.openMdFileGuardOpen).toBe(false);
     });

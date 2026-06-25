@@ -246,7 +246,7 @@ export function useMarkdownState({ userId }: { userId?: string } = {}) {
       markdownText: content,
       title,
       docUserId: null,
-      mode: 'editor',
+      mode: 'preview',
       isLoading: false,
       isSaving: false,
       error: null,
