@@ -1,7 +1,8 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import PresenceIndicator from './PresenceIndicator';
 import UserMenu from './UserMenu';
+import { useClickOutside } from '../hooks/useClickOutside';
 
 export interface DocumentState {
   slug: string | null;
@@ -62,9 +63,19 @@ function Spinner() {
   );
 }
 
+function CheckIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
 const TOOL_BTN =
   'flex items-center justify-center w-7 h-7 rounded-md transition-all duration-150 ' +
   'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]';
+
+const DROPDOWN_PANEL = 'absolute right-0 top-full mt-2 w-52 rounded-xl p-1.5 shadow-xl z-50 animate-fade-in';
 
 function MenuItem({
   onClick,
@@ -79,14 +90,7 @@ function MenuItem({
     <button
       onClick={onClick}
       disabled={disabled}
-      className="w-full flex items-center gap-3 px-3 py-2 text-sm text-left rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-      style={{ color: 'var(--text-primary)' }}
-      onMouseEnter={e => {
-        if (!disabled) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--bg-secondary)';
-      }}
-      onMouseLeave={e => {
-        (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
-      }}
+      className="w-full flex items-center gap-3 px-3 py-2 text-sm text-left rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:hover:bg-transparent"
     >
       {children}
     </button>
@@ -118,20 +122,7 @@ function LabeledBtn({
       disabled={disabled}
       title={title}
       data-onboarding={dataOnboarding}
-      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
-      style={{ color: active ? 'var(--accent)' : 'var(--text-secondary)' }}
-      onMouseEnter={e => {
-        if (!disabled) {
-          const el = e.currentTarget as HTMLButtonElement;
-          el.style.backgroundColor = 'var(--bg-secondary)';
-          if (!active) el.style.color = 'var(--text-primary)';
-        }
-      }}
-      onMouseLeave={e => {
-        const el = e.currentTarget as HTMLButtonElement;
-        el.style.backgroundColor = 'transparent';
-        el.style.color = active ? 'var(--accent)' : 'var(--text-secondary)';
-      }}
+      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap hover:bg-[var(--bg-secondary)] disabled:hover:bg-transparent ${active ? 'text-[var(--accent)] hover:text-[var(--accent)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
     >
       {icon}
       {children}
@@ -146,6 +137,8 @@ const ChevronDown = () => (
   </svg>
 );
 
+type OpenMenu = 'more' | 'share' | 'file' | null;
+
 export default function Header({
   document: { slug, markdownText, presenceCount },
   ui: { mode, isSaving, isLoading, copied, copiedMarkdown, sidebarOpen, isPdfImporting },
@@ -157,36 +150,11 @@ export default function Header({
   const moreRef = useRef<HTMLDivElement>(null);
   const shareRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLDivElement>(null);
-  const [moreOpen, setMoreOpen] = useState(false);
-  const [shareOpen, setShareOpen] = useState(false);
-  const [fileOpen, setFileOpen] = useState(false);
+  const [openMenu, setOpenMenu] = useState<OpenMenu>(null);
 
-  useEffect(() => {
-    if (!moreOpen) return;
-    function handleClick(e: MouseEvent) {
-      if (moreRef.current && !moreRef.current.contains(e.target as Node)) setMoreOpen(false);
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [moreOpen]);
-
-  useEffect(() => {
-    if (!shareOpen) return;
-    function handleClick(e: MouseEvent) {
-      if (shareRef.current && !shareRef.current.contains(e.target as Node)) setShareOpen(false);
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [shareOpen]);
-
-  useEffect(() => {
-    if (!fileOpen) return;
-    function handleClick(e: MouseEvent) {
-      if (fileRef.current && !fileRef.current.contains(e.target as Node)) setFileOpen(false);
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [fileOpen]);
+  useClickOutside(moreRef, openMenu === 'more', () => setOpenMenu(null));
+  useClickOutside(shareRef, openMenu === 'share', () => setOpenMenu(null));
+  useClickOutside(fileRef, openMenu === 'file', () => setOpenMenu(null));
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -195,18 +163,16 @@ export default function Header({
   }
 
   function handleMenuAction(fn: () => void) {
-    setMoreOpen(false);
+    setOpenMenu(null);
     fn();
   }
 
   function toggleShare() {
-    setFileOpen(false);
-    setShareOpen(v => !v);
+    setOpenMenu(v => v === 'share' ? null : 'share');
   }
 
   function toggleFile() {
-    setShareOpen(false);
-    setFileOpen(v => !v);
+    setOpenMenu(v => v === 'file' ? null : 'file');
   }
 
   const activeToggleStyle = {
@@ -333,16 +299,8 @@ export default function Header({
                 onClick={onOpenShortcutHelp}
                 title="Keyboard shortcuts"
                 aria-label="Keyboard shortcuts"
-                className="flex items-center justify-center w-7 h-7 rounded-lg text-sm font-medium transition-all duration-150"
-                style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', monospace" }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)';
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--accent)';
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)';
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)';
-                }}
+                className="flex items-center justify-center w-7 h-7 rounded-lg text-sm font-medium transition-all duration-150 text-[var(--text-muted)] bg-[var(--bg-secondary)] border border-[var(--border)] hover:text-[var(--text-primary)] hover:border-[var(--accent)]"
+                style={{ fontFamily: "'IBM Plex Mono', monospace" }}
               >
                 ?
               </button>
@@ -378,7 +336,7 @@ export default function Header({
             <div ref={shareRef} className="relative">
               <LabeledBtn
                 onClick={toggleShare}
-                active={shareOpen}
+                active={openMenu === 'share'}
                 data-onboarding="copy-link"
                 title="Share options"
                 icon={
@@ -392,17 +350,13 @@ export default function Header({
                 Share
               </LabeledBtn>
 
-              {shareOpen && (
+              {openMenu === 'share' && (
                 <div
-                  className="absolute right-0 top-full mt-2 w-52 rounded-xl p-1.5 shadow-xl z-50 animate-fade-in"
+                  className={DROPDOWN_PANEL}
                   style={{ backgroundColor: 'var(--bg-elevated, var(--bg-primary))', border: '1px solid var(--border)' }}
                 >
-                  <MenuItem onClick={() => { setShareOpen(false); onCopyLink(); }} disabled={slug === null}>
-                    {copied ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                    ) : (
+                  <MenuItem onClick={() => { setOpenMenu(null); onCopyLink(); }} disabled={slug === null}>
+                    {copied ? <CheckIcon /> : (
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
                         <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
@@ -413,12 +367,8 @@ export default function Header({
                       <span className="ml-auto text-[10px]" style={{ color: 'var(--text-muted)' }}>Save first</span>
                     )}
                   </MenuItem>
-                  <MenuItem onClick={() => { setShareOpen(false); onCopyMarkdown(); }} disabled={markdownText.length === 0}>
-                    {copiedMarkdown ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                    ) : (
+                  <MenuItem onClick={() => { setOpenMenu(null); onCopyMarkdown(); }} disabled={markdownText.length === 0}>
+                    {copiedMarkdown ? <CheckIcon /> : (
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
                         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
@@ -426,7 +376,7 @@ export default function Header({
                     )}
                     {copiedMarkdown ? 'Copied!' : 'Copy markdown'}
                   </MenuItem>
-                  <MenuItem onClick={() => { setShareOpen(false); onShowQr(); }} disabled={slug === null}>
+                  <MenuItem onClick={() => { setOpenMenu(null); onShowQr(); }} disabled={slug === null}>
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" />
                       <rect x="5" y="5" width="3" height="3" fill="currentColor" stroke="none" /><rect x="16" y="5" width="3" height="3" fill="currentColor" stroke="none" /><rect x="5" y="16" width="3" height="3" fill="currentColor" stroke="none" />
@@ -444,7 +394,7 @@ export default function Header({
             <div ref={fileRef} className="relative">
               <LabeledBtn
                 onClick={toggleFile}
-                active={fileOpen}
+                active={openMenu === 'file'}
                 title="File operations"
                 icon={
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -457,12 +407,12 @@ export default function Header({
                 File
               </LabeledBtn>
 
-              {fileOpen && (
+              {openMenu === 'file' && (
                 <div
-                  className="absolute right-0 top-full mt-2 w-52 rounded-xl p-1.5 shadow-xl z-50 animate-fade-in"
+                  className={DROPDOWN_PANEL}
                   style={{ backgroundColor: 'var(--bg-elevated, var(--bg-primary))', border: '1px solid var(--border)' }}
                 >
-                  <MenuItem onClick={() => { setFileOpen(false); onOpenMdFile(); }}>
+                  <MenuItem onClick={() => { setOpenMenu(null); onOpenMdFile(); }}>
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                       <polyline points="14 2 14 8 20 8" />
@@ -472,7 +422,7 @@ export default function Header({
                     <kbd className="ml-auto font-mono text-[10px] px-1 rounded" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-light)', color: 'var(--text-muted)' }}>⌃O</kbd>
                   </MenuItem>
                   <MenuItem
-                    onClick={() => { setFileOpen(false); fileInputRef.current?.click(); }}
+                    onClick={() => { setOpenMenu(null); fileInputRef.current?.click(); }}
                     disabled={isPdfImporting}
                   >
                     {isPdfImporting ? (
@@ -489,13 +439,13 @@ export default function Header({
                   <div className="my-1 h-px" style={{ backgroundColor: 'var(--border-light)' }} />
                   <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Export as</p>
 
-                  <MenuItem onClick={() => { setFileOpen(false); onExportPdf(); }} disabled={markdownText.length === 0}>
+                  <MenuItem onClick={() => { setOpenMenu(null); onExportPdf(); }} disabled={markdownText.length === 0}>
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" /><polyline points="13 2 13 9 20 9" />
                     </svg>
                     PDF
                   </MenuItem>
-                  <MenuItem onClick={() => { setFileOpen(false); onDownloadMarkdown(); }} disabled={markdownText.length === 0}>
+                  <MenuItem onClick={() => { setOpenMenu(null); onDownloadMarkdown(); }} disabled={markdownText.length === 0}>
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" /><polyline points="13 2 13 9 20 9" />
                       <polyline points="8 15 12 19 16 15" /><line x1="12" y1="12" x2="12" y2="19" />
@@ -512,15 +462,7 @@ export default function Header({
               disabled={slug === null && markdownText.length === 0}
               title="New doc  Ctrl+Shift+N"
               aria-label="New doc"
-              className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed ml-1"
-              style={{ backgroundColor: 'var(--accent)', color: 'white' }}
-              onMouseEnter={e => {
-                if (!(e.currentTarget as HTMLButtonElement).disabled)
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--accent-hover)';
-              }}
-              onMouseLeave={e => {
-                (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--accent)';
-              }}
+              className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed ml-1 text-white bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:hover:bg-[var(--accent)]"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
@@ -532,9 +474,9 @@ export default function Header({
           {/* ── Mobile overflow menu ──────────────────────── */}
           <div ref={moreRef} className="relative sm:hidden">
             <button
-              onClick={() => setMoreOpen(v => !v)}
+              onClick={() => setOpenMenu(v => v === 'more' ? null : 'more')}
               aria-label="More actions"
-              className={`${TOOL_BTN} ${moreOpen ? '!text-[var(--accent)] !bg-[var(--bg-secondary)]' : ''}`}
+              className={`${TOOL_BTN} ${openMenu === 'more' ? '!text-[var(--accent)] !bg-[var(--bg-secondary)]' : ''}`}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none" />
@@ -543,18 +485,14 @@ export default function Header({
               </svg>
             </button>
 
-            {moreOpen && (
+            {openMenu === 'more' && (
               <div
-                className="absolute right-0 top-full mt-2 w-52 rounded-xl p-1.5 shadow-xl z-50 animate-fade-in"
+                className={DROPDOWN_PANEL}
                 style={{ backgroundColor: 'var(--bg-elevated, var(--bg-primary))', border: '1px solid var(--border)' }}
               >
                 <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Share</p>
                 <MenuItem onClick={() => handleMenuAction(onCopyLink)} disabled={slug === null}>
-                  {copied ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  ) : (
+                  {copied ? <CheckIcon /> : (
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
                       <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
@@ -563,11 +501,7 @@ export default function Header({
                   {copied ? 'Copied!' : 'Copy link'}
                 </MenuItem>
                 <MenuItem onClick={() => handleMenuAction(onCopyMarkdown)} disabled={markdownText.length === 0}>
-                  {copiedMarkdown ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  ) : (
+                  {copiedMarkdown ? <CheckIcon /> : (
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                     </svg>
@@ -593,7 +527,7 @@ export default function Header({
                   </svg>
                   Open markdown file
                 </MenuItem>
-                <MenuItem onClick={() => { handleMenuAction(() => {}); fileInputRef.current?.click(); }} disabled={isPdfImporting}>
+                <MenuItem onClick={() => { setOpenMenu(null); fileInputRef.current?.click(); }} disabled={isPdfImporting}>
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" /><polyline points="13 2 13 9 20 9" /><polyline points="8 15 12 19 16 15" /><line x1="12" y1="12" x2="12" y2="19" />
                   </svg>
@@ -630,16 +564,7 @@ export default function Header({
                 <button
                   onClick={onSignInClick}
                   aria-label="Sign in"
-                  className="px-3 py-1 text-xs font-medium rounded-full transition-all duration-150"
-                  style={{ color: 'var(--text-muted)' }}
-                  onMouseEnter={e => {
-                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)';
-                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--bg-secondary)';
-                  }}
-                  onMouseLeave={e => {
-                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)';
-                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
-                  }}
+                  className="px-3 py-1 text-xs font-medium rounded-full transition-all duration-150 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
                 >
                   Sign in
                 </button>
