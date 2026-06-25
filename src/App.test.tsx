@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('./hooks/useMarkdownState');
@@ -120,6 +120,7 @@ describe('App', () => {
     it('opens when Show QR code button is clicked', () => {
       vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, slug: 'abc1234' });
       render(<App />);
+      fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Share' }));
       fireEvent.click(screen.getByRole('button', { name: 'Show QR code' }));
       expect(track).toHaveBeenCalledWith('qr_opened', { has_slug: true });
       expect(screen.getByTestId('qr-modal')).toBeInTheDocument();
@@ -128,6 +129,7 @@ describe('App', () => {
     it('closes when onClose is called from within the modal', () => {
       vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, slug: 'abc1234' });
       render(<App />);
+      fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Share' }));
       fireEvent.click(screen.getByRole('button', { name: 'Show QR code' }));
       fireEvent.click(screen.getByRole('button', { name: 'close-qr' }));
       expect(screen.queryByTestId('qr-modal')).not.toBeInTheDocument();
@@ -143,6 +145,7 @@ describe('App', () => {
       });
       render(<App />);
 
+      fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Share' }));
       fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
 
       await Promise.resolve();
@@ -157,6 +160,7 @@ describe('App', () => {
       });
       render(<App />);
 
+      fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Share' }));
       fireEvent.click(screen.getByRole('button', { name: 'Copy markdown' }));
 
       await Promise.resolve();
@@ -177,7 +181,7 @@ describe('App', () => {
         markdownText: '# Hello',
       });
       render(<App />);
-      fireEvent.click(screen.getByRole('button', { name: 'Export as…' }));
+      fireEvent.click(screen.getByRole('button', { name: 'File' }));
       fireEvent.click(screen.getByRole('button', { name: 'PDF' }));
       expect(track).toHaveBeenCalledWith('pdf_exported', { mode_at_export: 'preview' });
       expect(print).toHaveBeenCalledOnce();
@@ -195,7 +199,7 @@ describe('App', () => {
         toggleMode,
       });
       render(<App />);
-      fireEvent.click(screen.getByRole('button', { name: 'Export as…' }));
+      fireEvent.click(screen.getByRole('button', { name: 'File' }));
       fireEvent.click(screen.getByRole('button', { name: 'PDF' }));
       expect(track).toHaveBeenCalledWith('pdf_exported', { mode_at_export: 'editor' });
       expect(toggleMode).toHaveBeenCalledOnce();

@@ -59,6 +59,16 @@ function makeProps(overrides: {
   };
 }
 
+/** Opens the Share dropdown by clicking the Share button. */
+function openShare() {
+  fireEvent.click(screen.getByRole('button', { name: 'Share' }));
+}
+
+/** Opens the File dropdown by clicking the File button. */
+function openFile() {
+  fireEvent.click(screen.getByRole('button', { name: 'File' }));
+}
+
 describe('Header', () => {
   describe('root page (no slug)', () => {
     it('shows a Save button', () => {
@@ -98,118 +108,6 @@ describe('Header', () => {
     it('shows "Saving…" when saving', () => {
       render(<Header {...makeProps({ document: { slug: 'abc1234' }, ui: { isSaving: true } })} />);
       expect(screen.getByText(/Saving…/)).toBeInTheDocument();
-    });
-  });
-
-  describe('copy link button', () => {
-    it('is disabled when no slug (unsaved doc)', () => {
-      render(<Header {...makeProps({ document: { slug: null } })} />);
-      expect(screen.getByRole('button', { name: 'Copy link' })).toBeDisabled();
-    });
-
-    it('is enabled when slug exists (saved doc)', () => {
-      render(<Header {...makeProps({ document: { slug: 'abc1234' } })} />);
-      expect(screen.getByRole('button', { name: 'Copy link' })).not.toBeDisabled();
-    });
-
-    it('calls onCopyLink when clicked', () => {
-      const onCopyLink = vi.fn();
-      render(<Header {...makeProps({ document: { slug: 'abc1234' }, actions: { onCopyLink } })} />);
-      fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
-      expect(onCopyLink).toHaveBeenCalledOnce();
-    });
-  });
-
-  describe('new doc button', () => {
-    it('is disabled when no slug and text is empty', () => {
-      render(<Header {...makeProps({ document: { slug: null, markdownText: '' } })} />);
-      expect(screen.getByRole('button', { name: 'New doc' })).toBeDisabled();
-    });
-
-    it('is enabled when text is non-empty (unsaved)', () => {
-      render(<Header {...makeProps({ document: { slug: null, markdownText: '# Hello' } })} />);
-      expect(screen.getByRole('button', { name: 'New doc' })).not.toBeDisabled();
-    });
-
-    it('is enabled when a slug exists', () => {
-      render(<Header {...makeProps({ document: { slug: 'abc1234', markdownText: '' } })} />);
-      expect(screen.getByRole('button', { name: 'New doc' })).not.toBeDisabled();
-    });
-
-    it('calls onNewDoc when clicked', () => {
-      const onNewDoc = vi.fn();
-      render(<Header {...makeProps({ document: { slug: 'abc1234' }, actions: { onNewDoc } })} />);
-      fireEvent.click(screen.getByRole('button', { name: 'New doc' }));
-      expect(onNewDoc).toHaveBeenCalledOnce();
-    });
-  });
-
-  describe('export PDF button', () => {
-    it('is disabled when markdownText is empty', () => {
-      render(<Header {...makeProps({ document: { markdownText: '' } })} />);
-      expect(screen.getByRole('button', { name: 'Export as…' })).toBeDisabled();
-    });
-
-    it('is enabled when markdownText is non-empty', () => {
-      render(<Header {...makeProps({ document: { markdownText: '# Hello' } })} />);
-      expect(screen.getByRole('button', { name: 'Export as…' })).not.toBeDisabled();
-    });
-
-    it('calls onExportPdf when clicked', () => {
-      const onExportPdf = vi.fn();
-      render(<Header {...makeProps({ document: { markdownText: '# Hello' }, actions: { onExportPdf } })} />);
-      fireEvent.click(screen.getByRole('button', { name: 'Export as…' }));
-      fireEvent.click(screen.getByRole('button', { name: 'PDF' }));
-      expect(onExportPdf).toHaveBeenCalledOnce();
-    });
-  });
-
-  describe('QR code button', () => {
-    it('is disabled when no slug', () => {
-      render(<Header {...makeProps({ document: { slug: null } })} />);
-      expect(screen.getByRole('button', { name: 'Show QR code' })).toBeDisabled();
-    });
-
-    it('is enabled when slug exists', () => {
-      render(<Header {...makeProps({ document: { slug: 'abc1234' } })} />);
-      expect(screen.getByRole('button', { name: 'Show QR code' })).not.toBeDisabled();
-    });
-
-    it('calls onShowQr when clicked', () => {
-      const onShowQr = vi.fn();
-      render(<Header {...makeProps({ document: { slug: 'abc1234' }, actions: { onShowQr } })} />);
-      fireEvent.click(screen.getByRole('button', { name: 'Show QR code' }));
-      expect(onShowQr).toHaveBeenCalledOnce();
-    });
-  });
-
-  describe('import PDF button', () => {
-    it('renders an Import PDF button', () => {
-      render(<Header {...makeProps()} />);
-      expect(screen.getByRole('button', { name: 'Import PDF' })).toBeInTheDocument();
-    });
-
-    it('is disabled and shows spinner when isPdfImporting is true', () => {
-      render(<Header {...makeProps({ ui: { isPdfImporting: true } })} />);
-      expect(screen.getByRole('button', { name: 'Import PDF' })).toBeDisabled();
-    });
-
-    it('calls onImportPdf with the selected File when a file is chosen', () => {
-      const onImportPdf = vi.fn();
-      render(<Header {...makeProps({ actions: { onImportPdf } })} />);
-      const input = document.querySelector('input[type="file"]') as HTMLInputElement;
-      const file = new File(['%PDF'], 'test.pdf', { type: 'application/pdf' });
-      fireEvent.change(input, { target: { files: [file] } });
-      expect(onImportPdf).toHaveBeenCalledWith(file);
-    });
-
-    it('allows the same file to be re-selected (input value reset after change)', () => {
-      const onImportPdf = vi.fn();
-      render(<Header {...makeProps({ actions: { onImportPdf } })} />);
-      const input = document.querySelector('input[type="file"]') as HTMLInputElement;
-      const file = new File(['%PDF'], 'test.pdf', { type: 'application/pdf' });
-      fireEvent.change(input, { target: { files: [file] } });
-      expect(input.value).toBe('');
     });
   });
 
@@ -260,6 +158,277 @@ describe('Header', () => {
       const mockUser = { id: '1', email: 'dev@example.com', user_metadata: {} } as User;
       render(<Header {...makeProps({ auth: { user: mockUser, isAuthLoading: false } })} />);
       expect(screen.queryByRole('button', { name: 'Sign in' })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Docs / Recent button', () => {
+    it('shows "Recent" for unauthenticated users', () => {
+      render(<Header {...makeProps({ auth: { user: null } })} />);
+      expect(screen.getByRole('button', { name: /recent/i })).toBeInTheDocument();
+    });
+
+    it('shows "Docs" for authenticated users', () => {
+      const mockUser = { id: '1', email: 'dev@example.com', user_metadata: {} } as User;
+      render(<Header {...makeProps({ auth: { user: mockUser } })} />);
+      expect(screen.getByRole('button', { name: 'Docs' })).toBeInTheDocument();
+    });
+
+    it('calls onToggleSidebar when clicked', () => {
+      const onToggleSidebar = vi.fn();
+      render(<Header {...makeProps({ actions: { onToggleSidebar } })} />);
+      fireEvent.click(screen.getByRole('button', { name: /recent/i }));
+      expect(onToggleSidebar).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe('New doc button', () => {
+    it('is disabled when no slug and text is empty', () => {
+      render(<Header {...makeProps({ document: { slug: null, markdownText: '' } })} />);
+      expect(screen.getByRole('button', { name: 'New doc' })).toBeDisabled();
+    });
+
+    it('is enabled when text is non-empty (unsaved)', () => {
+      render(<Header {...makeProps({ document: { slug: null, markdownText: '# Hello' } })} />);
+      expect(screen.getByRole('button', { name: 'New doc' })).not.toBeDisabled();
+    });
+
+    it('is enabled when a slug exists', () => {
+      render(<Header {...makeProps({ document: { slug: 'abc1234', markdownText: '' } })} />);
+      expect(screen.getByRole('button', { name: 'New doc' })).not.toBeDisabled();
+    });
+
+    it('calls onNewDoc when clicked', () => {
+      const onNewDoc = vi.fn();
+      render(<Header {...makeProps({ document: { slug: 'abc1234' }, actions: { onNewDoc } })} />);
+      fireEvent.click(screen.getByRole('button', { name: 'New doc' }));
+      expect(onNewDoc).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe('Share dropdown', () => {
+    it('renders a Share button', () => {
+      render(<Header {...makeProps()} />);
+      expect(screen.getByRole('button', { name: 'Share' })).toBeInTheDocument();
+    });
+
+    it('is closed by default', () => {
+      render(<Header {...makeProps()} />);
+      expect(screen.queryByRole('button', { name: /copy link/i })).not.toBeInTheDocument();
+    });
+
+    it('opens when Share is clicked', () => {
+      render(<Header {...makeProps()} />);
+      openShare();
+      expect(screen.getByRole('button', { name: /copy link/i })).toBeInTheDocument();
+    });
+
+    it('closes when Share is clicked again', () => {
+      render(<Header {...makeProps()} />);
+      openShare();
+      openShare();
+      expect(screen.queryByRole('button', { name: /copy link/i })).not.toBeInTheDocument();
+    });
+
+    it('closes when File dropdown is opened', () => {
+      render(<Header {...makeProps()} />);
+      openShare();
+      openFile();
+      expect(screen.queryByRole('button', { name: /copy link/i })).not.toBeInTheDocument();
+    });
+
+    describe('Copy link item', () => {
+      it('is disabled when no slug', () => {
+        render(<Header {...makeProps({ document: { slug: null } })} />);
+        openShare();
+        expect(screen.getByRole('button', { name: /copy link/i })).toBeDisabled();
+      });
+
+      it('shows "Save first" hints when no slug', () => {
+        render(<Header {...makeProps({ document: { slug: null } })} />);
+        openShare();
+        expect(screen.getAllByText('Save first')).toHaveLength(2);
+      });
+
+      it('is enabled when slug exists', () => {
+        render(<Header {...makeProps({ document: { slug: 'abc1234' } })} />);
+        openShare();
+        expect(screen.getByRole('button', { name: /copy link/i })).not.toBeDisabled();
+      });
+
+      it('calls onCopyLink and closes dropdown when clicked', () => {
+        const onCopyLink = vi.fn();
+        render(<Header {...makeProps({ document: { slug: 'abc1234' }, actions: { onCopyLink } })} />);
+        openShare();
+        fireEvent.click(screen.getByRole('button', { name: /copy link/i }));
+        expect(onCopyLink).toHaveBeenCalledOnce();
+        expect(screen.queryByRole('button', { name: /copy link/i })).not.toBeInTheDocument();
+      });
+    });
+
+    describe('Copy markdown item', () => {
+      it('is disabled when markdownText is empty', () => {
+        render(<Header {...makeProps({ document: { markdownText: '' } })} />);
+        openShare();
+        expect(screen.getByRole('button', { name: /copy markdown/i })).toBeDisabled();
+      });
+
+      it('is enabled when markdownText is non-empty', () => {
+        render(<Header {...makeProps({ document: { markdownText: '# Hello' } })} />);
+        openShare();
+        expect(screen.getByRole('button', { name: /copy markdown/i })).not.toBeDisabled();
+      });
+
+      it('calls onCopyMarkdown and closes dropdown when clicked', () => {
+        const onCopyMarkdown = vi.fn();
+        render(<Header {...makeProps({ document: { markdownText: '# Hello' }, actions: { onCopyMarkdown } })} />);
+        openShare();
+        fireEvent.click(screen.getByRole('button', { name: /copy markdown/i }));
+        expect(onCopyMarkdown).toHaveBeenCalledOnce();
+        expect(screen.queryByRole('button', { name: /copy markdown/i })).not.toBeInTheDocument();
+      });
+    });
+
+    describe('QR code item', () => {
+      it('is disabled when no slug', () => {
+        render(<Header {...makeProps({ document: { slug: null } })} />);
+        openShare();
+        expect(screen.getByRole('button', { name: /show qr code/i })).toBeDisabled();
+      });
+
+      it('is enabled when slug exists', () => {
+        render(<Header {...makeProps({ document: { slug: 'abc1234' } })} />);
+        openShare();
+        expect(screen.getByRole('button', { name: /show qr code/i })).not.toBeDisabled();
+      });
+
+      it('calls onShowQr and closes dropdown when clicked', () => {
+        const onShowQr = vi.fn();
+        render(<Header {...makeProps({ document: { slug: 'abc1234' }, actions: { onShowQr } })} />);
+        openShare();
+        fireEvent.click(screen.getByRole('button', { name: /show qr code/i }));
+        expect(onShowQr).toHaveBeenCalledOnce();
+        expect(screen.queryByRole('button', { name: /show qr code/i })).not.toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('File dropdown', () => {
+    it('renders a File button', () => {
+      render(<Header {...makeProps()} />);
+      expect(screen.getByRole('button', { name: 'File' })).toBeInTheDocument();
+    });
+
+    it('is closed by default', () => {
+      render(<Header {...makeProps()} />);
+      expect(screen.queryByRole('button', { name: /open markdown file/i })).not.toBeInTheDocument();
+    });
+
+    it('opens when File is clicked', () => {
+      render(<Header {...makeProps()} />);
+      openFile();
+      expect(screen.getByRole('button', { name: /open markdown file/i })).toBeInTheDocument();
+    });
+
+    it('closes when File is clicked again', () => {
+      render(<Header {...makeProps()} />);
+      openFile();
+      openFile();
+      expect(screen.queryByRole('button', { name: /open markdown file/i })).not.toBeInTheDocument();
+    });
+
+    it('closes when Share dropdown is opened', () => {
+      render(<Header {...makeProps()} />);
+      openFile();
+      openShare();
+      expect(screen.queryByRole('button', { name: /open markdown file/i })).not.toBeInTheDocument();
+    });
+
+    describe('Open file item', () => {
+      it('calls onOpenMdFile and closes dropdown when clicked', () => {
+        const onOpenMdFile = vi.fn();
+        render(<Header {...makeProps({ actions: { onOpenMdFile } })} />);
+        openFile();
+        fireEvent.click(screen.getByRole('button', { name: /open markdown file/i }));
+        expect(onOpenMdFile).toHaveBeenCalledOnce();
+        expect(screen.queryByRole('button', { name: /open markdown file/i })).not.toBeInTheDocument();
+      });
+    });
+
+    describe('Import PDF item', () => {
+      it('shows "Import PDF" when not importing', () => {
+        render(<Header {...makeProps({ ui: { isPdfImporting: false } })} />);
+        openFile();
+        expect(screen.getByRole('button', { name: 'Import PDF' })).toBeInTheDocument();
+      });
+
+      it('is disabled and shows "Importing…" when isPdfImporting is true', () => {
+        render(<Header {...makeProps({ ui: { isPdfImporting: true } })} />);
+        openFile();
+        expect(screen.getByRole('button', { name: /importing/i })).toBeDisabled();
+      });
+
+      it('calls onImportPdf with the selected file when file input changes', () => {
+        const onImportPdf = vi.fn();
+        render(<Header {...makeProps({ actions: { onImportPdf } })} />);
+        const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+        const file = new File(['%PDF'], 'test.pdf', { type: 'application/pdf' });
+        fireEvent.change(input, { target: { files: [file] } });
+        expect(onImportPdf).toHaveBeenCalledWith(file);
+      });
+
+      it('resets file input value after selection to allow re-selecting the same file', () => {
+        render(<Header {...makeProps()} />);
+        const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+        const file = new File(['%PDF'], 'test.pdf', { type: 'application/pdf' });
+        fireEvent.change(input, { target: { files: [file] } });
+        expect(input.value).toBe('');
+      });
+    });
+
+    describe('Export PDF item', () => {
+      it('is disabled when markdownText is empty', () => {
+        render(<Header {...makeProps({ document: { markdownText: '' } })} />);
+        openFile();
+        expect(screen.getByRole('button', { name: 'PDF' })).toBeDisabled();
+      });
+
+      it('is enabled when markdownText is non-empty', () => {
+        render(<Header {...makeProps({ document: { markdownText: '# Hello' } })} />);
+        openFile();
+        expect(screen.getByRole('button', { name: 'PDF' })).not.toBeDisabled();
+      });
+
+      it('calls onExportPdf and closes dropdown when clicked', () => {
+        const onExportPdf = vi.fn();
+        render(<Header {...makeProps({ document: { markdownText: '# Hello' }, actions: { onExportPdf } })} />);
+        openFile();
+        fireEvent.click(screen.getByRole('button', { name: 'PDF' }));
+        expect(onExportPdf).toHaveBeenCalledOnce();
+        expect(screen.queryByRole('button', { name: 'PDF' })).not.toBeInTheDocument();
+      });
+    });
+
+    describe('Export Markdown item', () => {
+      it('is disabled when markdownText is empty', () => {
+        render(<Header {...makeProps({ document: { markdownText: '' } })} />);
+        openFile();
+        expect(screen.getByRole('button', { name: 'Markdown' })).toBeDisabled();
+      });
+
+      it('is enabled when markdownText is non-empty', () => {
+        render(<Header {...makeProps({ document: { markdownText: '# Hello' } })} />);
+        openFile();
+        expect(screen.getByRole('button', { name: 'Markdown' })).not.toBeDisabled();
+      });
+
+      it('calls onDownloadMarkdown and closes dropdown when clicked', () => {
+        const onDownloadMarkdown = vi.fn();
+        render(<Header {...makeProps({ document: { markdownText: '# Hello' }, actions: { onDownloadMarkdown } })} />);
+        openFile();
+        fireEvent.click(screen.getByRole('button', { name: 'Markdown' }));
+        expect(onDownloadMarkdown).toHaveBeenCalledOnce();
+        expect(screen.queryByRole('button', { name: 'Markdown' })).not.toBeInTheDocument();
+      });
     });
   });
 });
