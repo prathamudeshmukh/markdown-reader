@@ -92,7 +92,7 @@ export default function DocTitle({ title, mode, onChange }: DocTitleProps) {
             border: 'none',
             borderRadius: 0,
             paddingBottom: '0.6rem',
-            fontFamily: 'Inter, system-ui, sans-serif',
+            fontFamily: '"IBM Plex Mono", "Courier New", monospace',
             resize: 'none',
             overflow: 'hidden',
           }}
