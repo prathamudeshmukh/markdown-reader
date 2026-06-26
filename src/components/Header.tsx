@@ -183,10 +183,10 @@ export default function Header({
 
   return (
     <div className="fixed top-0 left-0 right-0 z-50">
-      <header className="relative surface-glass flex items-center h-14 px-4 sm:px-5">
+      <header className="relative surface-glass grid items-center h-14 px-4 sm:px-5" style={{ gridTemplateColumns: '1fr auto 1fr' }}>
 
         {/* ── Brand ──────────────────────────────────────── */}
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex items-center gap-2.5">
           <svg width="26" height="26" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <defs>
               <linearGradient id="logo-gradient" x1="44" y1="46" x2="156" y2="154" gradientUnits="userSpaceOnUse">
@@ -209,44 +209,41 @@ export default function Header({
           </h1>
         </div>
 
-        {/* ── Mode toggle — left-anchored (desktop only) ── */}
-        <div className="hidden sm:flex items-center shrink-0">
-          <div className="w-px h-4 mx-4 shrink-0" style={{ backgroundColor: 'var(--border)' }} />
-          <div
-            className="flex items-center rounded-lg p-0.5"
-            style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)' }}
+        {/* ── Mode toggle — center-anchored (desktop only) ── */}
+        <div
+          className="hidden sm:flex items-center rounded-lg p-0.5"
+          style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)' }}
+        >
+          <button
+            onClick={mode === 'preview' ? onToggle : undefined}
+            title="Editor  Ctrl+P"
+            aria-label={mode === 'preview' ? 'Show Editor' : 'Editor'}
+            className="flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-all duration-200"
+            style={mode === 'editor' ? activeToggleStyle : { color: 'var(--text-muted)' }}
           >
-            <button
-              onClick={mode === 'preview' ? onToggle : undefined}
-              title="Editor  Ctrl+P"
-              aria-label={mode === 'preview' ? 'Show Editor' : 'Editor'}
-              className="flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-all duration-200"
-              style={mode === 'editor' ? activeToggleStyle : { color: 'var(--text-muted)' }}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-              </svg>
-              Editor
-            </button>
-            <button
-              onClick={mode === 'editor' ? onToggle : undefined}
-              title="Preview  Ctrl+P"
-              aria-label={mode === 'editor' ? 'Show Preview' : 'Preview'}
-              className="flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-all duration-200"
-              style={mode === 'preview' ? activeToggleStyle : { color: 'var(--text-muted)' }}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                <circle cx="12" cy="12" r="3" />
-              </svg>
-              Preview
-            </button>
-          </div>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
+            Editor
+          </button>
+          <button
+            onClick={mode === 'editor' ? onToggle : undefined}
+            title="Preview  Ctrl+P"
+            aria-label={mode === 'editor' ? 'Show Preview' : 'Preview'}
+            className="flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-all duration-200"
+            style={mode === 'preview' ? activeToggleStyle : { color: 'var(--text-muted)' }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+            Preview
+          </button>
         </div>
 
         {/* ── Right: tools + auth ─────────────────────────── */}
-        <div className="flex-1 flex items-center justify-end gap-1 shrink-0">
+        <div className="flex items-center justify-end gap-1">
 
           {/* Presence */}
           {slug && presenceCount > 1 && <PresenceIndicator count={presenceCount} />}
