@@ -126,6 +126,28 @@ describe('FormattingToolbar accessibility', () => {
   });
 });
 
+// ── Ribbon layout (Variation 4) ────────────────────────────────────────────
+
+describe('FormattingToolbar ribbon labels', () => {
+  it('renders a visible text label for each action button', () => {
+    render(<FormattingToolbar {...baseProps} editorRef={makeRef()} />);
+    expect(screen.getByText('Bold')).toBeInTheDocument();
+    expect(screen.getByText('Italic')).toBeInTheDocument();
+    expect(screen.getByText('Code')).toBeInTheDocument();
+    expect(screen.getByText('Heading')).toBeInTheDocument();
+    expect(screen.getByText('Quote')).toBeInTheDocument();
+    expect(screen.getByText('List')).toBeInTheDocument();
+    expect(screen.getByText('Link')).toBeInTheDocument();
+    expect(screen.getByText('Table')).toBeInTheDocument();
+  });
+
+  it('toolbar uses a flat bar layout without a rounded-full pill', () => {
+    render(<FormattingToolbar {...baseProps} editorRef={makeRef()} />);
+    const toolbar = screen.getByRole('toolbar');
+    expect(toolbar).not.toHaveClass('rounded-full');
+  });
+});
+
 // ── Popovers ───────────────────────────────────────────────────────────────
 
 describe('FormattingToolbar Table button', () => {
