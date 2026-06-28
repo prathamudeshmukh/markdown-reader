@@ -60,6 +60,10 @@ const baseState = {
   confirmOpenMdFile: vi.fn(),
   openMdFileGuardOpen: false,
   docUserId: null as string | null,
+  isOwner: false,
+  canEdit: true,
+  editAccess: false,
+  setEditAccess: vi.fn(),
 };
 
 describe('App', () => {
@@ -325,7 +329,7 @@ describe('App', () => {
     it('authenticated user without creator token on unowned doc is blocked', () => {
       vi.mocked(useAuth).mockReturnValue({ user: { id: 'user-b' } as never, isAuthLoading: false, signInWithEmail: vi.fn(), signOut: vi.fn() });
       vi.mocked(loadCreatorToken).mockReturnValue(null);
-      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, slug: 'abc1234', docUserId: null });
+      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, slug: 'abc1234', docUserId: null, canEdit: false });
       render(<App />);
       expect(screen.getByPlaceholderText('Start writing…')).toHaveAttribute('readonly');
     });
@@ -341,7 +345,7 @@ describe('App', () => {
     // Flow D: different auth user on owned doc — blocked
     it('authenticated non-owner on someone else\'s doc is blocked', () => {
       vi.mocked(useAuth).mockReturnValue({ user: { id: 'user-b' } as never, isAuthLoading: false, signInWithEmail: vi.fn(), signOut: vi.fn() });
-      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, slug: 'abc1234', docUserId: 'user-a' });
+      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, slug: 'abc1234', docUserId: 'user-a', canEdit: false });
       render(<App />);
       expect(screen.getByPlaceholderText('Start writing…')).toHaveAttribute('readonly');
     });
@@ -350,7 +354,7 @@ describe('App', () => {
   describe('EditBlockedModal — isUnowned prop', () => {
     it('shows "no owner" copy when doc is unowned', () => {
       vi.mocked(useAuth).mockReturnValue({ user: { id: 'user-b' } as never, isAuthLoading: false, signInWithEmail: vi.fn(), signOut: vi.fn() });
-      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, slug: 'abc1234', docUserId: null, mode: 'preview' });
+      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, slug: 'abc1234', docUserId: null, mode: 'preview', canEdit: false });
       render(<App />);
       fireEvent.click(screen.getAllByRole('button', { name: /edit/i })[0]);
       expect(screen.getByText(/this document has no owner/i)).toBeInTheDocument();
@@ -359,7 +363,7 @@ describe('App', () => {
 
     it('shows "someone else\'s document" copy and sign-in button when doc is owned by another', () => {
       vi.mocked(useAuth).mockReturnValue({ user: { id: 'user-b' } as never, isAuthLoading: false, signInWithEmail: vi.fn(), signOut: vi.fn() });
-      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, slug: 'abc1234', docUserId: 'user-a', mode: 'preview' });
+      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, slug: 'abc1234', docUserId: 'user-a', mode: 'preview', canEdit: false });
       render(<App />);
       fireEvent.click(screen.getAllByRole('button', { name: /edit/i })[0]);
       expect(screen.getByText(/someone else/i)).toBeInTheDocument();

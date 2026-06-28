@@ -13,6 +13,7 @@ export interface Doc {
   user_id: string | null;
   collection_id: string | null;
   creator_token: string | null;
+  edit_access: boolean;
 }
 
 export interface DocSummary {
@@ -92,7 +93,7 @@ export async function getDoc(env: SupabaseEnv, slug: string): Promise<Doc | null
     throw new Error('getDoc failed: SUPABASE_SERVICE_ROLE_KEY is missing or not a valid JWT');
   }
 
-  const url = `${env.SUPABASE_URL}/rest/v1/docs?slug=eq.${encodeURIComponent(slug)}&select=slug,content,title,user_id,collection_id,creator_token`;
+  const url = `${env.SUPABASE_URL}/rest/v1/docs?slug=eq.${encodeURIComponent(slug)}&select=slug,content,title,user_id,collection_id,creator_token,edit_access`;
   const res = await fetch(url, {
     headers: {
       apikey: env.SUPABASE_ANON_KEY,
@@ -116,10 +117,11 @@ interface UpdateDocFields {
   collectionId?: string | null;
   userId?: string;
   clearCreatorToken?: boolean;
+  editAccess?: boolean;
 }
 
 export async function updateDoc(env: SupabaseEnv, slug: string, fields: UpdateDocFields): Promise<Doc> {
-  const { content, title, userJwt, collectionId, userId, clearCreatorToken } = fields;
+  const { content, title, userJwt, collectionId, userId, clearCreatorToken, editAccess } = fields;
   const url = `${env.SUPABASE_URL}/rest/v1/docs?slug=eq.${encodeURIComponent(slug)}`;
 
   const body: Record<string, unknown> = { updated_at: new Date().toISOString() };
@@ -128,6 +130,7 @@ export async function updateDoc(env: SupabaseEnv, slug: string, fields: UpdateDo
   if (collectionId !== undefined) body.collection_id = collectionId;
   if (userId !== undefined) body.user_id = userId;
   if (clearCreatorToken) body.creator_token = null;
+  if (editAccess !== undefined) body.edit_access = editAccess;
 
   const res = await fetch(url, {
     method: 'PATCH',

@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import PresenceIndicator from './PresenceIndicator';
 import UserMenu from './UserMenu';
+import EditAccessToggle from './EditAccessToggle';
 import { useClickOutside } from '../hooks/useClickOutside';
 
 export interface DocumentState {
@@ -20,6 +21,12 @@ export interface UiState {
   isPdfImporting: boolean;
 }
 
+export interface ShareState {
+  editAccess: boolean;
+  isOwner: boolean;
+  editAccessPending: boolean;
+}
+
 export interface HeaderActions {
   onToggle: () => void;
   onSave: () => void;
@@ -34,6 +41,7 @@ export interface HeaderActions {
   onOpenMdFile: () => void;
   onOpenCommandPalette?: () => void;
   onOpenShortcutHelp?: () => void;
+  onToggleEditAccess: (value: boolean) => void;
 }
 
 export interface AuthState {
@@ -49,6 +57,7 @@ export interface AuthActions {
 interface HeaderProps {
   document: DocumentState;
   ui: UiState;
+  share: ShareState;
   actions: HeaderActions;
   auth: AuthState;
   authActions: AuthActions;
@@ -142,7 +151,8 @@ type OpenMenu = 'more' | 'share' | 'file' | null;
 export default function Header({
   document: { slug, markdownText, presenceCount },
   ui: { mode, isSaving, isLoading, copied, copiedMarkdown, sidebarOpen, isPdfImporting },
-  actions: { onToggle, onSave, onNewDoc, onExportPdf, onDownloadMarkdown, onCopyLink, onCopyMarkdown, onToggleSidebar, onShowQr, onImportPdf, onOpenMdFile, onOpenCommandPalette, onOpenShortcutHelp },
+  share: { editAccess, isOwner, editAccessPending },
+  actions: { onToggle, onSave, onNewDoc, onExportPdf, onDownloadMarkdown, onCopyLink, onCopyMarkdown, onToggleSidebar, onShowQr, onImportPdf, onOpenMdFile, onOpenCommandPalette, onOpenShortcutHelp, onToggleEditAccess },
   auth: { user, isAuthLoading },
   authActions: { onSignInClick, onSignOut },
 }: HeaderProps) {
@@ -352,6 +362,16 @@ export default function Header({
                   className={DROPDOWN_PANEL}
                   style={{ backgroundColor: 'var(--bg-elevated, var(--bg-primary))', border: '1px solid var(--border)' }}
                 >
+                  {slug !== null && (
+                    <div className="px-3 py-2 border-b" style={{ borderColor: 'var(--border-light)' }}>
+                      <EditAccessToggle
+                        isOwner={isOwner}
+                        editAccess={editAccess}
+                        onToggle={onToggleEditAccess}
+                        pending={editAccessPending}
+                      />
+                    </div>
+                  )}
                   <MenuItem onClick={() => { setOpenMenu(null); onCopyLink(); }} disabled={slug === null}>
                     {copied ? <CheckIcon /> : (
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

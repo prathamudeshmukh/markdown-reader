@@ -108,6 +108,7 @@ async function handlePut(request: Request, slug: string, env: RouterEnv): Promis
     collection_id?: unknown;
     claim?: unknown;
     creatorToken?: unknown;
+    edit_access?: unknown;
   };
 
   const isClaim = body.claim === true;
@@ -141,6 +142,30 @@ async function handlePut(request: Request, slug: string, env: RouterEnv): Promis
     return json({ slug: doc.slug });
   }
 
+  // edit_access toggle — owner-only
+  if (typeof body.edit_access === 'boolean') {
+    const userJwt = extractBearerToken(request);
+    if (!userJwt) return json({ error: 'Unauthorized' }, 401);
+
+    const userId = extractUserIdFromJwt(userJwt);
+    if (!userId) return json({ error: 'Invalid token' }, 401);
+
+    const existing = await getDoc(env, slug);
+    if (!existing) return json({ error: 'Not found' }, 404);
+
+    if (existing.user_id !== userId) return json({ error: 'Forbidden' }, 403);
+
+    try {
+      const { origin } = new URL(request.url);
+      await cfCache().delete(docCacheKey(`${origin}${API_PREFIX}/${slug}`));
+    } catch {
+      // Cache invalidation failure is non-fatal
+    }
+
+    const doc = await updateDoc(env, slug, { userJwt, editAccess: body.edit_access });
+    return json({ slug: doc.slug });
+  }
+
   if (body.content !== undefined && typeof body.content !== 'string') {
     return json({ error: 'content must be a string' }, 400);
   }
@@ -156,6 +181,18 @@ async function handlePut(request: Request, slug: string, env: RouterEnv): Promis
   const title = parseTitle(body.title);
   const collectionId = parseCollectionId(body.collection_id);
   const userJwt = extractBearerToken(request);
+
+  // Pre-fetch to enforce access: Supabase returns an empty result (not an error)
+  // when RLS blocks a write, so we must check ownership here to return a proper 403.
+  const existing = await getDoc(env, slug);
+  if (!existing) return json({ error: 'Not found' }, 404);
+
+  const requesterId = extractUserIdFromJwt(userJwt ?? '');
+  // Unowned docs (user_id === null) remain editable by anyone — they use the
+  // creator-token claim flow. Only restrict writes on owned docs without edit_access.
+  if (existing.user_id !== null && !existing.edit_access && existing.user_id !== requesterId) {
+    return json({ error: 'Forbidden' }, 403);
+  }
 
   // Invalidate before the DB write so concurrent GETs bypass the cache
   // and read DB directly during the update window.

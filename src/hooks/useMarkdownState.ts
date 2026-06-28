@@ -14,6 +14,7 @@ interface MarkdownState {
   markdownText: string;
   title: string | null;
   docUserId: string | null;
+  editAccess: boolean;
   mode: Mode;
   isLoading: boolean;
   isSaving: boolean;
@@ -40,6 +41,7 @@ export function useMarkdownState({ userId }: { userId?: string } = {}) {
         markdownText: '',
         title: null,
         docUserId: null,
+        editAccess: false,
         mode: 'preview',
         isLoading: true,
         isSaving: false,
@@ -54,6 +56,7 @@ export function useMarkdownState({ userId }: { userId?: string } = {}) {
         markdownText: forked,
         title: null,
         docUserId: null,
+        editAccess: false,
         mode: 'editor',
         isLoading: false,
         isSaving: false,
@@ -65,6 +68,7 @@ export function useMarkdownState({ userId }: { userId?: string } = {}) {
       markdownText: getInitialMarkdownText(true),
       title: null,
       docUserId: null,
+      editAccess: false,
       mode: 'editor',
       isLoading: false,
       isSaving: false,
@@ -107,7 +111,7 @@ export function useMarkdownState({ userId }: { userId?: string } = {}) {
           has_slug: true,
           content_length_bucket: getContentLengthBucket(doc.content),
         });
-        setState((prev) => ({ ...prev, markdownText: doc.content, title: doc.title, docUserId: doc.user_id, isLoading: false }));
+        setState((prev) => ({ ...prev, markdownText: doc.content, title: doc.title, docUserId: doc.user_id, editAccess: doc.edit_access, isLoading: false }));
       })
       .catch((err: Error) =>
         setState((prev) => ({ ...prev, isLoading: false, error: err.message })),
@@ -127,6 +131,11 @@ export function useMarkdownState({ userId }: { userId?: string } = {}) {
         // time, not the stale value captured when setMarkdownText was created.
         const currentUserId = userIdRef.current;
         setState((prev) => {
+          // Unowned docs (docUserId === null) remain editable by anyone — that's the
+          // creator-token claim flow. Only restrict writes on owned docs without edit_access.
+          const isOwner = !!currentUserId && currentUserId === prev.docUserId;
+          if (prev.docUserId !== null && !isOwner && !prev.editAccess) return prev;
+
           const creatorToken = currentUserId && !prev.docUserId ? loadCreatorToken(slug) : null;
           const isClaim = !!creatorToken;
 
@@ -195,6 +204,7 @@ export function useMarkdownState({ userId }: { userId?: string } = {}) {
       markdownText: '',
       title: null,
       docUserId: null,
+      editAccess: false,
       mode: 'preview',
       isLoading: true,
       isSaving: false,
@@ -298,5 +308,18 @@ export function useMarkdownState({ userId }: { userId?: string } = {}) {
     }
   }, [onSave, applyMdFileContent]);
 
-  return { ...state, slug, collectionId, presenceCount, setMarkdownText, setTitle, toggleMode, onSave, navigateToDoc, openMdFile, confirmOpenMdFile, openMdFileGuardOpen };
+  const isOwner = !!userId && userId === state.docUserId;
+  const canEdit = state.docUserId === null || isOwner || state.editAccess;
+
+  const setEditAccess = useCallback(async (value: boolean) => {
+    if (!slug) return;
+    try {
+      await updateDoc(slug, { editAccess: value });
+      setState((prev) => ({ ...prev, editAccess: value }));
+    } catch (err) {
+      setState((prev) => ({ ...prev, error: (err as Error).message }));
+    }
+  }, [slug]);
+
+  return { ...state, slug, collectionId, presenceCount, isOwner, canEdit, setMarkdownText, setTitle, toggleMode, onSave, navigateToDoc, openMdFile, confirmOpenMdFile, openMdFileGuardOpen, setEditAccess };
 }

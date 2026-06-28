@@ -141,6 +141,33 @@ describe('docsApi', () => {
       );
     });
 
+    it('sends edit_access in body when editAccess is provided', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce(
+        new Response(JSON.stringify({ slug: 'abc1234' }), { status: 200 }),
+      );
+
+      await updateDoc('abc1234', { editAccess: true });
+
+      expect(fetch).toHaveBeenCalledWith(
+        '/api/docs/abc1234',
+        expect.objectContaining({
+          body: JSON.stringify({ edit_access: true }),
+        }),
+      );
+    });
+
+    it('omits edit_access from body when editAccess is not provided', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce(
+        new Response(JSON.stringify({ slug: 'abc1234' }), { status: 200 }),
+      );
+
+      await updateDoc('abc1234', { content: '# Hello' });
+
+      const call = vi.mocked(fetch).mock.calls[0];
+      const body = JSON.parse(call[1]?.body as string);
+      expect(body.edit_access).toBeUndefined();
+    });
+
     it('throws on error response', async () => {
       vi.mocked(fetch).mockResolvedValueOnce(
         new Response(JSON.stringify({ error: 'Not found' }), { status: 404 }),

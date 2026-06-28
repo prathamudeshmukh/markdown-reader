@@ -8,6 +8,7 @@ export interface Doc {
   content: string;
   title: string | null;
   user_id: string | null;
+  edit_access: boolean;
 }
 
 export interface DocSummary {
@@ -29,6 +30,7 @@ export interface UpdateDocInput {
   collectionId?: string | null;
   claim?: boolean;
   creatorToken?: string;
+  editAccess?: boolean;
 }
 
 async function parseResponse<T>(res: Response): Promise<T> {
@@ -68,6 +70,7 @@ export async function updateDoc(slug: string, input: UpdateDocInput): Promise<vo
     body.claim = true;
     body.creatorToken = input.creatorToken;
   }
+  if (input.editAccess !== undefined) body.edit_access = input.editAccess;
 
   const res = await fetch(`${API_BASE}/${slug}`, {
     method: 'PUT',

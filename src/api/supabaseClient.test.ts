@@ -114,6 +114,18 @@ describe('supabaseClient', () => {
       );
     });
 
+    it('selects edit_access in the URL query', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce(
+        new Response(JSON.stringify([]), { status: 200 }),
+      );
+
+      await getDoc(env, 'abc1234');
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringContaining('edit_access'),
+        expect.any(Object),
+      );
+    });
+
     it('uses service role key in Authorization header to bypass RLS', async () => {
       vi.mocked(fetch).mockResolvedValueOnce(
         new Response(JSON.stringify([{ slug: 'abc1234', content: '# Hello', title: null, user_id: 'uid' }]), { status: 200 }),
@@ -163,6 +175,32 @@ describe('supabaseClient', () => {
       const body = JSON.parse(call[1]?.body as string);
       expect(body.title).toBe('New Title');
       expect(body.content).toBeUndefined();
+    });
+
+    it('sends edit_access in body when editAccess is provided', async () => {
+      const doc = { slug: 'abc1234', content: '# Hello', title: null, user_id: null, edit_access: true };
+      vi.mocked(fetch).mockResolvedValueOnce(
+        new Response(JSON.stringify([doc]), { status: 200 }),
+      );
+
+      await updateDoc(env, 'abc1234', { editAccess: true });
+
+      const call = vi.mocked(fetch).mock.calls[0];
+      const body = JSON.parse(call[1]?.body as string);
+      expect(body.edit_access).toBe(true);
+    });
+
+    it('omits edit_access from body when editAccess is not provided', async () => {
+      const doc = { slug: 'abc1234', content: '# Updated', title: null, user_id: null, edit_access: false };
+      vi.mocked(fetch).mockResolvedValueOnce(
+        new Response(JSON.stringify([doc]), { status: 200 }),
+      );
+
+      await updateDoc(env, 'abc1234', { content: '# Updated' });
+
+      const call = vi.mocked(fetch).mock.calls[0];
+      const body = JSON.parse(call[1]?.body as string);
+      expect(body.edit_access).toBeUndefined();
     });
 
     it('throws when response is not ok', async () => {

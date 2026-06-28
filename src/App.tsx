@@ -21,7 +21,6 @@ import CommandPalette from './components/CommandPalette';
 import OpenMdFileGuardModal from './components/OpenMdFileGuardModal';
 import { useAuth } from './auth/AuthContext';
 import { getContentLengthBucket, track, type InteractionSource } from './telemetry';
-import { loadCreatorToken } from './utils/creatorTokens';
 import { pdfToMarkdown, PdfImportError } from './utils/pdfToMarkdown';
 import { pdfFileToMarkdown, PdfApiError } from './utils/pdfApiClient';
 import { readFeatureFlags } from './config/features';
@@ -33,19 +32,16 @@ const PDF_IMPORT_UNKNOWN_ERROR = 'Failed to import PDF. Please try again.';
 
 export default function App() {
   const { user, isAuthLoading, signInWithEmail, signOut } = useAuth();
-  const { markdownText, title, slug, docUserId, mode, isLoading, isSaving, error, presenceCount, setMarkdownText, setTitle, toggleMode, onSave, navigateToDoc, openMdFile, confirmOpenMdFile, openMdFileGuardOpen } =
+  const { markdownText, title, slug, docUserId, editAccess, isOwner, canEdit, mode, isLoading, isSaving, error, presenceCount, setMarkdownText, setTitle, toggleMode, onSave, navigateToDoc, openMdFile, confirmOpenMdFile, openMdFileGuardOpen, setEditAccess } =
     useMarkdownState({ userId: user?.id });
 
-  // True when this authenticated user holds the creator token for an unowned doc —
-  // they created it anonymously and can silently claim it on first auto-save.
-  const hasCreatorToken = !!slug && !!user && !docUserId && !!loadCreatorToken(slug);
+  const [editAccessPending, setEditAccessPending] = useState(false);
 
-  // A doc is editable if:
-  //   - no slug yet (new, unsaved)
-  //   - authenticated user holds the creator token (will claim on first save)
-  //   - anonymous user on an unowned doc
-  //   - authenticated user who owns the doc
-  const canEdit = !slug || hasCreatorToken || (!user && !docUserId) || docUserId === user?.id;
+  const handleToggleEditAccess = useCallback(async (value: boolean) => {
+    setEditAccessPending(true);
+    await setEditAccess(value);
+    setEditAccessPending(false);
+  }, [setEditAccess]);
 
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const mdFileInputRef = useRef<HTMLInputElement>(null);
@@ -206,6 +202,7 @@ export default function App() {
       <Header
         document={{ slug, markdownText, presenceCount }}
         ui={{ mode, isSaving, isLoading, copied, copiedMarkdown, sidebarOpen, isPdfImporting }}
+        share={{ editAccess, isOwner, editAccessPending }}
         actions={{
           onToggle: () => {
             if (canEdit || mode === 'editor') {
@@ -226,6 +223,7 @@ export default function App() {
           onOpenMdFile: () => mdFileInputRef.current?.click(),
           onOpenCommandPalette: () => setCommandPaletteOpen(true),
           onOpenShortcutHelp: () => setShortcutHelpOpen(true),
+          onToggleEditAccess: (v) => { void handleToggleEditAccess(v); },
         }}
         auth={{ user, isAuthLoading }}
         authActions={{ onSignInClick: () => setSignInOpen(true), onSignOut: signOut }}
