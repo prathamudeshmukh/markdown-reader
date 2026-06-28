@@ -2,6 +2,7 @@ import ReactMarkdown from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import remarkGfm from 'remark-gfm';
+import type { PreviewThemeId } from '../themes/previewThemes';
 
 // Allow highlight.js className attributes that rehype-highlight adds.
 // rehype-highlight adds 'hljs' and 'language-*' to <code> and 'hljs-*' to <span>.
@@ -18,9 +19,10 @@ const sanitizeSchema = {
 
 interface PreviewProps {
   content: string;
+  theme?: PreviewThemeId;
 }
 
-export default function Preview({ content }: PreviewProps) {
+export default function Preview({ content, theme = 'default' }: PreviewProps) {
   if (!content.trim()) {
     return (
       <div
@@ -33,7 +35,11 @@ export default function Preview({ content }: PreviewProps) {
   }
 
   return (
-    <div className="flex-1 overflow-auto animate-mode-enter" style={{ backgroundColor: 'var(--bg-primary)' }}>
+    <div
+      className="flex-1 overflow-auto animate-mode-enter"
+      style={{ backgroundColor: 'var(--bg-primary)' }}
+      data-preview-theme={theme}
+    >
       <div className="max-w-3xl mx-auto px-3 sm:px-10 pt-4 pb-10 prose prose-sm sm:prose-base font-mono">
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}

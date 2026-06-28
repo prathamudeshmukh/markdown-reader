@@ -3,7 +3,9 @@ import type { User } from '@supabase/supabase-js';
 import PresenceIndicator from './PresenceIndicator';
 import UserMenu from './UserMenu';
 import EditAccessToggle from './EditAccessToggle';
+import ThemePicker from './ThemePicker';
 import { useClickOutside } from '../hooks/useClickOutside';
+import type { PreviewThemeId } from '../themes/previewThemes';
 
 export interface DocumentState {
   slug: string | null;
@@ -42,6 +44,11 @@ export interface HeaderActions {
   onOpenCommandPalette?: () => void;
   onOpenShortcutHelp?: () => void;
   onToggleEditAccess: (value: boolean) => void;
+  onThemeChange: (id: PreviewThemeId) => void;
+}
+
+export interface ThemeState {
+  theme: PreviewThemeId;
 }
 
 export interface AuthState {
@@ -58,6 +65,7 @@ interface HeaderProps {
   document: DocumentState;
   ui: UiState;
   share: ShareState;
+  theme: ThemeState;
   actions: HeaderActions;
   auth: AuthState;
   authActions: AuthActions;
@@ -146,13 +154,14 @@ const ChevronDown = () => (
   </svg>
 );
 
-type OpenMenu = 'more' | 'share' | 'file' | null;
+type OpenMenu = 'more' | 'share' | 'file' | 'theme' | null;
 
 export default function Header({
   document: { slug, markdownText, presenceCount },
   ui: { mode, isSaving, isLoading, copied, copiedMarkdown, sidebarOpen, isPdfImporting },
   share: { editAccess, isOwner, editAccessPending },
-  actions: { onToggle, onSave, onNewDoc, onExportPdf, onDownloadMarkdown, onCopyLink, onCopyMarkdown, onToggleSidebar, onShowQr, onImportPdf, onOpenMdFile, onOpenCommandPalette, onOpenShortcutHelp, onToggleEditAccess },
+  theme: { theme },
+  actions: { onToggle, onSave, onNewDoc, onExportPdf, onDownloadMarkdown, onCopyLink, onCopyMarkdown, onToggleSidebar, onShowQr, onImportPdf, onOpenMdFile, onOpenCommandPalette, onOpenShortcutHelp, onToggleEditAccess, onThemeChange },
   auth: { user, isAuthLoading },
   authActions: { onSignInClick, onSignOut },
 }: HeaderProps) {
@@ -160,11 +169,13 @@ export default function Header({
   const moreRef = useRef<HTMLDivElement>(null);
   const shareRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLDivElement>(null);
+  const themeRef = useRef<HTMLDivElement>(null);
   const [openMenu, setOpenMenu] = useState<OpenMenu>(null);
 
   useClickOutside(moreRef, openMenu === 'more', () => setOpenMenu(null));
   useClickOutside(shareRef, openMenu === 'share', () => setOpenMenu(null));
   useClickOutside(fileRef, openMenu === 'file', () => setOpenMenu(null));
+  useClickOutside(themeRef, openMenu === 'theme', () => setOpenMenu(null));
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -281,6 +292,34 @@ export default function Header({
 
           {/* ── Desktop tools ──────────────────────────────── */}
           <div className="hidden sm:flex items-center gap-1">
+
+            {/* Theme picker — preview mode only */}
+            {mode === 'preview' && (
+              <div ref={themeRef} className="relative">
+                <LabeledBtn
+                  onClick={() => setOpenMenu(v => v === 'theme' ? null : 'theme')}
+                  active={openMenu === 'theme'}
+                  title="Preview theme"
+                  icon={
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10" />
+                      <path d="M12 2a10 10 0 0 1 0 20" />
+                      <path d="M12 6a6 6 0 0 1 0 12" />
+                    </svg>
+                  }
+                  trailing={<ChevronDown />}
+                >
+                  Theme
+                </LabeledBtn>
+                {openMenu === 'theme' && (
+                  <ThemePicker
+                    current={theme}
+                    onSelect={(id) => { onThemeChange(id); setOpenMenu(null); }}
+                    onClose={() => setOpenMenu(null)}
+                  />
+                )}
+              </div>
+            )}
 
             {/* Command palette */}
             {onOpenCommandPalette && (

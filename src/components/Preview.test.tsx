@@ -59,4 +59,16 @@ describe('Preview', () => {
     const proseDiv = document.querySelector('.prose');
     expect(proseDiv).toHaveClass('font-mono');
   });
+
+  it('sets data-preview-theme to "default" when no theme prop is passed', () => {
+    render(<Preview content="# Hello" />);
+    const wrapper = document.querySelector('[data-preview-theme]');
+    expect(wrapper).toHaveAttribute('data-preview-theme', 'default');
+  });
+
+  it('sets data-preview-theme to the supplied theme id', () => {
+    render(<Preview content="# Hello" theme="github" />);
+    const wrapper = document.querySelector('[data-preview-theme]');
+    expect(wrapper).toHaveAttribute('data-preview-theme', 'github');
+  });
 });

@@ -1,0 +1,193 @@
+/* ── Preview Theme CSS ────────────────────────────────────────────────────────
+   Each block is scoped to [data-preview-theme="<id>"] so theme tokens only
+   affect the prose container. The `default` theme block is intentionally empty
+   — existing :root tokens apply, keeping the default look unchanged.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+/* default — no-op; relies on :root tokens already in index.css */
+[data-preview-theme="default"] {}
+
+/* ── GitHub ──────────────────────────────────────────────────────────────── */
+[data-preview-theme="github"] {
+  --bg-primary:    #ffffff;
+  --bg-secondary:  #f6f8fa;
+  --bg-elevated:   #ffffff;
+  --text-primary:  #1f2328;
+  --text-secondary:#636c76;
+  --text-muted:    #9198a1;
+  --accent:        #0969da;
+  --accent-hover:  #0550ae;
+  --border:        #d1d9e0;
+  --border-light:  #eaeef2;
+}
+
+[data-preview-theme="github"] .prose {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+}
+
+[data-preview-theme="github"] .prose h1,
+[data-preview-theme="github"] .prose h2,
+[data-preview-theme="github"] .prose h3,
+[data-preview-theme="github"] .prose h4,
+[data-preview-theme="github"] .prose h5,
+[data-preview-theme="github"] .prose h6 {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.3em;
+}
+
+[data-preview-theme="github"] .prose.font-mono,
+[data-preview-theme="github"] .prose.font-mono h1,
+[data-preview-theme="github"] .prose.font-mono h2,
+[data-preview-theme="github"] .prose.font-mono h3,
+[data-preview-theme="github"] .prose.font-mono h4,
+[data-preview-theme="github"] .prose.font-mono h5,
+[data-preview-theme="github"] .prose.font-mono h6 {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+}
+
+/* ── Dracula ──────────────────────────────────────────────────────────────── */
+[data-preview-theme="dracula"] {
+  --bg-primary:    #282a36;
+  --bg-secondary:  #21222c;
+  --bg-elevated:   #343746;
+  --text-primary:  #f8f8f2;
+  --text-secondary:#6272a4;
+  --text-muted:    #44475a;
+  --accent:        #bd93f9;
+  --accent-hover:  #ff79c6;
+  --border:        #44475a;
+  --border-light:  #373844;
+}
+
+[data-preview-theme="dracula"] .prose h1,
+[data-preview-theme="dracula"] .prose h2,
+[data-preview-theme="dracula"] .prose h3 {
+  color: #bd93f9;
+}
+
+[data-preview-theme="dracula"] .prose h4,
+[data-preview-theme="dracula"] .prose h5,
+[data-preview-theme="dracula"] .prose h6 {
+  color: #ff79c6;
+}
+
+[data-preview-theme="dracula"] .prose strong {
+  color: #ffb86c;
+}
+
+[data-preview-theme="dracula"] .prose blockquote {
+  border-left-color: #ff79c6;
+  color: #6272a4;
+}
+
+/* ── Notion ───────────────────────────────────────────────────────────────── */
+[data-preview-theme="notion"] {
+  --bg-primary:    #ffffff;
+  --bg-secondary:  #f7f6f3;
+  --bg-elevated:   #ffffff;
+  --text-primary:  #37352f;
+  --text-secondary:#787774;
+  --text-muted:    #a0998e;
+  --accent:        #2eaadc;
+  --accent-hover:  #1a8fbf;
+  --border:        #e9e9e8;
+  --border-light:  #f1f0ee;
+}
+
+[data-preview-theme="notion"] .prose {
+  font-family: 'DM Serif Display', 'Georgia', serif;
+  font-size: 1.05rem;
+  line-height: 1.8;
+}
+
+[data-preview-theme="notion"] .prose h1,
+[data-preview-theme="notion"] .prose h2,
+[data-preview-theme="notion"] .prose h3,
+[data-preview-theme="notion"] .prose h4,
+[data-preview-theme="notion"] .prose h5,
+[data-preview-theme="notion"] .prose h6 {
+  font-family: 'DM Serif Display', 'Georgia', serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+[data-preview-theme="notion"] .prose.font-mono,
+[data-preview-theme="notion"] .prose.font-mono h1,
+[data-preview-theme="notion"] .prose.font-mono h2,
+[data-preview-theme="notion"] .prose.font-mono h3,
+[data-preview-theme="notion"] .prose.font-mono h4,
+[data-preview-theme="notion"] .prose.font-mono h5,
+[data-preview-theme="notion"] .prose.font-mono h6 {
+  font-family: 'DM Serif Display', 'Georgia', serif;
+}
+
+/* ── Solarized Light ──────────────────────────────────────────────────────── */
+[data-preview-theme="solarized"] {
+  --bg-primary:    #fdf6e3;
+  --bg-secondary:  #eee8d5;
+  --bg-elevated:   #fdf6e3;
+  --text-primary:  #657b83;
+  --text-secondary:#839496;
+  --text-muted:    #93a1a1;
+  --accent:        #2aa198;
+  --accent-hover:  #268bd2;
+  --border:        #d0cbb8;
+  --border-light:  #e8e2d0;
+}
+
+[data-preview-theme="solarized"] .prose h1,
+[data-preview-theme="solarized"] .prose h2,
+[data-preview-theme="solarized"] .prose h3 {
+  color: #cb4b16;
+}
+
+[data-preview-theme="solarized"] .prose h4,
+[data-preview-theme="solarized"] .prose h5,
+[data-preview-theme="solarized"] .prose h6 {
+  color: #b58900;
+}
+
+[data-preview-theme="solarized"] .prose strong {
+  color: #b58900;
+}
+
+[data-preview-theme="solarized"] .prose blockquote {
+  border-left-color: #268bd2;
+  color: #93a1a1;
+}
+
+/* ── Forest ───────────────────────────────────────────────────────────────── */
+[data-preview-theme="forest"] {
+  --bg-primary:    #1a2314;
+  --bg-secondary:  #141b0f;
+  --bg-elevated:   #1f2a18;
+  --text-primary:  #d4e0c8;
+  --text-secondary:#8fa882;
+  --text-muted:    #506449;
+  --accent:        #d4a853;
+  --accent-hover:  #e8bf6a;
+  --border:        #2d3d24;
+  --border-light:  #253220;
+}
+
+[data-preview-theme="forest"] .prose h1,
+[data-preview-theme="forest"] .prose h2 {
+  color: #d4a853;
+}
+
+[data-preview-theme="forest"] .prose h3,
+[data-preview-theme="forest"] .prose h4,
+[data-preview-theme="forest"] .prose h5,
+[data-preview-theme="forest"] .prose h6 {
+  color: #a8c896;
+}
+
+[data-preview-theme="forest"] .prose strong {
+  color: #e8bf6a;
+}
+
+[data-preview-theme="forest"] .prose blockquote {
+  border-left-color: #d4a853;
+  color: #8fa882;
+}

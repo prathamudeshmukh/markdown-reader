@@ -32,7 +32,8 @@ export type TelemetryEventName =
   | 'beautify_triggered'
   | 'beautify_succeeded'
   | 'beautify_failed'
-  | 'beautify_rerun';
+  | 'beautify_rerun'
+  | 'theme_changed';
 
 export interface TelemetrySharedProps {
   session_id: string;
@@ -119,5 +120,8 @@ export interface TelemetryPropsByEvent {
   };
   beautify_rerun: {
     content_length_bucket: ContentLengthBucket;
+  };
+  theme_changed: {
+    theme_id: string;
   };
 }

@@ -21,6 +21,7 @@ import CommandPalette from './components/CommandPalette';
 import OpenMdFileGuardModal from './components/OpenMdFileGuardModal';
 import { useAuth } from './auth/AuthContext';
 import { getContentLengthBucket, track, type InteractionSource } from './telemetry';
+import { usePreviewTheme } from './themes/usePreviewTheme';
 import { pdfToMarkdown, PdfImportError } from './utils/pdfToMarkdown';
 import { extractLeadingH1 } from './utils/mdHeading';
 import { pdfFileToMarkdown, PdfApiError } from './utils/pdfApiClient';
@@ -33,6 +34,7 @@ const PDF_IMPORT_UNKNOWN_ERROR = 'Failed to import PDF. Please try again.';
 
 export default function App() {
   const { user, isAuthLoading, signInWithEmail, signOut } = useAuth();
+  const [previewTheme, setPreviewTheme] = usePreviewTheme();
   const { markdownText, title, slug, docUserId, editAccess, isOwner, canEdit, mode, isLoading, isSaving, error, presenceCount, setMarkdownText, setTitle, toggleMode, onSave, navigateToDoc, openMdFile, confirmOpenMdFile, openMdFileGuardOpen, setEditAccess } =
     useMarkdownState({ userId: user?.id });
 
@@ -211,6 +213,7 @@ export default function App() {
         document={{ slug, markdownText, presenceCount }}
         ui={{ mode, isSaving, isLoading, copied, copiedMarkdown, sidebarOpen, isPdfImporting }}
         share={{ editAccess, isOwner, editAccessPending }}
+        theme={{ theme: previewTheme }}
         actions={{
           onToggle: () => {
             if (canEdit || mode === 'editor') {
@@ -232,6 +235,7 @@ export default function App() {
           onOpenCommandPalette: () => setCommandPaletteOpen(true),
           onOpenShortcutHelp: () => setShortcutHelpOpen(true),
           onToggleEditAccess: (v) => { void handleToggleEditAccess(v); },
+          onThemeChange: setPreviewTheme,
         }}
         auth={{ user, isAuthLoading }}
         authActions={{ onSignInClick: () => setSignInOpen(true), onSignOut: signOut }}
@@ -421,7 +425,7 @@ export default function App() {
             onDropRejected={() => {}}
           />
         ) : (
-          <Preview content={previewContent} />
+          <Preview content={previewContent} theme={previewTheme} />
         )}
       </main>
 

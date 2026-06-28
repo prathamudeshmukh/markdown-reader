@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import type { User } from '@supabase/supabase-js';
-import Header, { type DocumentState, type UiState, type ShareState, type HeaderActions, type AuthState, type AuthActions } from './Header';
+import Header, { type DocumentState, type UiState, type ShareState, type ThemeState, type HeaderActions, type AuthState, type AuthActions } from './Header';
 
 const defaultDocument: DocumentState = {
   slug: null,
@@ -32,6 +32,11 @@ const defaultActions: HeaderActions = {
   onImportPdf: vi.fn(),
   onOpenMdFile: vi.fn(),
   onToggleEditAccess: vi.fn(),
+  onThemeChange: vi.fn(),
+};
+
+const defaultTheme: ThemeState = {
+  theme: 'default',
 };
 
 const defaultShare: ShareState = {
@@ -54,6 +59,7 @@ function makeProps(overrides: {
   document?: Partial<DocumentState>;
   ui?: Partial<UiState>;
   share?: Partial<ShareState>;
+  theme?: Partial<ThemeState>;
   actions?: Partial<HeaderActions>;
   auth?: Partial<AuthState>;
   authActions?: Partial<AuthActions>;
@@ -62,6 +68,7 @@ function makeProps(overrides: {
     document: { ...defaultDocument, ...overrides.document },
     ui: { ...defaultUi, ...overrides.ui },
     share: { ...defaultShare, ...overrides.share },
+    theme: { ...defaultTheme, ...overrides.theme },
     actions: { ...defaultActions, ...overrides.actions },
     auth: { ...defaultAuth, ...overrides.auth },
     authActions: { ...defaultAuthActions, ...overrides.authActions },
