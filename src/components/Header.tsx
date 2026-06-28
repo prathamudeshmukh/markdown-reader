@@ -253,7 +253,7 @@ export default function Header({
         </div>
 
         {/* ── Right: tools + auth ─────────────────────────── */}
-        <div className="flex items-center justify-end gap-1">
+        <div data-testid="header-controls" className="flex items-center justify-end gap-1 col-start-3">
 
           {/* Presence */}
           {slug && presenceCount > 1 && <PresenceIndicator count={presenceCount} />}

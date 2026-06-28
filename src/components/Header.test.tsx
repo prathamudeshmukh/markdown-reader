@@ -79,6 +79,14 @@ function openFile() {
 }
 
 describe('Header', () => {
+  describe('mobile layout', () => {
+    it('pins right controls to grid column 3 so they stay right-aligned when mode toggle is hidden', () => {
+      render(<Header {...makeProps()} />);
+      const controls = document.querySelector('[data-testid="header-controls"]');
+      expect(controls).toHaveClass('col-start-3');
+    });
+  });
+
   describe('root page (no slug)', () => {
     it('shows a Save button', () => {
       render(<Header {...makeProps()} />);
