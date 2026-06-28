@@ -371,6 +371,115 @@ describe('App', () => {
     });
   });
 
+  describe('heading-as-title in preview mode', () => {
+    // AC-1: no stored title, leading H1 → heading shown via DocTitle, not duplicated by Preview
+    it('uses the leading H1 as title when no stored title exists (AC-1)', () => {
+      vi.mocked(useMarkdownState).mockReturnValue({
+        ...baseState,
+        mode: 'preview',
+        markdownText: '# Foo\n\nBody text',
+        title: null,
+      });
+      render(<App />);
+      expect(screen.getByRole('heading', { level: 1, name: 'Foo' })).toBeInTheDocument();
+      expect(screen.getByText('Body text')).toBeInTheDocument();
+      expect(screen.getAllByRole('heading', { level: 1, name: 'Foo' })).toHaveLength(1);
+    });
+
+    // AC-2: stored title equals H1 → shown once, not doubled
+    it('shows the heading exactly once when stored title matches the leading H1 (AC-2)', () => {
+      vi.mocked(useMarkdownState).mockReturnValue({
+        ...baseState,
+        mode: 'preview',
+        markdownText: '# Foo\n\nBody text',
+        title: 'Foo',
+      });
+      render(<App />);
+      expect(screen.getAllByRole('heading', { level: 1, name: 'Foo' })).toHaveLength(1);
+      expect(screen.getByText('Body text')).toBeInTheDocument();
+    });
+
+    // AC-3: stored title differs from H1 → stored title shown, H1 stripped from preview
+    it('strips the leading H1 and shows stored title when they differ (AC-3)', () => {
+      vi.mocked(useMarkdownState).mockReturnValue({
+        ...baseState,
+        mode: 'preview',
+        markdownText: '# Foo\n\nBody text',
+        title: 'Bar',
+      });
+      render(<App />);
+      expect(screen.getByRole('heading', { level: 1, name: 'Bar' })).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Foo' })).not.toBeInTheDocument();
+      expect(screen.getByText('Body text')).toBeInTheDocument();
+    });
+
+    // AC-4: no H1, no stored title → DocTitle hidden
+    it('hides DocTitle when there is no H1 and no stored title (AC-4)', () => {
+      vi.mocked(useMarkdownState).mockReturnValue({
+        ...baseState,
+        mode: 'preview',
+        markdownText: 'No heading here',
+        title: null,
+      });
+      render(<App />);
+      expect(screen.queryByTestId('title-bar')).not.toBeInTheDocument();
+      expect(screen.getByText('No heading here')).toBeInTheDocument();
+    });
+
+    // AC-5: no H1 in content, stored title present → DocTitle shows stored title, body unchanged
+    it('shows stored title and full body when content has no leading H1 (AC-5)', () => {
+      vi.mocked(useMarkdownState).mockReturnValue({
+        ...baseState,
+        mode: 'preview',
+        markdownText: 'Body only',
+        title: 'My Title',
+      });
+      render(<App />);
+      expect(screen.getByRole('heading', { level: 1, name: 'My Title' })).toBeInTheDocument();
+      expect(screen.getByText('Body only')).toBeInTheDocument();
+    });
+
+    // AC-6: editor mode — raw markdown unchanged, no heading extracted
+    it('does not extract heading in editor mode (AC-6)', () => {
+      vi.mocked(useMarkdownState).mockReturnValue({
+        ...baseState,
+        mode: 'editor',
+        markdownText: '# Foo\n\nBody text',
+        title: null,
+      });
+      render(<App />);
+      expect(screen.getByPlaceholderText('Start writing…')).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Foo' })).not.toBeInTheDocument();
+    });
+
+    // AC-7: leading H2 not treated as document title
+    it('does not extract H2 as document title (AC-7)', () => {
+      vi.mocked(useMarkdownState).mockReturnValue({
+        ...baseState,
+        mode: 'preview',
+        markdownText: '## Sub heading\n\nBody',
+        title: null,
+      });
+      render(<App />);
+      expect(screen.queryByTestId('title-bar')).not.toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 2, name: 'Sub heading' })).toBeInTheDocument();
+    });
+
+    // AC-8: H1 preceded by blank lines is still detected and stripped
+    it('detects and strips H1 when preceded by blank lines (AC-8)', () => {
+      vi.mocked(useMarkdownState).mockReturnValue({
+        ...baseState,
+        mode: 'preview',
+        markdownText: '\n\n# Foo\n\nBody',
+        title: null,
+      });
+      render(<App />);
+      expect(screen.getByRole('heading', { level: 1, name: 'Foo' })).toBeInTheDocument();
+      expect(screen.getByText('Body')).toBeInTheDocument();
+      expect(screen.getAllByRole('heading', { level: 1, name: 'Foo' })).toHaveLength(1);
+    });
+  });
+
   describe('keyboard shortcut sources', () => {
     it('marks save source as shortcut', () => {
       const onSave = vi.fn();

@@ -22,6 +22,7 @@ import OpenMdFileGuardModal from './components/OpenMdFileGuardModal';
 import { useAuth } from './auth/AuthContext';
 import { getContentLengthBucket, track, type InteractionSource } from './telemetry';
 import { pdfToMarkdown, PdfImportError } from './utils/pdfToMarkdown';
+import { extractLeadingH1 } from './utils/mdHeading';
 import { pdfFileToMarkdown, PdfApiError } from './utils/pdfApiClient';
 import { readFeatureFlags } from './config/features';
 import { EMPTY_TREE } from './types/collections';
@@ -193,6 +194,13 @@ export default function App() {
 
   const recentDocsState = useRecentDocs();
   const recentDocs = recentDocsState.status === 'ready' ? recentDocsState.docs : [];
+
+  // In preview mode, strip a leading # H1 from the rendered content and surface
+  // it as the document title — prevents the same heading appearing twice.
+  const { heading: contentHeading, rest: contentWithoutH1 } =
+    mode === 'preview' ? extractLeadingH1(markdownText) : { heading: null, rest: markdownText };
+  const effectiveTitle = title ?? contentHeading;
+  const previewContent = contentHeading !== null ? contentWithoutH1 : markdownText;
 
   return (
     <div
@@ -394,7 +402,7 @@ export default function App() {
         onTextChange={setMarkdownText}
       />
 
-      <DocTitle title={title} mode={mode} onChange={setTitle} />
+      <DocTitle title={effectiveTitle} mode={mode} onChange={setTitle} />
 
       <main className="flex-1 flex flex-col overflow-hidden">
         {isLoading ? (
@@ -413,7 +421,7 @@ export default function App() {
             onDropRejected={() => {}}
           />
         ) : (
-          <Preview content={markdownText} />
+          <Preview content={previewContent} />
         )}
       </main>
 
