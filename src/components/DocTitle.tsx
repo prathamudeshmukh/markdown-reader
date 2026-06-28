@@ -53,7 +53,7 @@ export default function DocTitle({ title, mode, onChange, theme = 'default' }: D
   }
 
   return (
-    <div className="w-full max-w-3xl mx-auto px-3 sm:px-12 pt-10 pb-0">
+    <div className="w-full max-w-3xl mx-auto px-3 sm:px-12 pt-4 pb-0">
       <div style={{ display: 'flex', gap: 0 }}>
         <div
           data-testid="title-bar"

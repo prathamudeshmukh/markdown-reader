@@ -84,5 +84,13 @@ describe('DocTitle', () => {
       const event = fireEvent.keyDown(textarea, { key: 'Enter' });
       expect(event).toBe(false);
     });
+
+    it('uses compact top padding to maximise writing area height', () => {
+      render(<DocTitle title="My Document" mode="editor" onChange={vi.fn()} />);
+      const textarea = screen.getByRole('textbox', { name: /document title/i });
+      const wrapper = textarea.closest('.max-w-3xl') as HTMLElement;
+      expect(wrapper).not.toHaveClass('pt-10');
+      expect(wrapper).toHaveClass('pt-4');
+    });
   });
 });
