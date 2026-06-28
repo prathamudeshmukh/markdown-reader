@@ -10,9 +10,9 @@ export interface PreviewTheme {
 
 export const PREVIEW_THEMES: PreviewTheme[] = [
   { id: 'default',   label: 'Default',   swatch: '#6366f1' },
-  { id: 'github',    label: 'GitHub',    swatch: '#0969da' },
+  { id: 'github',    label: 'GitHub',    swatch: '#58a6ff' },
   { id: 'dracula',   label: 'Dracula',   swatch: '#bd93f9' },
-  { id: 'notion',    label: 'Notion',    swatch: '#37352f' },
+  { id: 'notion',    label: 'Notion',    swatch: '#529cca' },
   { id: 'solarized', label: 'Solarized', swatch: '#2aa198' },
   { id: 'forest',    label: 'Forest',    swatch: '#d4a853' },
 ];
