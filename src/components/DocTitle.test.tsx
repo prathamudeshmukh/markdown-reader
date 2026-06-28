@@ -23,6 +23,12 @@ describe('DocTitle', () => {
       expect(bar.style.background).toContain('var(--accent)');
     });
 
+    it('renders the title in monospace font to match editor', () => {
+      render(<DocTitle title="My Document" mode="preview" onChange={vi.fn()} />);
+      const h1 = screen.getByRole('heading', { level: 1 });
+      expect(h1.style.fontFamily).toMatch(/IBM Plex Mono/i);
+    });
+
     it('does not render the gradient divider', () => {
       const { container } = render(
         <DocTitle title="My Document" mode="preview" onChange={vi.fn()} />

@@ -35,7 +35,7 @@ export default function DocTitle({ title, mode, onChange }: DocTitleProps) {
           <h1
             className="text-lg sm:text-2xl"
             style={{
-              fontFamily: 'Inter, system-ui, sans-serif',
+              fontFamily: '"IBM Plex Mono", "Courier New", monospace',
               fontWeight: 700,
               letterSpacing: '-0.02em',
               lineHeight: 1.15,
