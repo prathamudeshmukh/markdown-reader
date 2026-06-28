@@ -1,12 +1,14 @@
 import { useEffect, useRef } from 'react';
+import type { PreviewThemeId } from '../themes/previewThemes';
 
 interface DocTitleProps {
   title: string | null;
   mode: 'editor' | 'preview';
   onChange: (value: string) => void;
+  theme?: PreviewThemeId;
 }
 
-export default function DocTitle({ title, mode, onChange }: DocTitleProps) {
+export default function DocTitle({ title, mode, onChange, theme = 'default' }: DocTitleProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -19,7 +21,7 @@ export default function DocTitle({ title, mode, onChange }: DocTitleProps) {
   if (mode === 'preview') {
     if (!title) return null;
     return (
-      <div className="max-w-3xl mx-auto w-full px-3 sm:px-10 pt-10 pb-0">
+      <div className="max-w-3xl mx-auto w-full px-3 sm:px-10 pt-10 pb-0" data-preview-theme={theme}>
         <div style={{ display: 'flex', gap: 0 }}>
           <div
             data-testid="title-bar"
@@ -33,9 +35,8 @@ export default function DocTitle({ title, mode, onChange }: DocTitleProps) {
             }}
           />
           <h1
-            className="text-lg sm:text-2xl"
+            className="text-lg sm:text-2xl doc-title-preview"
             style={{
-              fontFamily: '"IBM Plex Mono", "Courier New", monospace',
               fontWeight: 700,
               letterSpacing: '-0.02em',
               lineHeight: 1.15,

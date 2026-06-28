@@ -23,10 +23,22 @@ describe('DocTitle', () => {
       expect(bar.style.background).toContain('var(--accent)');
     });
 
-    it('renders the title in monospace font to match editor', () => {
+    it('applies doc-title-preview class to h1 so theme CSS can override the font', () => {
       render(<DocTitle title="My Document" mode="preview" onChange={vi.fn()} />);
       const h1 = screen.getByRole('heading', { level: 1 });
-      expect(h1.style.fontFamily).toMatch(/IBM Plex Mono/i);
+      expect(h1).toHaveClass('doc-title-preview');
+    });
+
+    it('sets data-preview-theme to the supplied theme id', () => {
+      render(<DocTitle title="My Document" mode="preview" onChange={vi.fn()} theme="github" />);
+      const wrapper = document.querySelector('[data-preview-theme="github"]');
+      expect(wrapper).toBeInTheDocument();
+    });
+
+    it('defaults data-preview-theme to "default" when no theme is supplied', () => {
+      render(<DocTitle title="My Document" mode="preview" onChange={vi.fn()} />);
+      const wrapper = document.querySelector('[data-preview-theme="default"]');
+      expect(wrapper).toBeInTheDocument();
     });
 
     it('does not render the gradient divider', () => {

@@ -184,6 +184,12 @@ body {
   background: var(--text-muted);
 }
 
+/* ── Doc title preview ────────────────────────────────────── */
+/* Default monospace font; individual themes override via previewThemes.css */
+.doc-title-preview {
+  font-family: 'IBM Plex Mono', 'Courier New', monospace;
+}
+
 /* ── Doc title input ──────────────────────────────────────── */
 .doc-title-input::placeholder {
   color: var(--text-muted);

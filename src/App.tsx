@@ -406,7 +406,7 @@ export default function App() {
         onTextChange={setMarkdownText}
       />
 
-      <DocTitle title={effectiveTitle} mode={mode} onChange={setTitle} />
+      <DocTitle title={effectiveTitle} mode={mode} onChange={setTitle} theme={previewTheme} />
 
       <main className="flex-1 flex flex-col overflow-hidden">
         {isLoading ? (
