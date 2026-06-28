@@ -99,6 +99,16 @@ body {
   font-weight: 700;
 }
 
+.prose.font-mono,
+.prose.font-mono h1,
+.prose.font-mono h2,
+.prose.font-mono h3,
+.prose.font-mono h4,
+.prose.font-mono h5,
+.prose.font-mono h6 {
+  font-family: 'IBM Plex Mono', 'Courier New', monospace;
+}
+
 .prose h1 { letter-spacing: -0.025em; }
 .prose h2 { letter-spacing: -0.02em; }
 .prose h3 { letter-spacing: -0.015em; }

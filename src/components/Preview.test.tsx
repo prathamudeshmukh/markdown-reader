@@ -53,4 +53,10 @@ describe('Preview', () => {
     render(<Preview content={content} />);
     expect(screen.getByRole('table')).toBeInTheDocument();
   });
+
+  it('applies monospace font class to prose wrapper to match editor font', () => {
+    render(<Preview content="# Hello" />);
+    const proseDiv = document.querySelector('.prose');
+    expect(proseDiv).toHaveClass('font-mono');
+  });
 });
