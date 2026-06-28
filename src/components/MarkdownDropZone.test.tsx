@@ -76,4 +76,16 @@ describe('MarkdownDropZone', () => {
     expect(onRejected).toHaveBeenCalled();
     expect(screen.queryByTestId('md-drop-overlay')).not.toBeInTheDocument();
   });
+
+  it('root div participates in flex layout so it fills its parent height', () => {
+    render(
+      <MarkdownDropZone onFile={vi.fn()} onRejected={vi.fn()}>
+        <div>inner</div>
+      </MarkdownDropZone>,
+    );
+    const zone = screen.getByTestId('md-drop-zone');
+    expect(zone).toHaveClass('flex-1');
+    expect(zone).toHaveClass('flex');
+    expect(zone).toHaveClass('flex-col');
+  });
 });

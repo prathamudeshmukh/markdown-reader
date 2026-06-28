@@ -50,7 +50,7 @@ export default function MarkdownDropZone({ onFile, onRejected, children }: Markd
   return (
     <div
       data-testid="md-drop-zone"
-      className="relative"
+      className="relative flex-1 flex flex-col"
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
