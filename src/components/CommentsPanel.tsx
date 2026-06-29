@@ -1,5 +1,8 @@
+import { useState } from 'react';
 import type { Comment } from '../types/comments';
 import CommentItem from './CommentItem';
+
+type Tab = 'open' | 'resolved';
 
 interface CommentsPanelProps {
   comments: Comment[];
@@ -20,6 +23,17 @@ export default function CommentsPanel({
   previewText,
   unresolvedCount = 0,
 }: CommentsPanelProps) {
+  const [activeTab, setActiveTab] = useState<Tab>('open');
+
+  const visibleComments = comments.filter((c) =>
+    activeTab === 'open' ? !c.resolved : c.resolved,
+  );
+
+  const tabStyle = (tab: Tab) => ({
+    backgroundColor: activeTab === tab ? 'var(--accent)' : 'var(--bg-secondary)',
+    color: activeTab === tab ? 'white' : 'var(--text-muted)',
+  });
+
   return (
     <div className="flex flex-col h-full" style={{ backgroundColor: 'var(--bg-primary)' }}>
       {/* Header */}
@@ -51,17 +65,39 @@ export default function CommentsPanel({
         </button>
       </div>
 
-      {/* Timeline */}
+      {/* Pill tabs */}
+      <div className="flex gap-2 px-4 pt-2.5 pb-2.5 shrink-0">
+        <button
+          onClick={() => setActiveTab('open')}
+          aria-label="Open"
+          className="px-4 py-1 text-xs font-semibold rounded-full transition-colors"
+          style={tabStyle('open')}
+        >
+          Open
+        </button>
+        <button
+          onClick={() => setActiveTab('resolved')}
+          aria-label="Resolved"
+          className="px-4 py-1 text-xs font-semibold rounded-full transition-colors"
+          style={tabStyle('resolved')}
+        >
+          Resolved
+        </button>
+      </div>
+
+      <div className="shrink-0" style={{ height: '1px', backgroundColor: 'var(--border-light)' }} />
+
+      {/* Comment list */}
       <div className="flex-1 overflow-y-auto">
-        {comments.length === 0 ? (
+        {visibleComments.length === 0 ? (
           <div
             className="flex items-center justify-center h-full text-sm"
             style={{ color: 'var(--text-muted)' }}
           >
-            No comments yet
+            {activeTab === 'open' ? 'No open comments' : 'No resolved comments'}
           </div>
         ) : (
-          comments.map((comment, index) => (
+          visibleComments.map((comment, index) => (
             <CommentItem
               key={comment.id}
               comment={comment}
@@ -69,7 +105,7 @@ export default function CommentsPanel({
               onResolve={onResolve}
               onDelete={onDelete}
               previewText={previewText}
-              isLast={index === comments.length - 1}
+              isLast={index === visibleComments.length - 1}
             />
           ))
         )}

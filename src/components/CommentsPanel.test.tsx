@@ -23,8 +23,8 @@ const resolvedComment: Comment = {
   content: 'Resolved comment',
   anchorText: null,
   resolved: true,
-  createdAt: '2026-01-01T01:00:00.000Z',
-  updatedAt: '2026-01-01T01:00:00.000Z',
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z',
 };
 
 const defaultProps = {
@@ -42,21 +42,28 @@ describe('CommentsPanel', () => {
     expect(screen.getByText('Comments')).toBeInTheDocument();
   });
 
-  it('shows all comments (open and resolved) together without tabs', () => {
+  it('defaults to Open tab showing only unresolved comments', () => {
     render(<CommentsPanel {...defaultProps} />);
     expect(screen.getByText('Open comment')).toBeInTheDocument();
-    expect(screen.getByText('Resolved comment')).toBeInTheDocument();
+    expect(screen.queryByText('Resolved comment')).not.toBeInTheDocument();
   });
 
-  it('does not render Open or Resolved tab buttons', () => {
+  it('shows resolved comments when Resolved tab is selected', () => {
     render(<CommentsPanel {...defaultProps} />);
-    expect(screen.queryByRole('button', { name: /^open$/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^resolved$/i })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /resolved/i }));
+    expect(screen.getByText('Resolved comment')).toBeInTheDocument();
+    expect(screen.queryByText('Open comment')).not.toBeInTheDocument();
   });
 
-  it('shows "No comments yet" when comments array is empty', () => {
-    render(<CommentsPanel {...defaultProps} comments={[]} />);
-    expect(screen.getByText(/no comments yet/i)).toBeInTheDocument();
+  it('shows empty state message when no open comments', () => {
+    render(<CommentsPanel {...defaultProps} comments={[resolvedComment]} />);
+    expect(screen.getByText(/no open comments/i)).toBeInTheDocument();
+  });
+
+  it('shows empty state message when no resolved comments', () => {
+    render(<CommentsPanel {...defaultProps} comments={[openComment]} />);
+    fireEvent.click(screen.getByRole('button', { name: /resolved/i }));
+    expect(screen.getByText(/no resolved comments/i)).toBeInTheDocument();
   });
 
   it('calls onClose when close button is clicked', () => {
@@ -72,7 +79,7 @@ describe('CommentsPanel', () => {
   });
 
   it('does not show badge when unresolved count is 0', () => {
-    render(<CommentsPanel {...defaultProps} unresolvedCount={0} />);
+    render(<CommentsPanel {...defaultProps} unresolvedCount={0} comments={[resolvedComment]} />);
     expect(screen.queryByText('0')).not.toBeInTheDocument();
   });
 });
