@@ -158,4 +158,47 @@ describe('CommentItem', () => {
 
     expect(screen.getByText(/ago/i)).toBeInTheDocument();
   });
+
+  it('renders author initials in avatar for multi-word name', () => {
+    render(
+      <CommentItem
+        comment={{ ...baseComment, authorName: 'Sarah Kim' }}
+        isDocOwner={false}
+        onResolve={vi.fn()}
+        onDelete={vi.fn()}
+        previewText={null}
+      />,
+    );
+
+    expect(screen.getByText('SK')).toBeInTheDocument();
+  });
+
+  it('shows Resolved badge when comment is resolved', () => {
+    render(
+      <CommentItem
+        comment={{ ...baseComment, resolved: true }}
+        isDocOwner={false}
+        onResolve={vi.fn()}
+        onDelete={vi.fn()}
+        previewText={null}
+      />,
+    );
+
+    expect(screen.getByText('Resolved')).toBeInTheDocument();
+  });
+
+  it('applies line-through class to content when resolved', () => {
+    const { container } = render(
+      <CommentItem
+        comment={{ ...baseComment, resolved: true, content: 'Resolved content' }}
+        isDocOwner={false}
+        onResolve={vi.fn()}
+        onDelete={vi.fn()}
+        previewText={null}
+      />,
+    );
+
+    const contentEl = container.querySelector('[data-testid="comment-content"]');
+    expect(contentEl).toHaveClass('line-through');
+  });
 });

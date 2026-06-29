@@ -29,31 +29,26 @@ export default function CommentsPanel({
     activeTab === 'open' ? !c.resolved : c.resolved,
   );
 
-  const TAB_BASE =
-    'px-3 py-1.5 text-xs font-medium rounded-md transition-colors';
-  const TAB_ACTIVE = 'text-[var(--accent)] bg-[var(--bg-secondary)]';
-  const TAB_INACTIVE = 'text-[var(--text-muted)] hover:text-[var(--text-primary)]';
+  const tabStyle = (tab: Tab) => ({
+    backgroundColor: activeTab === tab ? 'var(--accent)' : 'var(--bg-secondary)',
+    color: activeTab === tab ? 'white' : 'var(--text-muted)',
+  });
 
   return (
-    <div
-      className="flex flex-col h-full"
-      style={{
-        backgroundColor: 'var(--bg-primary)',
-        borderLeft: '1px solid var(--border)',
-      }}
-    >
+    <div className="flex flex-col h-full" style={{ backgroundColor: 'var(--bg-primary)' }}>
       {/* Header */}
       <div
         className="flex items-center justify-between px-4 py-3 shrink-0"
         style={{ borderBottom: '1px solid var(--border)' }}
       >
         <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: 'var(--accent)' }} />
           <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
             Comments
           </h2>
           {unresolvedCount > 0 && (
             <span
-              className="text-xs font-medium px-1.5 py-0.5 rounded-full"
+              className="text-xs font-bold px-1.5 py-0.5 rounded"
               style={{ backgroundColor: 'var(--accent)', color: 'white' }}
             >
               {unresolvedCount}
@@ -63,30 +58,34 @@ export default function CommentsPanel({
         <button
           onClick={onClose}
           aria-label="Close comments panel"
-          className="flex items-center justify-center w-7 h-7 rounded-md transition-colors"
-          style={{ color: 'var(--text-muted)' }}
+          className="flex items-center justify-center w-7 h-7 rounded-md transition-colors text-base leading-none"
+          style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-muted)' }}
         >
           ×
         </button>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 px-3 pt-2 pb-1 shrink-0">
+      {/* Pill tabs */}
+      <div className="flex gap-2 px-4 pt-2.5 pb-2.5 shrink-0">
         <button
           onClick={() => setActiveTab('open')}
           aria-label="Open"
-          className={`${TAB_BASE} ${activeTab === 'open' ? TAB_ACTIVE : TAB_INACTIVE}`}
+          className="px-4 py-1 text-xs font-semibold rounded-full transition-colors"
+          style={tabStyle('open')}
         >
           Open
         </button>
         <button
           onClick={() => setActiveTab('resolved')}
           aria-label="Resolved"
-          className={`${TAB_BASE} ${activeTab === 'resolved' ? TAB_ACTIVE : TAB_INACTIVE}`}
+          className="px-4 py-1 text-xs font-semibold rounded-full transition-colors"
+          style={tabStyle('resolved')}
         >
           Resolved
         </button>
       </div>
+
+      <div className="shrink-0" style={{ height: '1px', backgroundColor: 'var(--border-light)' }} />
 
       {/* Comment list */}
       <div className="flex-1 overflow-y-auto">
@@ -98,7 +97,7 @@ export default function CommentsPanel({
             {activeTab === 'open' ? 'No open comments' : 'No resolved comments'}
           </div>
         ) : (
-          visibleComments.map((comment) => (
+          visibleComments.map((comment, index) => (
             <CommentItem
               key={comment.id}
               comment={comment}
@@ -106,6 +105,7 @@ export default function CommentsPanel({
               onResolve={onResolve}
               onDelete={onDelete}
               previewText={previewText}
+              isLast={index === visibleComments.length - 1}
             />
           ))
         )}
