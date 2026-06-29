@@ -4,6 +4,7 @@ import { getSlugFromPath } from '../utils/route';
 import { fetchDoc, saveDoc, updateDoc } from '../api/docsApi';
 import { addRecentDoc } from '../utils/recentDocs';
 import { useDocChannel } from '../realtime/useDocChannel';
+import type { Comment } from '../types/comments';
 import { getContentLengthBucket, getErrorType, track, type InteractionSource, type MdFileOpenSource } from '../telemetry';
 import { saveCreatorToken, loadCreatorToken, clearCreatorToken } from '../utils/creatorTokens';
 import { readMdFile, MdFileError } from '../utils/mdFileReader';
@@ -29,7 +30,14 @@ function getCollectionIdFromQuery(): string | null {
   return params.get('collection');
 }
 
-export function useMarkdownState({ userId }: { userId?: string } = {}) {
+interface UseMarkdownStateOptions {
+  userId?: string;
+  onCommentAdded?: (comment: Comment) => void;
+  onCommentUpdated?: (comment: Comment) => void;
+  onCommentDeleted?: (id: string) => void;
+}
+
+export function useMarkdownState({ userId, onCommentAdded, onCommentUpdated, onCommentDeleted }: UseMarkdownStateOptions = {}) {
   const [slug, setSlug] = useState<string | null>(() => getSlugFromPath());
   const [collectionId, setCollectionId] = useState<string | null>(() =>
     slug ? null : getCollectionIdFromQuery(),
@@ -81,8 +89,11 @@ export function useMarkdownState({ userId }: { userId?: string } = {}) {
     setState((prev) => ({ ...prev, markdownText: content }));
   }, []);
 
-  const { broadcastContent, presenceCount } = useDocChannel(slug, {
+  const { broadcastContent, broadcastCommentAdded, broadcastCommentUpdated, broadcastCommentDeleted, presenceCount } = useDocChannel(slug, {
     onRemoteContent: handleRemoteContent,
+    onCommentAdded,
+    onCommentUpdated,
+    onCommentDeleted,
   });
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -321,5 +332,5 @@ export function useMarkdownState({ userId }: { userId?: string } = {}) {
     }
   }, [slug]);
 
-  return { ...state, slug, collectionId, presenceCount, isOwner, canEdit, setMarkdownText, setTitle, toggleMode, onSave, navigateToDoc, openMdFile, confirmOpenMdFile, openMdFileGuardOpen, setEditAccess };
+  return { ...state, slug, collectionId, presenceCount, isOwner, canEdit, setMarkdownText, setTitle, toggleMode, onSave, navigateToDoc, openMdFile, confirmOpenMdFile, openMdFileGuardOpen, setEditAccess, broadcastCommentAdded, broadcastCommentUpdated, broadcastCommentDeleted };
 }

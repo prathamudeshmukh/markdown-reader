@@ -64,6 +64,9 @@ const baseState = {
   canEdit: true,
   editAccess: false,
   setEditAccess: vi.fn(),
+  broadcastCommentAdded: vi.fn(),
+  broadcastCommentUpdated: vi.fn(),
+  broadcastCommentDeleted: vi.fn(),
 };
 
 describe('App', () => {

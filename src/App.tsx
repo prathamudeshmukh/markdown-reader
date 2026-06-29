@@ -5,6 +5,7 @@ import OnboardingTooltips from './components/OnboardingTooltips';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useRecentDocs } from './hooks/useRecentDocs';
 import { useCollections } from './hooks/useCollections';
+import { useComments } from './hooks/useComments';
 import Header from './components/Header';
 import BottomActionBar from './components/BottomActionBar';
 import Editor from './components/Editor';
@@ -19,6 +20,11 @@ import EditBlockedModal from './components/EditBlockedModal';
 import ShortcutHelpModal from './components/ShortcutHelpModal';
 import CommandPalette from './components/CommandPalette';
 import OpenMdFileGuardModal from './components/OpenMdFileGuardModal';
+import CommentsPanel from './components/CommentsPanel';
+import AddCommentButton from './components/AddCommentButton';
+import CommentForm from './components/CommentForm';
+import CommentTooltip from './components/CommentTooltip';
+import CommentBottomSheet from './components/CommentBottomSheet';
 import { useAuth } from './auth/AuthContext';
 import { getContentLengthBucket, track, type InteractionSource } from './telemetry';
 import { usePreviewTheme } from './themes/usePreviewTheme';
@@ -27,16 +33,46 @@ import { extractLeadingH1 } from './utils/mdHeading';
 import { pdfFileToMarkdown, PdfApiError } from './utils/pdfApiClient';
 import { readFeatureFlags } from './config/features';
 import { EMPTY_TREE } from './types/collections';
+import type { Comment, CreateCommentInput } from './types/comments';
 
 const FEATURES = readFeatureFlags();
 
 const PDF_IMPORT_UNKNOWN_ERROR = 'Failed to import PDF. Please try again.';
 
+function isFinePointer(): boolean {
+  return typeof window !== 'undefined' && window.matchMedia('(pointer: fine)').matches;
+}
+
 export default function App() {
   const { user, isAuthLoading, signInWithEmail, signOut } = useAuth();
   const [previewTheme, setPreviewTheme] = usePreviewTheme();
-  const { markdownText, title, slug, docUserId, editAccess, isOwner, canEdit, mode, isLoading, isSaving, error, presenceCount, setMarkdownText, setTitle, toggleMode, onSave, navigateToDoc, openMdFile, confirmOpenMdFile, openMdFileGuardOpen, setEditAccess } =
-    useMarkdownState({ userId: user?.id });
+
+  // Refs used to break the hook ordering circular dependency:
+  // useMarkdownState (which calls useDocChannel) needs comment callbacks,
+  // but those callbacks need setComments from useComments(slug), which needs slug
+  // from useMarkdownState. We thread stable ref-based callbacks into useMarkdownState
+  // and wire them to setComments in a useEffect after useComments is initialized.
+  const commentAddedHandlerRef = useRef<((c: Comment) => void) | null>(null);
+  const commentUpdatedHandlerRef = useRef<((c: Comment) => void) | null>(null);
+  const commentDeletedHandlerRef = useRef<((id: string) => void) | null>(null);
+
+  const stableOnCommentAdded = useCallback((c: Comment) => {
+    commentAddedHandlerRef.current?.(c);
+  }, []);
+  const stableOnCommentUpdated = useCallback((c: Comment) => {
+    commentUpdatedHandlerRef.current?.(c);
+  }, []);
+  const stableOnCommentDeleted = useCallback((id: string) => {
+    commentDeletedHandlerRef.current?.(id);
+  }, []);
+
+  const { markdownText, title, slug, docUserId, editAccess, isOwner, canEdit, mode, isLoading, isSaving, error, presenceCount, setMarkdownText, setTitle, toggleMode, onSave, navigateToDoc, openMdFile, confirmOpenMdFile, openMdFileGuardOpen, setEditAccess, broadcastCommentAdded, broadcastCommentUpdated, broadcastCommentDeleted } =
+    useMarkdownState({
+      userId: user?.id,
+      onCommentAdded: stableOnCommentAdded,
+      onCommentUpdated: stableOnCommentUpdated,
+      onCommentDeleted: stableOnCommentDeleted,
+    });
 
   const [editAccessPending, setEditAccessPending] = useState(false);
 
@@ -53,6 +89,111 @@ export default function App() {
   const collectionsTree = collectionsHook.state.status === 'ready'
     ? collectionsHook.state.tree
     : EMPTY_TREE;
+
+  // Comments
+  const { comments, addComment, toggleResolve, removeComment, unresolvedCount, setComments } = useComments(slug);
+
+  // Wire realtime comment events into setComments
+  useEffect(() => {
+    commentAddedHandlerRef.current = (comment: Comment) => {
+      setComments((prev) => ({
+        ...prev,
+        comments: prev.comments.some((c) => c.id === comment.id)
+          ? prev.comments
+          : [...prev.comments, comment],
+      }));
+    };
+    commentUpdatedHandlerRef.current = (comment: Comment) => {
+      setComments((prev) => ({
+        ...prev,
+        comments: prev.comments.map((c) => (c.id === comment.id ? comment : c)),
+      }));
+    };
+    commentDeletedHandlerRef.current = (id: string) => {
+      setComments((prev) => ({
+        ...prev,
+        comments: prev.comments.filter((c) => c.id !== id),
+      }));
+    };
+  }, [setComments]);
+
+  const [commentsPanelOpen, setCommentsPanelOpen] = useState(false);
+  const [activeSelection, setActiveSelection] = useState<string | null>(null);
+  const [selectionRect, setSelectionRect] = useState<DOMRect | null>(null);
+  const [commentFormOpen, setCommentFormOpen] = useState(false);
+  const [commentFormAnchor, setCommentFormAnchor] = useState<string | null>(null);
+  const [commentFormMobile, setCommentFormMobile] = useState(false);
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [activeAnchorIds, setActiveAnchorIds] = useState<string[] | null>(null);
+  const [activeAnchorRect, setActiveAnchorRect] = useState<DOMRect | null>(null);
+
+  const handleToggleComments = useCallback(() => {
+    setCommentsPanelOpen((prev) => {
+      const next = !prev;
+      if (next) track('comment_panel_opened', { unresolved_count: unresolvedCount });
+      return next;
+    });
+  }, [unresolvedCount]);
+
+  const handleSelectionChange = useCallback((text: string | null) => {
+    setActiveSelection(text);
+    if (!text) {
+      setSelectionRect(null);
+      return;
+    }
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      setSelectionRect(sel.getRangeAt(0).getBoundingClientRect());
+    }
+  }, []);
+
+  const handleLongPress = useCallback((anchorText: string | null, _coords: { x: number; y: number }) => {
+    setCommentFormAnchor(anchorText);
+    setCommentFormMobile(true);
+    setCommentFormOpen(true);
+  }, []);
+
+  const handleAnchorClick = useCallback((ids: string[], rect: DOMRect) => {
+    setActiveAnchorIds(ids);
+    setActiveAnchorRect(rect);
+  }, []);
+
+  const handleAddCommentClick = useCallback(() => {
+    setCommentFormAnchor(activeSelection);
+    setCommentFormMobile(!isFinePointer());
+    setCommentFormOpen(true);
+  }, [activeSelection]);
+
+  const handleCommentSubmit = useCallback(async (input: CreateCommentInput) => {
+    setIsSubmittingComment(true);
+    try {
+      const created = await addComment(input);
+      track('comment_posted', { has_anchor: input.anchorText !== null });
+      if (created) broadcastCommentAdded(created);
+      setCommentFormOpen(false);
+      setActiveSelection(null);
+      setSelectionRect(null);
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  }, [addComment, broadcastCommentAdded]);
+
+  const handleResolve = useCallback((id: string, resolved: boolean) => {
+    void toggleResolve(id, resolved).then(() => {
+      const updated = comments.find((c) => c.id === id);
+      if (updated) broadcastCommentUpdated({ ...updated, resolved });
+    });
+    track('comment_resolved', { resolved });
+  }, [toggleResolve, comments, broadcastCommentUpdated]);
+
+  const handleDelete = useCallback((id: string) => {
+    const jwt = (user as unknown as { access_token?: string } | null)?.access_token;
+    if (!jwt) return;
+    void removeComment(id, jwt).then(() => {
+      broadcastCommentDeleted(id);
+    });
+    track('comment_deleted', {});
+  }, [removeComment, user, broadcastCommentDeleted]);
 
   const handleSave = useCallback(async (source: InteractionSource = 'button') => {
     const isNewDoc = slug === null;
@@ -141,20 +282,18 @@ export default function App() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Ignore clipboard failures (e.g. unsupported browsers).
+      // Ignore clipboard failures.
     }
   }, [slug, onCopyLinkInteraction]);
 
   const copyMarkdown = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(markdownText);
-      track('markdown_copied', {
-        content_length_bucket: getContentLengthBucket(markdownText),
-      });
+      track('markdown_copied', { content_length_bucket: getContentLengthBucket(markdownText) });
       setCopiedMarkdown(true);
       setTimeout(() => setCopiedMarkdown(false), 2000);
     } catch {
-      // Ignore clipboard failures (e.g. unsupported browsers).
+      // Ignore clipboard failures.
     }
   }, [markdownText]);
 
@@ -197,12 +336,18 @@ export default function App() {
   const recentDocsState = useRecentDocs();
   const recentDocs = recentDocsState.status === 'ready' ? recentDocsState.docs : [];
 
-  // In preview mode, strip a leading # H1 from the rendered content and surface
-  // it as the document title — prevents the same heading appearing twice.
   const { heading: contentHeading, rest: contentWithoutH1 } =
     mode === 'preview' ? extractLeadingH1(markdownText) : { heading: null, rest: markdownText };
   const effectiveTitle = title ?? contentHeading;
   const previewContent = contentHeading !== null ? contentWithoutH1 : markdownText;
+
+  const activeAnchorComments = activeAnchorIds
+    ? comments.filter((c) => activeAnchorIds.includes(c.id))
+    : [];
+
+  const showAddCommentButton = mode === 'preview' && slug !== null && activeSelection !== null && selectionRect !== null && isFinePointer();
+  const showTooltip = activeAnchorIds !== null && activeAnchorRect !== null && activeAnchorComments.length > 0 && isFinePointer();
+  const showBottomSheet = activeAnchorIds !== null && activeAnchorComments.length > 0 && !isFinePointer();
 
   return (
     <div
@@ -211,7 +356,7 @@ export default function App() {
     >
       <Header
         document={{ slug, markdownText, presenceCount }}
-        ui={{ mode, isSaving, isLoading, copied, copiedMarkdown, sidebarOpen, isPdfImporting }}
+        ui={{ mode, isSaving, isLoading, copied, copiedMarkdown, sidebarOpen, isPdfImporting, commentsPanelOpen, unresolvedCommentCount: unresolvedCount }}
         share={{ editAccess, isOwner, editAccessPending }}
         theme={{ theme: previewTheme }}
         actions={{
@@ -236,6 +381,7 @@ export default function App() {
           onOpenShortcutHelp: () => setShortcutHelpOpen(true),
           onToggleEditAccess: (v) => { void handleToggleEditAccess(v); },
           onThemeChange: setPreviewTheme,
+          onToggleComments: handleToggleComments,
         }}
         auth={{ user, isAuthLoading }}
         authActions={{ onSignInClick: () => setSignInOpen(true), onSignOut: signOut }}
@@ -376,7 +522,7 @@ export default function App() {
 
       <BottomActionBar
         document={{ slug, markdownText, presenceCount }}
-        ui={{ mode, isSaving, isLoading, copied, copiedMarkdown, sidebarOpen, isPdfImporting }}
+        ui={{ mode, isSaving, isLoading, copied, copiedMarkdown, sidebarOpen, isPdfImporting, commentsPanelOpen, unresolvedCommentCount: unresolvedCount }}
         actions={{
           onToggle: () => {
             if (canEdit || mode === 'editor') {
@@ -408,26 +554,149 @@ export default function App() {
 
       <DocTitle title={effectiveTitle} mode={mode} onChange={setTitle} theme={previewTheme} />
 
-      <main className="flex-1 flex flex-col overflow-hidden">
-        {isLoading ? (
+      <main className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {isLoading ? (
+            <div
+              className="flex-1 flex items-center justify-center text-sm animate-fade-in"
+              style={{ color: 'var(--text-muted)', backgroundColor: 'var(--bg-primary)' }}
+              aria-label="Loading document"
+            />
+          ) : mode === 'editor' ? (
+            <Editor
+              ref={editorRef}
+              value={markdownText}
+              onChange={setMarkdownText}
+              readOnly={!canEdit}
+              onDropFile={(file) => { void openMdFile(file, 'drag_drop'); }}
+              onDropRejected={() => {}}
+            />
+          ) : (
+            <Preview
+              content={previewContent}
+              theme={previewTheme}
+              comments={slug !== null ? comments : []}
+              onSelectionChange={slug !== null ? handleSelectionChange : undefined}
+              onLongPress={slug !== null ? handleLongPress : undefined}
+              onAnchorClick={slug !== null ? handleAnchorClick : undefined}
+            />
+          )}
+        </div>
+
+        {/* Comments panel — side-by-side on ≥1280px */}
+        {commentsPanelOpen && slug !== null && (
           <div
-            className="flex-1 flex items-center justify-center text-sm animate-fade-in"
-            style={{ color: 'var(--text-muted)', backgroundColor: 'var(--bg-primary)' }}
-            aria-label="Loading document"
-          />
-        ) : mode === 'editor' ? (
-          <Editor
-            ref={editorRef}
-            value={markdownText}
-            onChange={setMarkdownText}
-            readOnly={!canEdit}
-            onDropFile={(file) => { void openMdFile(file, 'drag_drop'); }}
-            onDropRejected={() => {}}
-          />
-        ) : (
-          <Preview content={previewContent} theme={previewTheme} />
+            className="w-[360px] shrink-0 border-l hidden xl:flex flex-col"
+            style={{ borderColor: 'var(--border)' }}
+          >
+            <CommentsPanel
+              comments={comments}
+              isDocOwner={isOwner}
+              onClose={() => setCommentsPanelOpen(false)}
+              onResolve={handleResolve}
+              onDelete={handleDelete}
+              previewText={previewContent}
+              unresolvedCount={unresolvedCount}
+            />
+          </div>
+        )}
+
+        {/* Comments panel overlay on smaller screens */}
+        {commentsPanelOpen && slug !== null && (
+          <div className="fixed inset-0 z-30 xl:hidden flex">
+            <div
+              className="absolute inset-0"
+              style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}
+              onClick={() => setCommentsPanelOpen(false)}
+            />
+            <div className="relative ml-auto w-full max-w-[360px] h-full flex flex-col shadow-xl" style={{ backgroundColor: 'var(--bg-primary)' }}>
+              <CommentsPanel
+                comments={comments}
+                isDocOwner={isOwner}
+                onClose={() => setCommentsPanelOpen(false)}
+                onResolve={handleResolve}
+                onDelete={handleDelete}
+                previewText={previewContent}
+                unresolvedCount={unresolvedCount}
+              />
+            </div>
+          </div>
         )}
       </main>
+
+      {/* Floating Add Comment button (desktop, fine-pointer only) */}
+      {showAddCommentButton && (
+        <AddCommentButton
+          top={selectionRect!.top - 40}
+          left={selectionRect!.left + selectionRect!.width / 2}
+          onClick={handleAddCommentClick}
+        />
+      )}
+
+      {/* Comment form — bottom sheet on mobile, popover on desktop */}
+      {commentFormOpen && (
+        commentFormMobile ? (
+          <div className="fixed inset-0 z-50 flex flex-col justify-end">
+            <div
+              className="absolute inset-0"
+              style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
+              onClick={() => { setCommentFormOpen(false); setActiveSelection(null); }}
+            />
+            <div
+              className="relative rounded-t-2xl p-2"
+              style={{ backgroundColor: 'var(--bg-elevated, var(--bg-primary))', border: '1px solid var(--border)' }}
+            >
+              <CommentForm
+                anchorText={commentFormAnchor}
+                onSubmit={(input) => { void handleCommentSubmit(input); }}
+                onCancel={() => { setCommentFormOpen(false); setActiveSelection(null); }}
+                isSubmitting={isSubmittingComment}
+              />
+            </div>
+          </div>
+        ) : (
+          <div
+            className="fixed z-50 rounded-xl shadow-xl overflow-hidden"
+            style={{
+              top: selectionRect ? selectionRect.bottom + 8 : 100,
+              left: selectionRect ? Math.max(8, selectionRect.left) : 200,
+              width: 360,
+              backgroundColor: 'var(--bg-elevated, var(--bg-primary))',
+              border: '1px solid var(--border)',
+            }}
+          >
+            <CommentForm
+              anchorText={commentFormAnchor}
+              onSubmit={(input) => { void handleCommentSubmit(input); }}
+              onCancel={() => { setCommentFormOpen(false); setActiveSelection(null); setSelectionRect(null); }}
+              isSubmitting={isSubmittingComment}
+            />
+          </div>
+        )
+      )}
+
+      {/* Comment tooltip on desktop anchor click */}
+      {showTooltip && (
+        <CommentTooltip
+          comments={activeAnchorComments}
+          anchorRect={activeAnchorRect!}
+          isDocOwner={isOwner}
+          onResolve={handleResolve}
+          onDelete={handleDelete}
+          onClose={() => { setActiveAnchorIds(null); setActiveAnchorRect(null); }}
+        />
+      )}
+
+      {/* Comment bottom sheet on mobile anchor tap */}
+      {showBottomSheet && (
+        <CommentBottomSheet
+          comments={activeAnchorComments}
+          isDocOwner={isOwner}
+          onResolve={handleResolve}
+          onDelete={handleDelete}
+          onClose={() => { setActiveAnchorIds(null); }}
+        />
+      )}
 
       <OnboardingTooltips visible={tooltipsVisible} onDismiss={dismissTooltip} />
 

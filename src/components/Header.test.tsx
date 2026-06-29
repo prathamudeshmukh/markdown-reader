@@ -17,6 +17,8 @@ const defaultUi: UiState = {
   copiedMarkdown: false,
   sidebarOpen: false,
   isPdfImporting: false,
+  commentsPanelOpen: false,
+  unresolvedCommentCount: 0,
 };
 
 const defaultActions: HeaderActions = {

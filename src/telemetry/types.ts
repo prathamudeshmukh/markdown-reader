@@ -33,7 +33,11 @@ export type TelemetryEventName =
   | 'beautify_succeeded'
   | 'beautify_failed'
   | 'beautify_rerun'
-  | 'theme_changed';
+  | 'theme_changed'
+  | 'comment_panel_opened'
+  | 'comment_posted'
+  | 'comment_resolved'
+  | 'comment_deleted';
 
 export interface TelemetrySharedProps {
   session_id: string;
@@ -124,4 +128,14 @@ export interface TelemetryPropsByEvent {
   theme_changed: {
     theme_id: string;
   };
+  comment_panel_opened: {
+    unresolved_count: number;
+  };
+  comment_posted: {
+    has_anchor: boolean;
+  };
+  comment_resolved: {
+    resolved: boolean;
+  };
+  comment_deleted: Record<string, never>;
 }

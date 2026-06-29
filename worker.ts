@@ -1,6 +1,7 @@
 import { handleDocsRequest } from './src/api/docsRouter';
 import { handlePdfRequest } from './src/api/pdfRouter';
 import { handleCollectionsRequest } from './src/api/collectionsRouter';
+import { handleCommentsRequest } from './src/api/commentsRouter';
 
 interface Env {
   ASSETS: { fetch(request: Request): Promise<Response> };
@@ -46,6 +47,9 @@ export default {
     // API routes — checked before asset fallback
     const collectionsResponse = await handleCollectionsRequest(request, env);
     if (collectionsResponse) return collectionsResponse;
+
+    const commentsResponse = await handleCommentsRequest(request, env);
+    if (commentsResponse) return commentsResponse;
 
     const apiResponse = await handleDocsRequest(request, env);
     if (apiResponse) return apiResponse;

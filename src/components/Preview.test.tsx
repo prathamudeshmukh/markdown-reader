@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { render, screen, fireEvent, act } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import Preview from './Preview';
 
 describe('Preview', () => {
@@ -70,5 +70,108 @@ describe('Preview', () => {
     render(<Preview content="# Hello" theme="github" />);
     const wrapper = document.querySelector('[data-preview-theme]');
     expect(wrapper).toHaveAttribute('data-preview-theme', 'github');
+  });
+
+  describe('onSelectionChange', () => {
+    it('fires with trimmed selection text on mouseup when text is selected', () => {
+      const onSelectionChange = vi.fn();
+      render(<Preview content="Hello world" onSelectionChange={onSelectionChange} />);
+
+      const container = document.querySelector('[data-preview-theme]')!;
+
+      // Simulate a non-collapsed selection
+      const range = document.createRange();
+      range.selectNodeContents(container);
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      // Override toString to return trimmed text
+      vi.spyOn(selection, 'toString').mockReturnValue('  Hello world  ');
+
+      fireEvent.mouseUp(container);
+
+      expect(onSelectionChange).toHaveBeenCalledWith('Hello world');
+    });
+
+    it('fires null when selection is empty on mouseup', () => {
+      const onSelectionChange = vi.fn();
+      render(<Preview content="Hello world" onSelectionChange={onSelectionChange} />);
+
+      const container = document.querySelector('[data-preview-theme]')!;
+      window.getSelection()?.removeAllRanges();
+
+      fireEvent.mouseUp(container);
+
+      expect(onSelectionChange).toHaveBeenCalledWith(null);
+    });
+  });
+
+  describe('onLongPress', () => {
+    it('triggers onLongPress with nearest block text after 500ms', async () => {
+      vi.useFakeTimers();
+      const onLongPress = vi.fn();
+      render(<Preview content="Hello world paragraph" onLongPress={onLongPress} />);
+
+      const container = document.querySelector('[data-preview-theme]')!;
+
+      // Create a paragraph element in the DOM for elementFromPoint to return
+      const para = document.createElement('p');
+      para.textContent = 'Hello world paragraph';
+      container.appendChild(para);
+
+      const stub = vi.fn().mockReturnValue(para);
+      Object.defineProperty(document, 'elementFromPoint', { value: stub, configurable: true, writable: true });
+
+      fireEvent.touchStart(container, {
+        touches: [{ clientX: 100, clientY: 200 }],
+      });
+
+      await act(async () => {
+        vi.advanceTimersByTime(500);
+      });
+
+      expect(onLongPress).toHaveBeenCalledWith('Hello world paragraph', { x: 100, y: 200 });
+
+      vi.useRealTimers();
+    });
+
+    it('does not trigger onLongPress when touch moves more than 10px before timer fires', async () => {
+      vi.useFakeTimers();
+      const onLongPress = vi.fn();
+      render(<Preview content="Hello" onLongPress={onLongPress} />);
+
+      const container = document.querySelector('[data-preview-theme]')!;
+
+      fireEvent.touchStart(container, { touches: [{ clientX: 100, clientY: 200 }] });
+      fireEvent.touchMove(container, { touches: [{ clientX: 115, clientY: 200 }] });
+
+      await act(async () => {
+        vi.advanceTimersByTime(600);
+      });
+
+      expect(onLongPress).not.toHaveBeenCalled();
+
+      vi.useRealTimers();
+    });
+
+    it('does not trigger onLongPress when touchend fires before timer', async () => {
+      vi.useFakeTimers();
+      const onLongPress = vi.fn();
+      render(<Preview content="Hello" onLongPress={onLongPress} />);
+
+      const container = document.querySelector('[data-preview-theme]')!;
+
+      fireEvent.touchStart(container, { touches: [{ clientX: 100, clientY: 200 }] });
+      fireEvent.touchEnd(container);
+
+      await act(async () => {
+        vi.advanceTimersByTime(600);
+      });
+
+      expect(onLongPress).not.toHaveBeenCalled();
+
+      vi.useRealTimers();
+    });
   });
 });

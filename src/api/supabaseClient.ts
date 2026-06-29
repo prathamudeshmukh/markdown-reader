@@ -276,3 +276,122 @@ export async function deleteDoc(env: SupabaseEnv, slug: string, userJwt: string)
     throw new Error(`deleteDoc failed: ${res.status} ${text}`);
   }
 }
+
+export interface CommentRow {
+  id: string;
+  doc_slug: string;
+  user_id: string | null;
+  author_name: string;
+  content: string;
+  anchor_text: string | null;
+  resolved: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getComments(env: SupabaseEnv, docSlug: string): Promise<CommentRow[]> {
+  const url = `${env.SUPABASE_URL}/rest/v1/comments?doc_slug=eq.${encodeURIComponent(docSlug)}&order=created_at.asc`;
+  const res = await fetch(url, {
+    headers: {
+      apikey: env.SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+    },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`getComments failed: ${res.status} ${text}`);
+  }
+
+  return res.json() as Promise<CommentRow[]>;
+}
+
+interface CreateCommentFields {
+  docSlug: string;
+  userId: string | null;
+  authorName: string;
+  content: string;
+  anchorText: string | null;
+}
+
+export async function createComment(env: SupabaseEnv, fields: CreateCommentFields): Promise<CommentRow> {
+  const body: Record<string, unknown> = {
+    doc_slug: fields.docSlug,
+    author_name: fields.authorName,
+    content: fields.content,
+  };
+  if (fields.userId !== null) body.user_id = fields.userId;
+  if (fields.anchorText !== null) body.anchor_text = fields.anchorText;
+
+  const res = await fetch(`${env.SUPABASE_URL}/rest/v1/comments`, {
+    method: 'POST',
+    headers: buildHeaders(env),
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`createComment failed: ${res.status} ${text}`);
+  }
+
+  const rows: CommentRow[] = await res.json();
+  return rows[0];
+}
+
+export async function resolveComment(env: SupabaseEnv, id: string, resolved: boolean): Promise<CommentRow> {
+  const url = `${env.SUPABASE_URL}/rest/v1/comments?id=eq.${encodeURIComponent(id)}`;
+  const res = await fetch(url, {
+    method: 'PATCH',
+    headers: buildHeaders(env),
+    body: JSON.stringify({ resolved, updated_at: new Date().toISOString() }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`resolveComment failed: ${res.status} ${text}`);
+  }
+
+  const rows: CommentRow[] = await res.json();
+  return rows[0];
+}
+
+export async function deleteComment(env: SupabaseEnv, id: string, userJwt: string): Promise<void> {
+  const url = `${env.SUPABASE_URL}/rest/v1/comments?id=eq.${encodeURIComponent(id)}`;
+  const res = await fetch(url, {
+    method: 'DELETE',
+    headers: {
+      apikey: env.SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${userJwt}`,
+    },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`deleteComment failed: ${res.status} ${text}`);
+  }
+}
+
+export async function countComments(env: SupabaseEnv, docSlug: string): Promise<number> {
+  const url = `${env.SUPABASE_URL}/rest/v1/comments?doc_slug=eq.${encodeURIComponent(docSlug)}&select=id`;
+  const res = await fetch(url, {
+    headers: {
+      apikey: env.SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      Prefer: 'count=exact',
+    },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`countComments failed: ${res.status} ${text}`);
+  }
+
+  const contentRange = res.headers.get('Content-Range');
+  if (contentRange) {
+    const match = /\/(\d+)$/.exec(contentRange);
+    if (match) return parseInt(match[1], 10);
+  }
+
+  const rows: unknown[] = await res.json();
+  return rows.length;
+}

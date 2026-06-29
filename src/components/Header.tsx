@@ -21,6 +21,8 @@ export interface UiState {
   copiedMarkdown: boolean;
   sidebarOpen: boolean;
   isPdfImporting: boolean;
+  commentsPanelOpen: boolean;
+  unresolvedCommentCount: number;
 }
 
 export interface ShareState {
@@ -45,6 +47,7 @@ export interface HeaderActions {
   onOpenShortcutHelp?: () => void;
   onToggleEditAccess: (value: boolean) => void;
   onThemeChange: (id: PreviewThemeId) => void;
+  onToggleComments?: () => void;
 }
 
 export interface ThemeState {
@@ -158,10 +161,10 @@ type OpenMenu = 'more' | 'share' | 'file' | 'theme' | null;
 
 export default function Header({
   document: { slug, markdownText, presenceCount },
-  ui: { mode, isSaving, isLoading, copied, copiedMarkdown, sidebarOpen, isPdfImporting },
+  ui: { mode, isSaving, isLoading, copied, copiedMarkdown, sidebarOpen, isPdfImporting, commentsPanelOpen, unresolvedCommentCount },
   share: { editAccess, isOwner, editAccessPending },
   theme: { theme },
-  actions: { onToggle, onSave, onNewDoc, onExportPdf, onDownloadMarkdown, onCopyLink, onCopyMarkdown, onToggleSidebar, onShowQr, onImportPdf, onOpenMdFile, onOpenCommandPalette, onOpenShortcutHelp, onToggleEditAccess, onThemeChange },
+  actions: { onToggle, onSave, onNewDoc, onExportPdf, onDownloadMarkdown, onCopyLink, onCopyMarkdown, onToggleSidebar, onShowQr, onImportPdf, onOpenMdFile, onOpenCommandPalette, onOpenShortcutHelp, onToggleEditAccess, onThemeChange, onToggleComments },
   auth: { user, isAuthLoading },
   authActions: { onSignInClick, onSignOut },
 }: HeaderProps) {
@@ -356,6 +359,27 @@ export default function Header({
               <div className="w-px h-4 mx-1 shrink-0" style={{ backgroundColor: 'var(--border)' }} />
             )}
 
+            {/* Comments — only when doc is saved */}
+            {slug !== null && onToggleComments && (
+              <LabeledBtn
+                onClick={onToggleComments}
+                active={commentsPanelOpen}
+                title="Comments"
+                icon={
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                }
+                trailing={unresolvedCommentCount > 0 ? (
+                  <span className="text-[10px] font-semibold px-1 py-0.5 rounded-full text-white" style={{ backgroundColor: 'var(--accent)', lineHeight: 1 }}>
+                    {unresolvedCommentCount}
+                  </span>
+                ) : undefined}
+              >
+                Comments
+              </LabeledBtn>
+            )}
+
             {/* Docs (sidebar) */}
             <LabeledBtn
               onClick={onToggleSidebar}
@@ -546,6 +570,23 @@ export default function Header({
                 className={DROPDOWN_PANEL}
                 style={{ backgroundColor: 'var(--bg-elevated, var(--bg-primary))', border: '1px solid var(--border)' }}
               >
+                {slug !== null && onToggleComments && (
+                  <>
+                    <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Discuss</p>
+                    <MenuItem onClick={() => handleMenuAction(onToggleComments)}>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                      </svg>
+                      Comments
+                      {unresolvedCommentCount > 0 && (
+                        <span className="ml-auto text-xs font-semibold px-1.5 py-0.5 rounded-full text-white" style={{ backgroundColor: 'var(--accent)' }}>
+                          {unresolvedCommentCount}
+                        </span>
+                      )}
+                    </MenuItem>
+                    <div className="my-1 h-px" style={{ backgroundColor: 'var(--border-light)' }} />
+                  </>
+                )}
                 <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Share</p>
                 <MenuItem onClick={() => handleMenuAction(onCopyLink)} disabled={slug === null}>
                   {copied ? <CheckIcon /> : (
