@@ -43,6 +43,11 @@ function isFinePointer(): boolean {
   return typeof window !== 'undefined' && window.matchMedia('(pointer: fine)').matches;
 }
 
+function getUserDisplayName(user: import('@supabase/supabase-js').User): string {
+  const meta = user.user_metadata as Record<string, string> | undefined;
+  return meta?.full_name ?? meta?.name ?? user.email ?? 'Anonymous';
+}
+
 export default function App() {
   const { user, isAuthLoading, signInWithEmail, signOut } = useAuth();
   const [previewTheme, setPreviewTheme] = usePreviewTheme();
@@ -635,6 +640,7 @@ export default function App() {
                 onSubmit={(input) => { void handleCommentSubmit(input); }}
                 onCancel={() => { setCommentFormOpen(false); setActiveSelection(null); }}
                 isSubmitting={isSubmittingComment}
+                authorName={user ? getUserDisplayName(user) : undefined}
               />
             </div>
           </div>
@@ -654,6 +660,7 @@ export default function App() {
               onSubmit={(input) => { void handleCommentSubmit(input); }}
               onCancel={() => { setCommentFormOpen(false); setActiveSelection(null); setSelectionRect(null); }}
               isSubmitting={isSubmittingComment}
+              authorName={user ? getUserDisplayName(user) : undefined}
             />
           </div>
         )

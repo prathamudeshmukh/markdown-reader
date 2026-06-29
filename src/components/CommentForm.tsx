@@ -6,6 +6,7 @@ interface CommentFormProps {
   onSubmit: (input: CreateCommentInput) => void;
   onCancel: () => void;
   isSubmitting: boolean;
+  authorName?: string;
 }
 
 const MAX_CONTENT = 2000;
@@ -13,7 +14,7 @@ const MAX_NAME = 100;
 const COUNTER_THRESHOLD = 1800;
 const ANCHOR_PREVIEW_LENGTH = 120;
 
-export default function CommentForm({ anchorText, onSubmit, onCancel, isSubmitting }: CommentFormProps) {
+export default function CommentForm({ anchorText, onSubmit, onCancel, isSubmitting, authorName }: CommentFormProps) {
   const [name, setName] = useState('');
   const [content, setContent] = useState('');
 
@@ -23,7 +24,7 @@ export default function CommentForm({ anchorText, onSubmit, onCancel, isSubmitti
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!canSubmit) return;
-    onSubmit({ content: trimmedContent, authorName: name.trim(), anchorText });
+    onSubmit({ content: trimmedContent, authorName: authorName ?? name.trim(), anchorText });
   }
 
   const anchorPreview = anchorText
@@ -43,22 +44,24 @@ export default function CommentForm({ anchorText, onSubmit, onCancel, isSubmitti
         </blockquote>
       )}
 
-      <div className="flex flex-col gap-1">
-        <label htmlFor="comment-author" className="sr-only">Your name</label>
-        <input
-          id="comment-author"
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value.slice(0, MAX_NAME))}
-          placeholder="Anonymous"
-          className="w-full px-3 py-2 text-sm rounded-md border"
-          style={{
-            backgroundColor: 'var(--bg-secondary)',
-            borderColor: 'var(--border)',
-            color: 'var(--text-primary)',
-          }}
-        />
-      </div>
+      {authorName === undefined && (
+        <div className="flex flex-col gap-1">
+          <label htmlFor="comment-author" className="sr-only">Your name</label>
+          <input
+            id="comment-author"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value.slice(0, MAX_NAME))}
+            placeholder="Anonymous"
+            className="w-full px-3 py-2 text-sm rounded-md border"
+            style={{
+              backgroundColor: 'var(--bg-secondary)',
+              borderColor: 'var(--border)',
+              color: 'var(--text-primary)',
+            }}
+          />
+        </div>
+      )}
 
       <div className="flex flex-col gap-1">
         <label htmlFor="comment-content" className="sr-only">Comment</label>

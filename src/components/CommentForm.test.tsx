@@ -89,4 +89,23 @@ describe('CommentForm', () => {
     fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
     expect(onCancel).toHaveBeenCalled();
   });
+
+  it('hides name input when authorName prop is provided', () => {
+    render(<CommentForm {...defaultProps} authorName="Alice Smith" />);
+    expect(screen.queryByPlaceholderText(/anonymous/i)).not.toBeInTheDocument();
+  });
+
+  it('submits with provided authorName without touching name input', () => {
+    const onSubmit = vi.fn();
+    render(<CommentForm {...defaultProps} authorName="Alice Smith" onSubmit={onSubmit} />);
+    fireEvent.change(screen.getByRole('textbox', { name: /comment/i }), {
+      target: { value: 'Great doc' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /submit/i }));
+    expect(onSubmit).toHaveBeenCalledWith({
+      content: 'Great doc',
+      authorName: 'Alice Smith',
+      anchorText: null,
+    });
+  });
 });
