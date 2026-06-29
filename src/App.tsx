@@ -49,6 +49,7 @@ function getUserDisplayName(user: import('@supabase/supabase-js').User): string 
 }
 
 export default function App() {
+  const commentsAnchorRef = useRef<HTMLDivElement>(null);
   const { user, isAuthLoading, signInWithEmail, signOut } = useAuth();
   const [previewTheme, setPreviewTheme] = usePreviewTheme();
 
@@ -354,6 +355,10 @@ export default function App() {
   const showTooltip = activeAnchorIds !== null && activeAnchorRect !== null && activeAnchorComments.length > 0 && isFinePointer();
   const showBottomSheet = activeAnchorIds !== null && activeAnchorComments.length > 0 && !isFinePointer();
 
+  const commentsAnchorRect = commentsAnchorRef.current?.getBoundingClientRect();
+  const commentsPanelTop = commentsAnchorRect ? commentsAnchorRect.bottom + 4 : 61;
+  const commentsPanelRight = commentsAnchorRect ? window.innerWidth - commentsAnchorRect.right : 16;
+
   return (
     <div
       className="h-full flex flex-col pt-[57px] pb-[calc(56px+env(safe-area-inset-bottom))] sm:pb-0"
@@ -390,6 +395,7 @@ export default function App() {
         }}
         auth={{ user, isAuthLoading }}
         authActions={{ onSignInClick: () => setSignInOpen(true), onSignOut: signOut }}
+        commentsAnchorRef={commentsAnchorRef}
       />
 
       {error && (
@@ -588,7 +594,7 @@ export default function App() {
           )}
         </div>
 
-        {/* Comments panel — floating card, never shifts the layout */}
+        {/* Comments panel — floating card anchored below the Comments header button */}
         {commentsPanelOpen && slug !== null && (
           <>
             <div
@@ -596,8 +602,8 @@ export default function App() {
               onClick={() => setCommentsPanelOpen(false)}
             />
             <div
-              className="fixed top-[57px] right-4 z-40 w-80 max-h-[calc(100vh-73px)] flex flex-col rounded-xl shadow-2xl overflow-hidden"
-              style={{ backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
+              className="fixed z-40 w-80 max-h-[calc(100vh-73px)] flex flex-col rounded-xl shadow-2xl overflow-hidden"
+              style={{ top: commentsPanelTop, right: commentsPanelRight, backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
             >
               <CommentsPanel
                 comments={comments}

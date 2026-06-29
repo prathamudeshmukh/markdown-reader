@@ -72,6 +72,7 @@ interface HeaderProps {
   actions: HeaderActions;
   auth: AuthState;
   authActions: AuthActions;
+  commentsAnchorRef?: React.RefObject<HTMLDivElement>;
 }
 
 function Spinner() {
@@ -167,6 +168,7 @@ export default function Header({
   actions: { onToggle, onSave, onNewDoc, onExportPdf, onDownloadMarkdown, onCopyLink, onCopyMarkdown, onToggleSidebar, onShowQr, onImportPdf, onOpenMdFile, onOpenCommandPalette, onOpenShortcutHelp, onToggleEditAccess, onThemeChange, onToggleComments },
   auth: { user, isAuthLoading },
   authActions: { onSignInClick, onSignOut },
+  commentsAnchorRef,
 }: HeaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const moreRef = useRef<HTMLDivElement>(null);
@@ -361,23 +363,25 @@ export default function Header({
 
             {/* Comments — only when doc is saved */}
             {slug !== null && onToggleComments && (
-              <LabeledBtn
-                onClick={onToggleComments}
-                active={commentsPanelOpen}
-                title="Comments"
-                icon={
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                  </svg>
-                }
-                trailing={unresolvedCommentCount > 0 ? (
-                  <span className="text-[10px] font-semibold px-1 py-0.5 rounded-full text-white" style={{ backgroundColor: 'var(--accent)', lineHeight: 1 }}>
-                    {unresolvedCommentCount}
-                  </span>
-                ) : undefined}
-              >
-                Comments
-              </LabeledBtn>
+              <div ref={commentsAnchorRef}>
+                <LabeledBtn
+                  onClick={onToggleComments}
+                  active={commentsPanelOpen}
+                  title="Comments"
+                  icon={
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    </svg>
+                  }
+                  trailing={unresolvedCommentCount > 0 ? (
+                    <span className="text-[10px] font-semibold px-1 py-0.5 rounded-full text-white" style={{ backgroundColor: 'var(--accent)', lineHeight: 1 }}>
+                      {unresolvedCommentCount}
+                    </span>
+                  ) : undefined}
+                >
+                  Comments
+                </LabeledBtn>
+              </div>
             )}
 
             {/* Docs (sidebar) */}
