@@ -583,33 +583,18 @@ export default function App() {
           )}
         </div>
 
-        {/* Comments panel — side-by-side on ≥1280px */}
+        {/* Comments panel — floating overlay, never shifts the preview layout */}
         {commentsPanelOpen && slug !== null && (
-          <div
-            className="w-[360px] shrink-0 border-l hidden xl:flex flex-col"
-            style={{ borderColor: 'var(--border)' }}
-          >
-            <CommentsPanel
-              comments={comments}
-              isDocOwner={isOwner}
-              onClose={() => setCommentsPanelOpen(false)}
-              onResolve={handleResolve}
-              onDelete={handleDelete}
-              previewText={previewContent}
-              unresolvedCount={unresolvedCount}
-            />
-          </div>
-        )}
-
-        {/* Comments panel overlay on smaller screens */}
-        {commentsPanelOpen && slug !== null && (
-          <div className="fixed inset-0 z-30 xl:hidden flex">
+          <div className="fixed inset-0 z-30 flex pointer-events-none">
             <div
-              className="absolute inset-0"
-              style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}
+              className="absolute inset-0 pointer-events-auto"
+              style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}
               onClick={() => setCommentsPanelOpen(false)}
             />
-            <div className="relative ml-auto w-full max-w-[360px] h-full flex flex-col shadow-xl" style={{ backgroundColor: 'var(--bg-primary)' }}>
+            <div
+              className="relative ml-auto w-full max-w-[360px] h-full flex flex-col shadow-xl pointer-events-auto"
+              style={{ backgroundColor: 'var(--bg-primary)', borderLeft: '1px solid var(--border)' }}
+            >
               <CommentsPanel
                 comments={comments}
                 isDocOwner={isOwner}
