@@ -101,7 +101,7 @@ describe('CommentItem', () => {
     expect(screen.getByRole('button', { name: /delete/i })).toBeInTheDocument();
   });
 
-  it('calls onDelete when Delete button is clicked', () => {
+  it('shows confirmation UI after clicking Delete — does not call onDelete immediately', () => {
     const onDelete = vi.fn();
     render(
       <CommentItem
@@ -113,8 +113,48 @@ describe('CommentItem', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /delete/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^delete$/i }));
+    expect(onDelete).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: /confirm/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
+  });
+
+  it('calls onDelete with comment id when delete is confirmed', () => {
+    const onDelete = vi.fn();
+    render(
+      <CommentItem
+        comment={baseComment}
+        isDocOwner={true}
+        onResolve={vi.fn()}
+        onDelete={onDelete}
+        previewText={null}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /^delete$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
     expect(onDelete).toHaveBeenCalledWith('c1');
+  });
+
+  it('does not call onDelete and hides confirmation when cancel is clicked', () => {
+    const onDelete = vi.fn();
+    render(
+      <CommentItem
+        comment={baseComment}
+        isDocOwner={true}
+        onResolve={vi.fn()}
+        onDelete={onDelete}
+        previewText={null}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /^delete$/i }));
+    expect(screen.getByRole('button', { name: /confirm/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+    expect(onDelete).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: /confirm/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^delete$/i })).toBeInTheDocument();
   });
 
   it('shows stale anchor blockquote when anchorText is set but not found in preview', () => {
