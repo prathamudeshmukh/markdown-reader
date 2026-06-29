@@ -82,14 +82,7 @@ export default function CommentItem({
           <span className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>
             {comment.authorName}
           </span>
-          {comment.resolved && (
-            <span
-              className="text-xs font-semibold px-1.5 py-0.5 rounded"
-              style={{ background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}
-            >
-              Resolved
-            </span>
-          )}
+
           <span className="text-xs ml-auto" style={{ color: 'var(--text-muted)' }}>
             {formatRelativeTime(comment.createdAt)}
           </span>

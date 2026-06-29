@@ -173,7 +173,7 @@ describe('CommentItem', () => {
     expect(screen.getByText('SK')).toBeInTheDocument();
   });
 
-  it('shows Resolved badge when comment is resolved', () => {
+  it('does not show a Resolved badge when comment is resolved', () => {
     render(
       <CommentItem
         comment={{ ...baseComment, resolved: true }}
@@ -184,7 +184,7 @@ describe('CommentItem', () => {
       />,
     );
 
-    expect(screen.getByText('Resolved')).toBeInTheDocument();
+    expect(screen.queryByText('Resolved')).not.toBeInTheDocument();
   });
 
   it('applies line-through class to content when resolved', () => {
