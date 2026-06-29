@@ -27,6 +27,7 @@ import CommentTooltip from './components/CommentTooltip';
 import CommentBottomSheet from './components/CommentBottomSheet';
 import { useAuth } from './auth/AuthContext';
 import { getContentLengthBucket, track, type InteractionSource } from './telemetry';
+import { getAuthToken } from './api/authToken';
 import { usePreviewTheme } from './themes/usePreviewTheme';
 import { pdfToMarkdown, PdfImportError } from './utils/pdfToMarkdown';
 import { extractLeadingH1 } from './utils/mdHeading';
@@ -193,13 +194,13 @@ export default function App() {
   }, [toggleResolve, comments, broadcastCommentUpdated]);
 
   const handleDelete = useCallback((id: string) => {
-    const jwt = (user as unknown as { access_token?: string } | null)?.access_token;
+    const jwt = getAuthToken();
     if (!jwt) return;
     void removeComment(id, jwt).then(() => {
       broadcastCommentDeleted(id);
     });
     track('comment_deleted', {});
-  }, [removeComment, user, broadcastCommentDeleted]);
+  }, [removeComment, broadcastCommentDeleted]);
 
   const handleSave = useCallback(async (source: InteractionSource = 'button') => {
     const isNewDoc = slug === null;

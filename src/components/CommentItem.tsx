@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import type { Comment } from '../types/comments';
 
 interface CommentItemProps {
@@ -54,7 +53,6 @@ export default function CommentItem({
   previewText,
   isLast = false,
 }: CommentItemProps) {
-  const [pendingDelete, setPendingDelete] = useState(false);
   const showStaleAnchor = comment.anchorText !== null && previewText === null;
   const initials = getInitials(comment.authorName);
   const gradient = avatarGradient(comment.authorName);
@@ -120,39 +118,15 @@ export default function CommentItem({
             {comment.resolved ? 'Unresolve' : 'Resolve'}
           </button>
 
-          {isDocOwner && !pendingDelete && (
+          {isDocOwner && (
             <button
-              onClick={() => setPendingDelete(true)}
+              onClick={() => onDelete(comment.id)}
               aria-label="Delete"
               className="px-3 py-1 text-xs font-medium rounded-full transition-colors"
               style={{ backgroundColor: '#fef2f2', color: '#ef4444' }}
             >
               Delete
             </button>
-          )}
-
-          {isDocOwner && pendingDelete && (
-            <>
-              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                Delete?
-              </span>
-              <button
-                onClick={() => onDelete(comment.id)}
-                aria-label="Confirm"
-                className="px-3 py-1 text-xs font-medium rounded-full transition-colors"
-                style={{ backgroundColor: '#ef4444', color: 'white' }}
-              >
-                Confirm
-              </button>
-              <button
-                onClick={() => setPendingDelete(false)}
-                aria-label="Cancel"
-                className="px-3 py-1 text-xs font-medium rounded-full transition-colors"
-                style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-muted)' }}
-              >
-                Cancel
-              </button>
-            </>
           )}
         </div>
       </div>

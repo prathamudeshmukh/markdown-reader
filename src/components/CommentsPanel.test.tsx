@@ -82,4 +82,34 @@ describe('CommentsPanel', () => {
     render(<CommentsPanel {...defaultProps} unresolvedCount={0} comments={[resolvedComment]} />);
     expect(screen.queryByText('0')).not.toBeInTheDocument();
   });
+
+  it('shows a confirmation modal when doc owner clicks Delete — does not immediately call onDelete', () => {
+    const onDelete = vi.fn();
+    render(<CommentsPanel {...defaultProps} isDocOwner={true} onDelete={onDelete} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /delete/i }));
+    expect(onDelete).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('calls onDelete with comment id when deletion is confirmed in modal', () => {
+    const onDelete = vi.fn();
+    render(<CommentsPanel {...defaultProps} isDocOwner={true} onDelete={onDelete} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /delete/i }));
+    fireEvent.click(screen.getByRole('button', { name: /confirm delete/i }));
+    expect(onDelete).toHaveBeenCalledWith('c1');
+  });
+
+  it('does not call onDelete and closes modal when cancel is clicked', () => {
+    const onDelete = vi.fn();
+    render(<CommentsPanel {...defaultProps} isDocOwner={true} onDelete={onDelete} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /delete/i }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }));
+    expect(onDelete).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
 });

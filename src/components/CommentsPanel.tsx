@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Comment } from '../types/comments';
 import CommentItem from './CommentItem';
+import ConfirmDeleteCommentModal from './ConfirmDeleteCommentModal';
 
 type Tab = 'open' | 'resolved';
 
@@ -24,6 +25,7 @@ export default function CommentsPanel({
   unresolvedCount = 0,
 }: CommentsPanelProps) {
   const [activeTab, setActiveTab] = useState<Tab>('open');
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   const visibleComments = comments.filter((c) =>
     activeTab === 'open' ? !c.resolved : c.resolved,
@@ -103,13 +105,23 @@ export default function CommentsPanel({
               comment={comment}
               isDocOwner={isDocOwner}
               onResolve={onResolve}
-              onDelete={onDelete}
+              onDelete={(id) => setPendingDeleteId(id)}
               previewText={previewText}
               isLast={index === visibleComments.length - 1}
             />
           ))
         )}
       </div>
+
+      {pendingDeleteId !== null && (
+        <ConfirmDeleteCommentModal
+          onConfirm={() => {
+            onDelete(pendingDeleteId);
+            setPendingDeleteId(null);
+          }}
+          onCancel={() => setPendingDeleteId(null)}
+        />
+      )}
     </div>
   );
 }
