@@ -583,17 +583,16 @@ export default function App() {
           )}
         </div>
 
-        {/* Comments panel — floating overlay, never shifts the preview layout */}
+        {/* Comments panel — floating card, never shifts the layout */}
         {commentsPanelOpen && slug !== null && (
-          <div className="fixed inset-0 z-30 flex pointer-events-none">
+          <>
             <div
-              className="absolute inset-0 pointer-events-auto"
-              style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}
+              className="fixed inset-0 z-30"
               onClick={() => setCommentsPanelOpen(false)}
             />
             <div
-              className="relative ml-auto w-full max-w-[360px] h-full flex flex-col shadow-xl pointer-events-auto"
-              style={{ backgroundColor: 'var(--bg-primary)', borderLeft: '1px solid var(--border)' }}
+              className="fixed top-[57px] right-4 z-40 w-80 max-h-[calc(100vh-73px)] flex flex-col rounded-xl shadow-2xl overflow-hidden"
+              style={{ backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
             >
               <CommentsPanel
                 comments={comments}
@@ -605,7 +604,7 @@ export default function App() {
                 unresolvedCount={unresolvedCount}
               />
             </div>
-          </div>
+          </>
         )}
       </main>
 
