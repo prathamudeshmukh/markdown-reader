@@ -1,5 +1,5 @@
 {
-  "name": "openmark-mcp",
+  "name": "@openmark/mcp",
   "version": "1.0.0",
   "description": "MCP server for openmark — lets AI coding agents create, read, and update markdown documents",
   "type": "module",
