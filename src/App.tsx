@@ -22,6 +22,7 @@ import CommandPalette from './components/CommandPalette';
 import OpenMdFileGuardModal from './components/OpenMdFileGuardModal';
 import CommentsPanel from './components/CommentsPanel';
 import AddCommentButton from './components/AddCommentButton';
+import ApiKeysSettings from './components/ApiKeysSettings';
 import CommentForm from './components/CommentForm';
 import CommentTooltip from './components/CommentTooltip';
 import CommentBottomSheet from './components/CommentBottomSheet';
@@ -219,6 +220,7 @@ export default function App() {
     useOnboarding(slug === null);
 
   const [signInOpen, setSignInOpen] = useState(false);
+  const [apiKeysOpen, setApiKeysOpen] = useState(false);
   const [editBlockedOpen, setEditBlockedOpen] = useState(false);
   const [shortcutHelpOpen, setShortcutHelpOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
@@ -395,7 +397,7 @@ export default function App() {
           onToggleComments: handleToggleComments,
         }}
         auth={{ user, isAuthLoading }}
-        authActions={{ onSignInClick: () => setSignInOpen(true), onSignOut: signOut }}
+        authActions={{ onSignInClick: () => setSignInOpen(true), onSignOut: signOut, onOpenApiKeys: () => setApiKeysOpen(true) }}
         commentsAnchorRef={commentsAnchorRef}
       />
 
@@ -449,6 +451,33 @@ export default function App() {
               <polyline points="20 6 9 17 4 12" />
             </svg>
             PDF imported — tables may not have converted correctly, please review.
+          </div>
+        </div>
+      )}
+
+      {apiKeysOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+          onClick={() => setApiKeysOpen(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl shadow-2xl overflow-hidden"
+            style={{ backgroundColor: 'var(--bg-elevated, var(--bg-primary))', border: '1px solid var(--border)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-4 pt-4">
+              <span />
+              <button
+                aria-label="Close API Keys settings"
+                onClick={() => setApiKeysOpen(false)}
+                className="text-sm px-2 py-1 rounded"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                ✕
+              </button>
+            </div>
+            <ApiKeysSettings />
           </div>
         </div>
       )}

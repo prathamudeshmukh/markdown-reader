@@ -2,6 +2,8 @@ import { handleDocsRequest } from './src/api/docsRouter';
 import { handlePdfRequest } from './src/api/pdfRouter';
 import { handleCollectionsRequest } from './src/api/collectionsRouter';
 import { handleCommentsRequest } from './src/api/commentsRouter';
+import { handleApiKeysRequest } from './src/api/apiKeysRouter';
+import { handleMcpRequest } from './src/api/mcpRouter';
 
 interface Env {
   ASSETS: { fetch(request: Request): Promise<Response> };
@@ -39,6 +41,14 @@ export default {
         headers: { 'Content-Type': 'application/json' },
       });
     }
+
+    // MCP endpoint — checked before all other routes
+    const mcpResponse = await handleMcpRequest(request, env);
+    if (mcpResponse) return mcpResponse;
+
+    // API key management
+    const apiKeysResponse = await handleApiKeysRequest(request, env);
+    if (apiKeysResponse) return apiKeysResponse;
 
     // PDF routes — checked before docs API
     const pdfResponse = await handlePdfRequest(request, env);

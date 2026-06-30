@@ -7,3 +7,4 @@ dist/
 inputs/
 tasks/
 SPEC.md
+supabase/.temp/

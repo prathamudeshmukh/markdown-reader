@@ -64,6 +64,25 @@ describe('supabaseClient', () => {
       expect(body.title).toBe('My Doc');
     });
 
+    it('uses service role key when userJwt is a synthetic JWT', async () => {
+      const doc = { slug: 'abc1234', content: '# Hello', title: null, user_id: 'user-uuid' };
+      vi.mocked(fetch).mockResolvedValueOnce(
+        new Response(JSON.stringify([doc]), { status: 201 }),
+      );
+
+      const payload = btoa(JSON.stringify({ sub: 'user-uuid' }));
+      const syntheticJwt = `synthetic.${payload}.internal`;
+
+      await createDoc(env, 'abc1234', { content: '# Hello', userJwt: syntheticJwt });
+
+      expect(fetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          headers: expect.objectContaining({ Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` }),
+        }),
+      );
+    });
+
     it('throws when response is not ok', async () => {
       vi.mocked(fetch).mockResolvedValueOnce(new Response('error', { status: 400 }));
       await expect(createDoc(env, 'abc', { content: '# Hello' })).rejects.toThrow('createDoc failed');

@@ -42,8 +42,18 @@ function extractUserIdFromJwt(jwt: string): string | undefined {
   }
 }
 
+function isSyntheticJwt(jwt: string): boolean {
+  return jwt.startsWith('synthetic.') && jwt.endsWith('.internal');
+}
+
 function buildHeaders(env: SupabaseEnv, userJwt?: string): Record<string, string> {
-  const token = userJwt ?? env.SUPABASE_ANON_KEY;
+  // Synthetic JWTs (created for API key auth) are not signed with the Supabase secret
+  // and will fail PostgREST's cryptographic verification. Use the service role key
+  // instead — ownership is enforced at the Worker layer before this call.
+  const token =
+    userJwt !== undefined && isSyntheticJwt(userJwt)
+      ? env.SUPABASE_SERVICE_ROLE_KEY
+      : (userJwt ?? env.SUPABASE_ANON_KEY);
   return {
     apikey: env.SUPABASE_ANON_KEY,
     Authorization: `Bearer ${token}`,
@@ -368,6 +378,110 @@ export async function deleteComment(env: SupabaseEnv, id: string, userJwt: strin
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`deleteComment failed: ${res.status} ${text}`);
+  }
+}
+
+export interface ApiKeyRow {
+  id: string;
+  userId: string;
+}
+
+export async function lookupApiKey(env: SupabaseEnv, keyHash: string): Promise<ApiKeyRow | null> {
+  const url = `${env.SUPABASE_URL}/rest/v1/api_keys?key_hash=eq.${encodeURIComponent(keyHash)}&select=id,user_id&limit=1`;
+  const res = await fetch(url, {
+    headers: {
+      apikey: env.SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+    },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`lookupApiKey failed: ${res.status} ${text}`);
+  }
+
+  const rows: Array<{ id: string; user_id: string }> = await res.json();
+  if (rows.length === 0) return null;
+  return { id: rows[0].id, userId: rows[0].user_id };
+}
+
+export async function touchApiKeyLastUsed(env: SupabaseEnv, keyId: string): Promise<void> {
+  const url = `${env.SUPABASE_URL}/rest/v1/api_keys?id=eq.${encodeURIComponent(keyId)}`;
+  await fetch(url, {
+    method: 'PATCH',
+    headers: {
+      apikey: env.SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ last_used_at: new Date().toISOString() }),
+  });
+}
+
+export interface InsertApiKeyFields {
+  userId: string;
+  keyHash: string;
+  label: string;
+}
+
+export interface ApiKeyRecord {
+  id: string;
+  label: string;
+  created_at: string;
+  last_used_at: string | null;
+}
+
+export async function insertApiKey(env: SupabaseEnv, fields: InsertApiKeyFields, userJwt: string): Promise<ApiKeyRecord> {
+  const res = await fetch(`${env.SUPABASE_URL}/rest/v1/api_keys`, {
+    method: 'POST',
+    headers: {
+      apikey: env.SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${userJwt}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation',
+    },
+    body: JSON.stringify({ user_id: fields.userId, key_hash: fields.keyHash, label: fields.label }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`insertApiKey failed: ${res.status} ${text}`);
+  }
+
+  const rows: ApiKeyRecord[] = await res.json();
+  return rows[0];
+}
+
+export async function listApiKeys(env: SupabaseEnv, userId: string, userJwt: string): Promise<ApiKeyRecord[]> {
+  const url = `${env.SUPABASE_URL}/rest/v1/api_keys?user_id=eq.${encodeURIComponent(userId)}&select=id,label,created_at,last_used_at&order=created_at.desc`;
+  const res = await fetch(url, {
+    headers: {
+      apikey: env.SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${userJwt}`,
+    },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`listApiKeys failed: ${res.status} ${text}`);
+  }
+
+  return res.json() as Promise<ApiKeyRecord[]>;
+}
+
+export async function deleteApiKey(env: SupabaseEnv, keyId: string, userId: string, userJwt: string): Promise<void> {
+  const url = `${env.SUPABASE_URL}/rest/v1/api_keys?id=eq.${encodeURIComponent(keyId)}&user_id=eq.${encodeURIComponent(userId)}`;
+  const res = await fetch(url, {
+    method: 'DELETE',
+    headers: {
+      apikey: env.SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${userJwt}`,
+    },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`deleteApiKey failed: ${res.status} ${text}`);
   }
 }
 

@@ -1,0 +1,38 @@
+{
+  "name": "openmark-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for openmark — lets AI coding agents create, read, and update markdown documents",
+  "type": "module",
+  "bin": {
+    "openmark-mcp": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "mcp",
+    "openmark",
+    "markdown",
+    "claude",
+    "cursor",
+    "ai"
+  ],
+  "license": "MIT"
+}

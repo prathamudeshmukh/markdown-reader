@@ -55,6 +55,7 @@ const defaultAuth: AuthState = {
 const defaultAuthActions: AuthActions = {
   onSignInClick: vi.fn(),
   onSignOut: vi.fn(),
+  onOpenApiKeys: vi.fn(),
 };
 
 function makeProps(overrides: {

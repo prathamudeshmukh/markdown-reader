@@ -1,6 +1,7 @@
 import { nanoid } from 'nanoid';
 import { createDoc, getDoc, updateDoc, getUserDocs, deleteDoc, type SupabaseEnv } from './supabaseClient';
 import { json, extractBearerToken, extractUserIdFromJwt } from './workerUtils';
+import { resolveApiKey } from './apiKeyAuth';
 
 export type RouterEnv = SupabaseEnv;
 
@@ -9,6 +10,19 @@ const MAX_CONTENT_BYTES = 500_000;
 const MAX_TITLE_CHARS = 300;
 const SLUG_LENGTH = 7;
 const CREATOR_TOKEN_LENGTH = 21;
+
+// Builds a minimal fake JWT with sub=userId consumed by extractUserIdFromJwt.
+// Never sent to external systems; used purely to thread the userId through existing handlers.
+function buildSyntheticJwt(userId: string): string {
+  const payload = btoa(JSON.stringify({ sub: userId }));
+  return `synthetic.${payload}.internal`;
+}
+
+function injectBearerToken(request: Request, jwt: string): Request {
+  const headers = new Headers(request.headers);
+  headers.set('Authorization', `Bearer ${jwt}`);
+  return new Request(request, { headers });
+}
 
 function parseTitle(raw: unknown): string | undefined {
   if (typeof raw !== 'string') return undefined;
@@ -242,6 +256,19 @@ export async function handleDocsRequest(
 ): Promise<Response | null> {
   const { pathname } = new URL(request.url);
   const { method } = request;
+
+  // Resolve API key auth before routing. When valid, inject a synthetic bearer
+  // token so existing handlers can remain agnostic to the auth mechanism.
+  if (request.headers.has('X-OpenMark-Key')) {
+    try {
+      const ctx = await resolveApiKey(request, env);
+      if (ctx) {
+        request = injectBearerToken(request, buildSyntheticJwt(ctx.userId));
+      }
+    } catch {
+      return json({ error: 'Invalid API key' }, 401);
+    }
+  }
 
   if (pathname === API_PREFIX) {
     if (method === 'POST') return handlePost(request, env);

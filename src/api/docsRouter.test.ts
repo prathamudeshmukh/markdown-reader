@@ -8,12 +8,17 @@ vi.mock('./supabaseClient', () => ({
   deleteDoc: vi.fn(),
 }));
 
+vi.mock('./apiKeyAuth', () => ({
+  resolveApiKey: vi.fn().mockResolvedValue(null),
+}));
+
 vi.mock('nanoid', () => ({
   nanoid: vi.fn(() => 'abc1234'),
 }));
 
 import { handleDocsRequest } from './docsRouter';
 import { createDoc, getDoc, updateDoc, getUserDocs, deleteDoc } from './supabaseClient';
+import { resolveApiKey } from './apiKeyAuth';
 
 const mockCache = {
   match: vi.fn().mockResolvedValue(undefined),
@@ -561,6 +566,48 @@ describe('handleDocsRequest', () => {
         env,
       );
       expect(res?.status).toBe(405);
+    });
+  });
+
+  describe('API key auth (X-OpenMark-Key)', () => {
+    it('creates a doc when API key resolves to a valid user', async () => {
+      vi.mocked(resolveApiKey).mockResolvedValueOnce({ userId: 'api-key-user', keyId: 'key-id-1' });
+      vi.mocked(createDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: 'api-key-user', collection_id: null, creator_token: null, edit_access: false });
+
+      const res = await handleDocsRequest(
+        makeRequest('POST', '/api/docs', { content: '# Hello' }, { 'X-OpenMark-Key': 'omk_test' }),
+        env,
+      );
+
+      expect(res?.status).toBe(201);
+      expect(createDoc).toHaveBeenCalledWith(
+        env,
+        'abc1234',
+        expect.objectContaining({ userJwt: expect.any(String) }),
+      );
+    });
+
+    it('returns 401 when API key header is present but resolveApiKey throws', async () => {
+      vi.mocked(resolveApiKey).mockRejectedValueOnce(new Error('Invalid API key'));
+
+      const res = await handleDocsRequest(
+        makeRequest('POST', '/api/docs', { content: '# Hello' }, { 'X-OpenMark-Key': 'omk_bad' }),
+        env,
+      );
+
+      expect(res?.status).toBe(401);
+    });
+
+    it('reads a doc with API key (no auth required for GET)', async () => {
+      vi.mocked(resolveApiKey).mockResolvedValueOnce({ userId: 'api-key-user', keyId: 'key-id-1' });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: 'api-key-user', collection_id: null, creator_token: null, edit_access: false });
+
+      const res = await handleDocsRequest(
+        makeRequest('GET', '/api/docs/abc1234', undefined, { 'X-OpenMark-Key': 'omk_test' }),
+        env,
+      );
+
+      expect(res?.status).toBe(200);
     });
   });
 });
