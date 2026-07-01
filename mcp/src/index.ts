@@ -11,7 +11,7 @@ if (!apiKey) {
   process.exit(1);
 }
 
-const baseUrl = process.env.OPENMARK_BASE_URL ?? 'https://app.prathamesh.cloud';
+const baseUrl = process.env.OPENMARK_BASE_URL ?? 'https://openmark.cc';
 
 const client = new OpenMarkClient({ apiKey, baseUrl });
 const server = new McpServer({ name: 'openmark', version: '1.0.0' });

@@ -1,6 +1,6 @@
 {
   "name": "@openmark/mcp",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "MCP server for openmark — lets AI coding agents create, read, and update markdown documents",
   "type": "module",
   "bin": {
