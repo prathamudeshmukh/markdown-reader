@@ -1,6 +1,6 @@
 {
   "name": "@openmark/mcp",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "MCP server for openmark — lets AI coding agents create, read, and update markdown documents",
   "type": "module",
   "bin": {
@@ -34,5 +34,9 @@
     "cursor",
     "ai"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/prathamudeshmukh/markdown-reader"
+  }
 }
