@@ -17,10 +17,28 @@ const updateDocSchema = z.object({
   title: z.string().max(300).optional(),
 });
 
+const listCommentsSchema = z.object({
+  slug: z.string().min(1, 'slug is required'),
+});
+
+const resolveCommentSchema = z.object({
+  slug: z.string().min(1, 'slug is required'),
+  commentId: z.string().min(1, 'commentId is required'),
+  resolved: z.boolean(),
+});
+
+const deleteCommentSchema = z.object({
+  slug: z.string().min(1, 'slug is required'),
+  commentId: z.string().min(1, 'commentId is required'),
+});
+
 export interface ToolHandlers {
   openmark_create_doc: (args: Record<string, unknown>) => Promise<string>;
   openmark_read_doc: (args: Record<string, unknown>) => Promise<string>;
   openmark_update_doc: (args: Record<string, unknown>) => Promise<string>;
+  openmark_list_comments: (args: Record<string, unknown>) => Promise<string>;
+  openmark_resolve_comment: (args: Record<string, unknown>) => Promise<string>;
+  openmark_delete_comment: (args: Record<string, unknown>) => Promise<string>;
 }
 
 export function buildToolHandlers(client: OpenMarkClient): ToolHandlers {
@@ -47,7 +65,37 @@ export function buildToolHandlers(client: OpenMarkClient): ToolHandlers {
     return `Updated: ${result.url}`;
   }
 
-  return { openmark_create_doc, openmark_read_doc, openmark_update_doc };
+  async function openmark_list_comments(args: Record<string, unknown>): Promise<string> {
+    const { slug } = listCommentsSchema.parse(args);
+    const comments = await client.listComments(slug);
+
+    if (comments.length === 0) return 'No comments on this document.';
+
+    return comments
+      .map((c) => `[${c.id}] ${c.resolved ? 'resolved' : 'open'} — ${c.authorName}: ${c.content}`)
+      .join('\n');
+  }
+
+  async function openmark_resolve_comment(args: Record<string, unknown>): Promise<string> {
+    const { slug, commentId, resolved } = resolveCommentSchema.parse(args);
+    await client.resolveComment(slug, commentId, resolved);
+    return `Comment ${commentId} marked ${resolved ? 'resolved' : 'unresolved'}`;
+  }
+
+  async function openmark_delete_comment(args: Record<string, unknown>): Promise<string> {
+    const { slug, commentId } = deleteCommentSchema.parse(args);
+    await client.deleteComment(slug, commentId);
+    return `Deleted comment ${commentId}`;
+  }
+
+  return {
+    openmark_create_doc,
+    openmark_read_doc,
+    openmark_update_doc,
+    openmark_list_comments,
+    openmark_resolve_comment,
+    openmark_delete_comment,
+  };
 }
 
 export function registerTools(server: McpServer, client: OpenMarkClient): void {
@@ -77,6 +125,40 @@ export function registerTools(server: McpServer, client: OpenMarkClient): void {
     { slug: z.string().describe('The 7-char slug or full openmark URL'), content: z.string().describe('New markdown content'), title: z.string().max(300).optional().describe('New title (omit to leave unchanged)') },
     async ({ slug, content, title }) => ({
       content: [{ type: 'text' as const, text: await handlers.openmark_update_doc({ slug, content, title }) }],
+    }),
+  );
+
+  server.tool(
+    'openmark_list_comments',
+    'List comments left on an openmark document.',
+    { slug: z.string().describe('The 7-char slug or full openmark URL') },
+    async ({ slug }) => ({
+      content: [{ type: 'text' as const, text: await handlers.openmark_list_comments({ slug }) }],
+    }),
+  );
+
+  server.tool(
+    'openmark_resolve_comment',
+    'Mark a comment on an openmark document as resolved or unresolved.',
+    {
+      slug: z.string().describe('The 7-char slug or full openmark URL'),
+      commentId: z.string().describe('The comment id, from openmark_list_comments'),
+      resolved: z.boolean().describe('true to resolve, false to unresolve'),
+    },
+    async ({ slug, commentId, resolved }) => ({
+      content: [{ type: 'text' as const, text: await handlers.openmark_resolve_comment({ slug, commentId, resolved }) }],
+    }),
+  );
+
+  server.tool(
+    'openmark_delete_comment',
+    'Delete a comment on an openmark document you own.',
+    {
+      slug: z.string().describe('The 7-char slug or full openmark URL'),
+      commentId: z.string().describe('The comment id, from openmark_list_comments'),
+    },
+    async ({ slug, commentId }) => ({
+      content: [{ type: 'text' as const, text: await handlers.openmark_delete_comment({ slug, commentId }) }],
     }),
   );
 }
