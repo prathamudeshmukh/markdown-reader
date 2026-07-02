@@ -9,8 +9,13 @@ vi.mock('./supabaseClient', () => ({
   countComments: vi.fn(),
 }));
 
+vi.mock('./apiKeyAuth', () => ({
+  resolveApiKey: vi.fn().mockResolvedValue(null),
+}));
+
 import { handleCommentsRequest } from './commentsRouter';
 import { getDoc, getComments, createComment, resolveComment, deleteComment, countComments } from './supabaseClient';
+import { resolveApiKey } from './apiKeyAuth';
 
 const env = {
   SUPABASE_URL: 'https://test.supabase.co',
@@ -264,6 +269,59 @@ describe('handleCommentsRequest', () => {
       );
 
       expect(res?.status).toBe(404);
+    });
+
+    describe('API key auth (X-OpenMark-Key)', () => {
+      it('returns 204 when API key resolves to the doc owner', async () => {
+        vi.mocked(resolveApiKey).mockResolvedValueOnce({ userId, keyId: 'key-id-1' });
+        vi.mocked(getDoc).mockResolvedValueOnce(mockDoc);
+        vi.mocked(deleteComment).mockResolvedValueOnce(undefined);
+
+        const res = await handleCommentsRequest(
+          makeRequest('DELETE', '/api/docs/doc123/comments/comment-uuid-1', undefined, {
+            'X-OpenMark-Key': 'omk_test',
+          }),
+          env,
+        );
+
+        expect(res?.status).toBe(204);
+      });
+
+      it('returns 403 when API key resolves to a non-owner', async () => {
+        vi.mocked(resolveApiKey).mockResolvedValueOnce({ userId: 'other-user-id', keyId: 'key-id-1' });
+        vi.mocked(getDoc).mockResolvedValueOnce(mockDoc);
+
+        const res = await handleCommentsRequest(
+          makeRequest('DELETE', '/api/docs/doc123/comments/comment-uuid-1', undefined, {
+            'X-OpenMark-Key': 'omk_test',
+          }),
+          env,
+        );
+
+        expect(res?.status).toBe(403);
+      });
+
+      it('returns 401 when API key is invalid', async () => {
+        vi.mocked(resolveApiKey).mockRejectedValueOnce(new Error('Invalid API key'));
+
+        const res = await handleCommentsRequest(
+          makeRequest('DELETE', '/api/docs/doc123/comments/comment-uuid-1', undefined, {
+            'X-OpenMark-Key': 'omk_bad',
+          }),
+          env,
+        );
+
+        expect(res?.status).toBe(401);
+      });
+
+      it('returns 401 when neither X-OpenMark-Key nor Authorization is present', async () => {
+        const res = await handleCommentsRequest(
+          makeRequest('DELETE', '/api/docs/doc123/comments/comment-uuid-1'),
+          env,
+        );
+
+        expect(res?.status).toBe(401);
+      });
     });
   });
 });
