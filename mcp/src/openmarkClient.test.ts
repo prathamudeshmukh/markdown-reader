@@ -175,7 +175,7 @@ describe('OpenMarkClient', () => {
         ok: true,
         json: async () => ({
           comments: [
-            { id: 'c1', authorName: 'Alice', content: 'Looks good', resolved: false, createdAt: '2026-01-01T00:00:00.000Z' },
+            { id: 'c1', authorName: 'Alice', content: 'Looks good', anchorText: 'the intro paragraph', resolved: false, createdAt: '2026-01-01T00:00:00.000Z' },
           ],
         }),
       });
@@ -189,8 +189,23 @@ describe('OpenMarkClient', () => {
         }),
       );
       expect(result).toEqual([
-        { id: 'c1', authorName: 'Alice', content: 'Looks good', resolved: false, createdAt: '2026-01-01T00:00:00.000Z' },
+        { id: 'c1', authorName: 'Alice', content: 'Looks good', anchorText: 'the intro paragraph', resolved: false, createdAt: '2026-01-01T00:00:00.000Z' },
       ]);
+    });
+
+    it('passes through a null anchorText for unanchored comments', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          comments: [
+            { id: 'c1', authorName: 'Alice', content: 'General feedback', anchorText: null, resolved: false, createdAt: '2026-01-01T00:00:00.000Z' },
+          ],
+        }),
+      });
+
+      const result = await client.listComments('abc1234');
+
+      expect(result[0].anchorText).toBeNull();
     });
 
     it('extracts slug from full URL before fetching', async () => {

@@ -96,7 +96,7 @@ Replaces the content of a document you own.
 
 ### `openmark_list_comments`
 
-Lists comments on a document as a plain-text digest (one line per comment: id, resolved state, author, content). Available to any visitor, matching the doc's open comment-reading behavior.
+Lists comments on a document as a plain-text digest (one line per comment: id, resolved state, author, the anchored text it was left on — if any — and content). The anchored text lets an agent locate which part of the document a comment refers to. Available to any visitor, matching the doc's open comment-reading behavior.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|

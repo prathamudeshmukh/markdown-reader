@@ -72,7 +72,10 @@ export function buildToolHandlers(client: OpenMarkClient): ToolHandlers {
     if (comments.length === 0) return 'No comments on this document.';
 
     return comments
-      .map((c) => `[${c.id}] ${c.resolved ? 'resolved' : 'open'} — ${c.authorName}: ${c.content}`)
+      .map((c) => {
+        const anchor = c.anchorText ? ` (on: "${c.anchorText}")` : '';
+        return `[${c.id}] ${c.resolved ? 'resolved' : 'open'} — ${c.authorName}${anchor}: ${c.content}`;
+      })
       .join('\n');
   }
 

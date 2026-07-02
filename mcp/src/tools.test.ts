@@ -105,8 +105,8 @@ describe('buildToolHandlers', () => {
   describe('openmark_list_comments', () => {
     it('returns a formatted digest with one line per comment', async () => {
       mockClient.listComments.mockResolvedValueOnce([
-        { id: 'c1', authorName: 'Alice', content: 'Fix the typo here', resolved: false, createdAt: '2026-01-01T00:00:00.000Z' },
-        { id: 'c2', authorName: 'Bob', content: 'Looks good', resolved: true, createdAt: '2026-01-02T00:00:00.000Z' },
+        { id: 'c1', authorName: 'Alice', content: 'Fix the typo here', anchorText: 'the itnro', resolved: false, createdAt: '2026-01-01T00:00:00.000Z' },
+        { id: 'c2', authorName: 'Bob', content: 'Looks good', anchorText: null, resolved: true, createdAt: '2026-01-02T00:00:00.000Z' },
       ]);
 
       const handlers = buildToolHandlers(mockClient as unknown as OpenMarkClient);
@@ -118,6 +118,29 @@ describe('buildToolHandlers', () => {
       expect(result).toContain('c2');
       expect(result).toContain('Bob');
       expect(result).toContain('resolved');
+    });
+
+    it('includes the anchored text so an agent can locate the comment in the doc content', async () => {
+      mockClient.listComments.mockResolvedValueOnce([
+        { id: 'c1', authorName: 'Alice', content: 'Fix the typo here', anchorText: 'the itnro', resolved: false, createdAt: '2026-01-01T00:00:00.000Z' },
+      ]);
+
+      const handlers = buildToolHandlers(mockClient as unknown as OpenMarkClient);
+      const result = await handlers.openmark_list_comments({ slug: 'abc1234' });
+
+      expect(result).toContain('the itnro');
+    });
+
+    it('omits an anchor marker for comments with no anchored text', async () => {
+      mockClient.listComments.mockResolvedValueOnce([
+        { id: 'c1', authorName: 'Alice', content: 'General feedback', anchorText: null, resolved: false, createdAt: '2026-01-01T00:00:00.000Z' },
+      ]);
+
+      const handlers = buildToolHandlers(mockClient as unknown as OpenMarkClient);
+      const result = await handlers.openmark_list_comments({ slug: 'abc1234' });
+
+      expect(result).toContain('[c1] open — Alice: General feedback');
+      expect(result).not.toContain('on:');
     });
 
     it('returns a message when there are no comments', async () => {

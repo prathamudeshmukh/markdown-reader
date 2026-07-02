@@ -24,6 +24,7 @@ export interface CommentInfo {
   id: string;
   authorName: string;
   content: string;
+  anchorText: string | null;
   resolved: boolean;
   createdAt: string;
 }
