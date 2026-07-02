@@ -20,6 +20,14 @@ export interface UpdatedDoc {
   url: string;
 }
 
+export interface CommentInfo {
+  id: string;
+  authorName: string;
+  content: string;
+  resolved: boolean;
+  createdAt: string;
+}
+
 export function extractSlug(input: string): string {
   try {
     const url = new URL(input);
@@ -99,5 +107,37 @@ export class OpenMarkClient {
 
     const data = (await res.json()) as { slug: string };
     return { slug: data.slug, url: this.docUrl(data.slug) };
+  }
+
+  async listComments(slugOrUrl: string): Promise<CommentInfo[]> {
+    const slug = extractSlug(slugOrUrl);
+    const res = await fetch(`${this.baseUrl}/api/docs/${encodeURIComponent(slug)}/comments`, {
+      headers: { 'X-OpenMark-Key': this.apiKey },
+    });
+
+    if (!res.ok) await handleErrorResponse(res);
+
+    const data = (await res.json()) as { comments: CommentInfo[] };
+    return data.comments;
+  }
+
+  async resolveComment(slugOrUrl: string, commentId: string, resolved: boolean): Promise<void> {
+    const slug = extractSlug(slugOrUrl);
+    const res = await fetch(
+      `${this.baseUrl}/api/docs/${encodeURIComponent(slug)}/comments/${encodeURIComponent(commentId)}`,
+      { method: 'PATCH', headers: this.authHeaders(), body: JSON.stringify({ resolved }) },
+    );
+
+    if (!res.ok) await handleErrorResponse(res);
+  }
+
+  async deleteComment(slugOrUrl: string, commentId: string): Promise<void> {
+    const slug = extractSlug(slugOrUrl);
+    const res = await fetch(
+      `${this.baseUrl}/api/docs/${encodeURIComponent(slug)}/comments/${encodeURIComponent(commentId)}`,
+      { method: 'DELETE', headers: this.authHeaders() },
+    );
+
+    if (!res.ok) await handleErrorResponse(res);
   }
 }

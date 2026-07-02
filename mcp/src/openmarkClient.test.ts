@@ -168,4 +168,118 @@ describe('OpenMarkClient', () => {
       await expect(client.updateDoc('abc1234', '# Bad')).rejects.toThrow('403');
     });
   });
+
+  describe('listComments', () => {
+    it('calls GET /api/docs/:slug/comments with X-OpenMark-Key header', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          comments: [
+            { id: 'c1', authorName: 'Alice', content: 'Looks good', resolved: false, createdAt: '2026-01-01T00:00:00.000Z' },
+          ],
+        }),
+      });
+
+      const result = await client.listComments('abc1234');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://openmark.cc/api/docs/abc1234/comments',
+        expect.objectContaining({
+          headers: expect.objectContaining({ 'X-OpenMark-Key': config.apiKey }),
+        }),
+      );
+      expect(result).toEqual([
+        { id: 'c1', authorName: 'Alice', content: 'Looks good', resolved: false, createdAt: '2026-01-01T00:00:00.000Z' },
+      ]);
+    });
+
+    it('extracts slug from full URL before fetching', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ comments: [] }) });
+
+      await client.listComments('https://openmark.cc/d/abc1234');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://openmark.cc/api/docs/abc1234/comments',
+        expect.any(Object),
+      );
+    });
+
+    it('returns an empty array when the doc has no comments', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ comments: [] }) });
+
+      const result = await client.listComments('abc1234');
+
+      expect(result).toEqual([]);
+    });
+
+    it('throws on non-2xx response', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        text: async () => 'Not found',
+      });
+
+      await expect(client.listComments('missing')).rejects.toThrow('404');
+    });
+  });
+
+  describe('resolveComment', () => {
+    it('calls PATCH /api/docs/:slug/comments/:id with the resolved flag', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ comment: { id: 'c1', resolved: true } }) });
+
+      await client.resolveComment('abc1234', 'c1', true);
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://openmark.cc/api/docs/abc1234/comments/c1',
+        expect.objectContaining({ method: 'PATCH' }),
+      );
+      const body = JSON.parse(vi.mocked(mockFetch).mock.calls[0][1].body as string);
+      expect(body).toEqual({ resolved: true });
+    });
+
+    it('can unresolve a comment', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ comment: { id: 'c1', resolved: false } }) });
+
+      await client.resolveComment('abc1234', 'c1', false);
+
+      const body = JSON.parse(vi.mocked(mockFetch).mock.calls[0][1].body as string);
+      expect(body).toEqual({ resolved: false });
+    });
+
+    it('throws on non-2xx response', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        text: async () => 'Not found',
+      });
+
+      await expect(client.resolveComment('abc1234', 'missing', true)).rejects.toThrow('404');
+    });
+  });
+
+  describe('deleteComment', () => {
+    it('calls DELETE /api/docs/:slug/comments/:id with X-OpenMark-Key header', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: true, text: async () => '' });
+
+      await client.deleteComment('abc1234', 'c1');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://openmark.cc/api/docs/abc1234/comments/c1',
+        expect.objectContaining({
+          method: 'DELETE',
+          headers: expect.objectContaining({ 'X-OpenMark-Key': config.apiKey }),
+        }),
+      );
+    });
+
+    it('throws on non-2xx response', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        text: async () => 'Forbidden',
+      });
+
+      await expect(client.deleteComment('abc1234', 'c1')).rejects.toThrow('403');
+    });
+  });
 });
