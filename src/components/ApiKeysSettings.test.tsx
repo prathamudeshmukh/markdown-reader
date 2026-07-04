@@ -112,4 +112,60 @@ describe('ApiKeysSettings', () => {
     fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
     await waitFor(() => expect(revokeKey).toHaveBeenCalledWith('key-1'));
   });
+
+  it('keeps the setup guide collapsed by default, with a toggle to expand it', () => {
+    vi.mocked(useApiKeys).mockReturnValue(makeHook());
+    render(<ApiKeysSettings />);
+
+    expect(screen.queryByText(/omk_your_key_here/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /setup guide/i })).toBeInTheDocument();
+  });
+
+  it('expands the setup guide with the placeholder key when initialShowSetup is true', () => {
+    vi.mocked(useApiKeys).mockReturnValue(makeHook());
+    render(<ApiKeysSettings initialShowSetup />);
+
+    expect(screen.getByText(/omk_your_key_here/)).toBeInTheDocument();
+  });
+
+  it('toggles the setup guide open and closed via the header button', () => {
+    vi.mocked(useApiKeys).mockReturnValue(makeHook());
+    render(<ApiKeysSettings />);
+
+    fireEvent.click(screen.getByRole('button', { name: /setup guide/i }));
+    expect(screen.getByText(/omk_your_key_here/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /setup guide/i }));
+    expect(screen.queryByText(/omk_your_key_here/)).not.toBeInTheDocument();
+  });
+
+  it('auto-expands the setup guide with the real key after creating one', async () => {
+    const createKey = vi.fn().mockResolvedValue({ key: 'omk_newrawkey12345678901234567890' });
+    vi.mocked(useApiKeys).mockReturnValue(makeHook({ createKey }));
+    render(<ApiKeysSettings />);
+
+    fireEvent.click(screen.getByRole('button', { name: /new api key/i }));
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'My key' } });
+    fireEvent.click(screen.getByRole('button', { name: /create/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/OPENMARK_API_KEY=omk_newrawkey12345678901234567890/)).toBeInTheDocument();
+    });
+  });
+
+  it('falls back to the placeholder key in the setup guide after dismissing the raw key, without unmounting it', async () => {
+    const createKey = vi.fn().mockResolvedValue({ key: 'omk_newrawkey12345678901234567890' });
+    vi.mocked(useApiKeys).mockReturnValue(makeHook({ createKey }));
+    render(<ApiKeysSettings />);
+
+    fireEvent.click(screen.getByRole('button', { name: /new api key/i }));
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'My key' } });
+    fireEvent.click(screen.getByRole('button', { name: /create/i }));
+    await waitFor(() => screen.getByText('omk_newrawkey12345678901234567890'));
+
+    fireEvent.click(screen.getByRole('button', { name: /i've copied it/i }));
+
+    expect(screen.queryByText('omk_newrawkey12345678901234567890')).not.toBeInTheDocument();
+    expect(screen.getByText(/OPENMARK_API_KEY=omk_your_key_here/)).toBeInTheDocument();
+  });
 });

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useApiKeys } from '../hooks/useApiKeys';
 import type { ApiKey } from '../api/apiKeysApi';
+import McpSetupPanel from './McpSetupPanel';
+import { PLACEHOLDER_API_KEY } from '../config/mcpSetupSnippets';
 
 interface CreateModalProps {
   onCreate: (label: string) => Promise<void>;
@@ -221,16 +223,22 @@ function KeyRow({ apiKey, onRevoke }: KeyRowProps) {
   );
 }
 
-export default function ApiKeysSettings() {
+interface ApiKeysSettingsProps {
+  initialShowSetup?: boolean;
+}
+
+export default function ApiKeysSettings({ initialShowSetup = false }: ApiKeysSettingsProps) {
   const { keys, isLoading, error, createKey, revokeKey } = useApiKeys();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newRawKey, setNewRawKey] = useState<string | null>(null);
   const [revokeTarget, setRevokeTarget] = useState<ApiKey | null>(null);
+  const [showSetupGuide, setShowSetupGuide] = useState(initialShowSetup);
 
   async function handleCreate(label: string): Promise<void> {
     const { key } = await createKey(label);
     setShowCreateModal(false);
     setNewRawKey(key);
+    setShowSetupGuide(true);
   }
 
   async function handleConfirmRevoke(): Promise<void> {
@@ -243,19 +251,36 @@ export default function ApiKeysSettings() {
     <div className="p-4">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>API Keys</h2>
-        <button
-          type="button"
-          aria-label="New API Key"
-          className="text-sm px-3 py-1.5 rounded-lg font-medium"
-          style={{ backgroundColor: 'var(--accent)', color: '#fff' }}
-          onClick={() => setShowCreateModal(true)}
-        >
-          New API Key
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-label="Setup guide"
+            className="text-sm px-3 py-1.5 rounded-lg font-medium"
+            style={{ backgroundColor: 'transparent', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+            onClick={() => setShowSetupGuide((v) => !v)}
+          >
+            Setup guide
+          </button>
+          <button
+            type="button"
+            aria-label="New API Key"
+            className="text-sm px-3 py-1.5 rounded-lg font-medium"
+            style={{ backgroundColor: 'var(--accent)', color: '#fff' }}
+            onClick={() => setShowCreateModal(true)}
+          >
+            New API Key
+          </button>
+        </div>
       </div>
 
       {newRawKey && (
         <RawKeyCopyPanel rawKey={newRawKey} onDismiss={() => setNewRawKey(null)} />
+      )}
+
+      {showSetupGuide && (
+        <div className="mb-4">
+          <McpSetupPanel apiKey={newRawKey ?? PLACEHOLDER_API_KEY} />
+        </div>
       )}
 
       {error && (
