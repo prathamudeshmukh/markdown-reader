@@ -56,6 +56,7 @@ const defaultAuthActions: AuthActions = {
   onSignInClick: vi.fn(),
   onSignOut: vi.fn(),
   onOpenApiKeys: vi.fn(),
+  onOpenMcpSetup: vi.fn(),
 };
 
 function makeProps(overrides: {
@@ -185,6 +186,17 @@ describe('Header', () => {
       const mockUser = { id: '1', email: 'dev@example.com', user_metadata: {} } as User;
       render(<Header {...makeProps({ auth: { user: mockUser, isAuthLoading: false } })} />);
       expect(screen.queryByRole('button', { name: 'Sign in' })).not.toBeInTheDocument();
+    });
+
+    it('calls onOpenMcpSetup when MCP Setup is clicked in the account menu', () => {
+      const mockUser = { id: '1', email: 'dev@example.com', user_metadata: {} } as User;
+      const onOpenMcpSetup = vi.fn();
+      render(<Header {...makeProps({ auth: { user: mockUser, isAuthLoading: false }, authActions: { onOpenMcpSetup } })} />);
+
+      fireEvent.click(screen.getByRole('button', { name: /account menu/i }));
+      fireEvent.click(screen.getByRole('button', { name: /mcp setup/i }));
+
+      expect(onOpenMcpSetup).toHaveBeenCalledOnce();
     });
   });
 

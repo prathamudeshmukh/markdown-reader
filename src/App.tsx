@@ -221,6 +221,7 @@ export default function App() {
 
   const [signInOpen, setSignInOpen] = useState(false);
   const [apiKeysOpen, setApiKeysOpen] = useState(false);
+  const [mcpSetupInitiallyOpen, setMcpSetupInitiallyOpen] = useState(false);
   const [editBlockedOpen, setEditBlockedOpen] = useState(false);
   const [shortcutHelpOpen, setShortcutHelpOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
@@ -397,7 +398,12 @@ export default function App() {
           onToggleComments: handleToggleComments,
         }}
         auth={{ user, isAuthLoading }}
-        authActions={{ onSignInClick: () => setSignInOpen(true), onSignOut: signOut, onOpenApiKeys: () => setApiKeysOpen(true) }}
+        authActions={{
+          onSignInClick: () => setSignInOpen(true),
+          onSignOut: signOut,
+          onOpenApiKeys: () => setApiKeysOpen(true),
+          onOpenMcpSetup: () => { setApiKeysOpen(true); setMcpSetupInitiallyOpen(true); },
+        }}
         commentsAnchorRef={commentsAnchorRef}
       />
 
@@ -459,7 +465,7 @@ export default function App() {
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
-          onClick={() => setApiKeysOpen(false)}
+          onClick={() => { setApiKeysOpen(false); setMcpSetupInitiallyOpen(false); }}
         >
           <div
             className="w-full max-w-md rounded-2xl shadow-2xl overflow-hidden"
@@ -470,14 +476,14 @@ export default function App() {
               <span />
               <button
                 aria-label="Close API Keys settings"
-                onClick={() => setApiKeysOpen(false)}
+                onClick={() => { setApiKeysOpen(false); setMcpSetupInitiallyOpen(false); }}
                 className="text-sm px-2 py-1 rounded"
                 style={{ color: 'var(--text-muted)' }}
               >
                 ✕
               </button>
             </div>
-            <ApiKeysSettings />
+            <ApiKeysSettings initialShowSetup={mcpSetupInitiallyOpen} />
           </div>
         </div>
       )}

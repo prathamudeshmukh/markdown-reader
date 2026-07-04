@@ -63,6 +63,7 @@ export interface AuthActions {
   onSignInClick: () => void;
   onSignOut: () => void;
   onOpenApiKeys: () => void;
+  onOpenMcpSetup: () => void;
 }
 
 interface HeaderProps {
@@ -168,7 +169,7 @@ export default function Header({
   theme: { theme },
   actions: { onToggle, onSave, onNewDoc, onExportPdf, onDownloadMarkdown, onCopyLink, onCopyMarkdown, onToggleSidebar, onShowQr, onImportPdf, onOpenMdFile, onOpenCommandPalette, onOpenShortcutHelp, onToggleEditAccess, onThemeChange, onToggleComments },
   auth: { user, isAuthLoading },
-  authActions: { onSignInClick, onSignOut, onOpenApiKeys },
+  authActions: { onSignInClick, onSignOut, onOpenApiKeys, onOpenMcpSetup },
   commentsAnchorRef,
 }: HeaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -661,7 +662,7 @@ export default function Header({
             <>
               <div className="w-px h-4 shrink-0" style={{ backgroundColor: 'var(--border)' }} />
               {user ? (
-                <UserMenu user={user} onSignOut={onSignOut} onOpenApiKeys={onOpenApiKeys} />
+                <UserMenu user={user} onSignOut={onSignOut} onOpenApiKeys={onOpenApiKeys} onOpenMcpSetup={onOpenMcpSetup} />
               ) : (
                 <button
                   onClick={onSignInClick}

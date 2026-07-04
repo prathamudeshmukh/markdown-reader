@@ -18,9 +18,10 @@ interface Props {
   user: User;
   onSignOut: () => void;
   onOpenApiKeys: () => void;
+  onOpenMcpSetup: () => void;
 }
 
-export default function UserMenu({ user, onSignOut, onOpenApiKeys }: Props) {
+export default function UserMenu({ user, onSignOut, onOpenApiKeys, onOpenMcpSetup }: Props) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const initial = (user.email ?? '?')[0].toUpperCase();
@@ -79,6 +80,20 @@ export default function UserMenu({ user, onSignOut, onOpenApiKeys }: Props) {
             }}
           >
             API Keys
+          </button>
+
+          <button
+            onClick={() => { setOpen(false); onOpenMcpSetup(); }}
+            className="w-full flex items-center gap-3 px-3 py-2 text-sm text-left rounded-md transition-colors"
+            style={{ color: 'var(--text-primary)' }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--bg-secondary)';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+            }}
+          >
+            MCP Setup
           </button>
 
           <div className="my-1 h-px" style={{ backgroundColor: 'var(--border-light)' }} />
