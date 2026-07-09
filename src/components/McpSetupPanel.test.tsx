@@ -8,27 +8,39 @@ describe('McpSetupPanel', () => {
     Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
   });
 
-  it('shows the Claude Code snippet by default with the key substituted', () => {
+  it('expands the Claude Code section by default with the key substituted', () => {
     render(<McpSetupPanel apiKey="omk_abc123" />);
+    expect(screen.getByRole('button', { name: /claude code/i })).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByText(/omk_abc123/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Claude Code' })).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('switches to the Claude Desktop snippet when that tab is clicked, key still substituted', () => {
+  it('keeps other sections collapsed by default', () => {
     render(<McpSetupPanel apiKey="omk_abc123" />);
-    fireEvent.click(screen.getByRole('button', { name: 'Claude Desktop' }));
+    expect(screen.getByRole('button', { name: /claude desktop/i })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('button', { name: /^cursor$/i })).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('expands Claude Desktop and collapses Claude Code when clicked, key still substituted', () => {
+    render(<McpSetupPanel apiKey="omk_abc123" />);
+    fireEvent.click(screen.getByRole('button', { name: /claude desktop/i }));
+
+    expect(screen.getByRole('button', { name: /claude desktop/i })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('button', { name: /claude code/i })).toHaveAttribute('aria-expanded', 'false');
     expect(screen.getByText(/"OPENMARK_API_KEY": "omk_abc123"/)).toBeInTheDocument();
   });
 
-  it('switches to the Cursor snippet when that tab is clicked, key still substituted', () => {
+  it('only keeps one section expanded at a time', () => {
     render(<McpSetupPanel apiKey="omk_abc123" />);
-    fireEvent.click(screen.getByRole('button', { name: 'Cursor' }));
-    expect(screen.getByText(/"OPENMARK_API_KEY": "omk_abc123"/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^cursor$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /claude desktop/i }));
+
+    expect(screen.getByRole('button', { name: /^cursor$/i })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('button', { name: /claude desktop/i })).toHaveAttribute('aria-expanded', 'true');
   });
 
-  it('copies the full rendered snippet, not just the bare key, and flips the button label', () => {
+  it('copies the full rendered snippet of the expanded section, not just the bare key', () => {
     render(<McpSetupPanel apiKey="omk_abc123" />);
-    fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Copy command' }));
 
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
       expect.stringContaining('claude mcp add openmark'),
@@ -39,12 +51,19 @@ describe('McpSetupPanel', () => {
     expect(screen.getByRole('button', { name: 'Copied!' })).toBeInTheDocument();
   });
 
-  it('renders the tab row and snippet block with wrap-friendly classes, not overflow-x-auto', () => {
+  it('resets the copied state when switching sections', () => {
+    render(<McpSetupPanel apiKey="omk_abc123" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Copy command' }));
+    expect(screen.getByRole('button', { name: 'Copied!' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /claude desktop/i }));
+    expect(screen.getByRole('button', { name: 'Copy command' })).toBeInTheDocument();
+  });
+
+  it('renders the expanded snippet with wrap-friendly classes, not overflow-x-auto', () => {
     const { container } = render(<McpSetupPanel apiKey="omk_abc123" />);
-    const tabRow = container.querySelector('[data-testid="mcp-setup-tabs"]');
     const snippet = container.querySelector('[data-testid="mcp-setup-snippet"]');
 
-    expect(tabRow?.className).toContain('flex-wrap');
     expect(snippet?.className).toContain('whitespace-pre-wrap');
     expect(snippet?.className).toContain('break-all');
     expect(container.querySelector('.overflow-x-auto')).toBeNull();
