@@ -8,6 +8,7 @@ import { getDoc } from './src/api/supabaseClient';
 import { deriveTitle, deriveDescription, type DocMeta } from './src/api/docMeta';
 import { injectDocMeta } from './src/api/metaRewriter';
 import { docPageCacheUrl, toCacheKeyRequest } from './src/api/docCacheKeys';
+import { handleOgImageRequest } from './src/api/ogImageRouter';
 
 interface Env {
   ASSETS: { fetch(request: Request): Promise<Response> };
@@ -126,6 +127,10 @@ export default {
 
     const apiResponse = await handleDocsRequest(request, env);
     if (apiResponse) return apiResponse;
+
+    // OG image generation — checked before asset fallback
+    const ogImageResponse = await handleOgImageRequest(request, env);
+    if (ogImageResponse) return ogImageResponse;
 
     // /d/:slug: rewrite social-preview meta tags for the doc, cached per-slug
     if (url.pathname.startsWith(DOC_PATH_PREFIX)) {
