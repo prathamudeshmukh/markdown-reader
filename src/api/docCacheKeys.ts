@@ -17,3 +17,22 @@ export function ogImageCacheUrl(origin: string, slug: string): string {
 export function toCacheKeyRequest(url: string): Request {
   return new Request(url, { method: 'GET' });
 }
+
+// Lazily accessed so tests can mock `caches` before the first call.
+// caches.default is a Cloudflare Workers extension not in standard lib types.
+function cfCache(): Cache {
+  return (caches as unknown as { default: Cache }).default;
+}
+
+export async function invalidateDocCaches(origin: string, slug: string): Promise<void> {
+  const urls = [docJsonCacheUrl(origin, slug), docPageCacheUrl(origin, slug), ogImageCacheUrl(origin, slug)];
+  await Promise.all(
+    urls.map(async (url) => {
+      try {
+        await cfCache().delete(toCacheKeyRequest(url));
+      } catch {
+        // Cache invalidation failure is non-fatal — DB is source of truth
+      }
+    }),
+  );
+}

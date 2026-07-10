@@ -51,6 +51,18 @@ function makeRequest(method: string, path: string, body?: unknown, headers?: Rec
   });
 }
 
+function deletedCacheUrls(): string[] {
+  return mockCache.delete.mock.calls.map(([req]) => (req as Request).url);
+}
+
+function expectedCacheUrls(slug: string): string[] {
+  return [
+    `https://app.prathamesh.cloud/api/docs/${slug}`,
+    `https://app.prathamesh.cloud/d/${slug}`,
+    `https://app.prathamesh.cloud/api/og/${slug}.png`,
+  ];
+}
+
 describe('handleDocsRequest', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -280,6 +292,19 @@ describe('handleDocsRequest', () => {
       expect(updateDoc).toHaveBeenCalled();
     });
 
+    it('invalidates all three per-slug cache keys on content update', async () => {
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null, creator_token: null, edit_access: true });
+      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Updated', title: null, user_id: null, collection_id: null, creator_token: null, edit_access: true });
+
+      await handleDocsRequest(
+        makeRequest('PUT', '/api/docs/abc1234', { content: '# Updated' }),
+        env,
+      );
+
+      expect(mockCache.delete).toHaveBeenCalledTimes(3);
+      expect(deletedCacheUrls()).toEqual(expect.arrayContaining(expectedCacheUrls('abc1234')));
+    });
+
     it('returns 400 when neither content nor title is provided', async () => {
       const res = await handleDocsRequest(
         makeRequest('PUT', '/api/docs/abc1234', {}),
@@ -404,7 +429,7 @@ describe('handleDocsRequest', () => {
       expect(updateDoc).toHaveBeenCalledWith(env, 'abc1234', expect.objectContaining({ editAccess: false }));
     });
 
-    it('invalidates cache after toggle', async () => {
+    it('invalidates all three per-slug cache keys after toggle', async () => {
       vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId, collection_id: null, creator_token: null, edit_access: false });
       vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId, collection_id: null, creator_token: null, edit_access: true });
 
@@ -413,7 +438,8 @@ describe('handleDocsRequest', () => {
         env,
       );
 
-      expect(mockCache.delete).toHaveBeenCalled();
+      expect(mockCache.delete).toHaveBeenCalledTimes(3);
+      expect(deletedCacheUrls()).toEqual(expect.arrayContaining(expectedCacheUrls('abc1234')));
     });
   });
 
@@ -482,6 +508,19 @@ describe('handleDocsRequest', () => {
         expect.objectContaining({ userId, clearCreatorToken: true }),
       );
     });
+
+    it('invalidates all three per-slug cache keys on claim', async () => {
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null, creator_token: 'correct-token', edit_access: false });
+      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId, collection_id: null, creator_token: null, edit_access: false });
+
+      await handleDocsRequest(
+        makeRequest('PUT', '/api/docs/abc1234', { claim: true, creatorToken: 'correct-token' }, { Authorization: `Bearer ${fakeJwt}` }),
+        env,
+      );
+
+      expect(mockCache.delete).toHaveBeenCalledTimes(3);
+      expect(deletedCacheUrls()).toEqual(expect.arrayContaining(expectedCacheUrls('abc1234')));
+    });
   });
 
   describe('DELETE /api/docs/:slug', () => {
@@ -548,6 +587,19 @@ describe('handleDocsRequest', () => {
 
       expect(res?.status).toBe(204);
       expect(deleteDoc).toHaveBeenCalled();
+    });
+
+    it('invalidates all three per-slug cache keys on delete', async () => {
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId, collection_id: null, creator_token: null, edit_access: false });
+      vi.mocked(deleteDoc).mockResolvedValueOnce(undefined);
+
+      await handleDocsRequest(
+        makeRequest('DELETE', '/api/docs/abc1234', undefined, { Authorization: `Bearer ${fakeJwt}` }),
+        env,
+      );
+
+      expect(mockCache.delete).toHaveBeenCalledTimes(3);
+      expect(deletedCacheUrls()).toEqual(expect.arrayContaining(expectedCacheUrls('abc1234')));
     });
 
     it('returns 405 for DELETE on the base /api/docs path', async () => {

@@ -2,6 +2,7 @@ import { nanoid } from 'nanoid';
 import { createDoc, getDoc, updateDoc, getUserDocs, deleteDoc, type SupabaseEnv } from './supabaseClient';
 import { json, extractBearerToken, extractUserIdFromJwt } from './workerUtils';
 import { resolveApiKey } from './apiKeyAuth';
+import { invalidateDocCaches } from './docCacheKeys';
 
 export type RouterEnv = SupabaseEnv;
 
@@ -145,12 +146,8 @@ async function handlePut(request: Request, slug: string, env: RouterEnv): Promis
       return json({ error: 'Invalid creator token' }, 403);
     }
 
-    try {
-      const { origin } = new URL(request.url);
-      await cfCache().delete(docCacheKey(`${origin}${API_PREFIX}/${slug}`));
-    } catch {
-      // Cache invalidation failure is non-fatal
-    }
+    const { origin } = new URL(request.url);
+    await invalidateDocCaches(origin, slug);
 
     const doc = await updateDoc(env, slug, { userJwt, userId, clearCreatorToken: true });
     return json({ slug: doc.slug });
@@ -169,12 +166,8 @@ async function handlePut(request: Request, slug: string, env: RouterEnv): Promis
 
     if (existing.user_id !== userId) return json({ error: 'Forbidden' }, 403);
 
-    try {
-      const { origin } = new URL(request.url);
-      await cfCache().delete(docCacheKey(`${origin}${API_PREFIX}/${slug}`));
-    } catch {
-      // Cache invalidation failure is non-fatal
-    }
+    const { origin } = new URL(request.url);
+    await invalidateDocCaches(origin, slug);
 
     const doc = await updateDoc(env, slug, { userJwt, editAccess: body.edit_access });
     return json({ slug: doc.slug });
@@ -210,12 +203,8 @@ async function handlePut(request: Request, slug: string, env: RouterEnv): Promis
 
   // Invalidate before the DB write so concurrent GETs bypass the cache
   // and read DB directly during the update window.
-  try {
-    const { origin } = new URL(request.url);
-    await cfCache().delete(docCacheKey(`${origin}${API_PREFIX}/${slug}`));
-  } catch {
-    // Cache invalidation failure is non-fatal — DB is source of truth
-  }
+  const { origin } = new URL(request.url);
+  await invalidateDocCaches(origin, slug);
 
   const doc = await updateDoc(env, slug, {
     content: body.content as string | undefined,
@@ -239,12 +228,8 @@ async function handleDelete(request: Request, slug: string, env: RouterEnv): Pro
 
   if (doc.user_id !== userId) return json({ error: 'Forbidden' }, 403);
 
-  try {
-    const { origin } = new URL(request.url);
-    await cfCache().delete(docCacheKey(`${origin}${API_PREFIX}/${slug}`));
-  } catch {
-    // Cache invalidation failure is non-fatal
-  }
+  const { origin } = new URL(request.url);
+  await invalidateDocCaches(origin, slug);
 
   await deleteDoc(env, slug, userJwt);
   return new Response(null, { status: 204 });
