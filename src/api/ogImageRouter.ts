@@ -1,7 +1,8 @@
 import { ImageResponse } from 'workers-og';
 import { getDoc, type SupabaseEnv } from './supabaseClient';
-import { deriveTitle, escapeHtmlAttr } from './docMeta';
+import { deriveTitle } from './docMeta';
 import { ogImageCacheUrl, toCacheKeyRequest } from './docCacheKeys';
+import { buildOgImageHtml, OG_IMAGE_FONT_NAME } from './ogImageTemplate';
 
 export type OgImageRouterEnv = SupabaseEnv & {
   ASSETS: { fetch(request: Request): Promise<Response> };
@@ -13,15 +14,7 @@ const OG_IMAGE_HEIGHT = 630;
 const OG_IMAGE_MAX_AGE = 86400;
 const OG_IMAGE_STALE_WHILE_REVALIDATE = 604800;
 const OG_IMAGE_FONT_PATH = '/fonts/Inter-Bold.woff';
-const OG_IMAGE_FONT_NAME = 'Inter';
-const OG_IMAGE_BACKGROUND = '#0f172a';
-const OG_IMAGE_TITLE_MAX_LENGTH = 100;
 const OG_IMAGE_CACHE_CONTROL = `public, max-age=${OG_IMAGE_MAX_AGE}, stale-while-revalidate=${OG_IMAGE_STALE_WHILE_REVALIDATE}`;
-
-function truncateForImage(title: string): string {
-  if (title.length <= OG_IMAGE_TITLE_MAX_LENGTH) return title;
-  return `${title.slice(0, OG_IMAGE_TITLE_MAX_LENGTH).trimEnd()}…`;
-}
 
 function cfCache(): Cache {
   return (caches as unknown as { default: Cache }).default;
@@ -29,13 +22,6 @@ function cfCache(): Cache {
 
 function redirectToLogo(origin: string): Response {
   return Response.redirect(`${origin}/logo.png`, 302);
-}
-
-function buildOgImageHtml(title: string): string {
-  const safeTitle = escapeHtmlAttr(truncateForImage(title));
-  return `<div style="display: flex; align-items: center; justify-content: center; height: 100vh; width: 100vw; background: ${OG_IMAGE_BACKGROUND}; padding: 80px; overflow: hidden;">
-  <h1 style="font-family: '${OG_IMAGE_FONT_NAME}'; font-weight: 700; font-size: 64px; color: white; margin: 0; text-align: center;">${safeTitle}</h1>
-</div>`;
 }
 
 export async function handleOgImageRequest(request: Request, env: OgImageRouterEnv): Promise<Response | null> {
