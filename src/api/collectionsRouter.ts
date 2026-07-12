@@ -5,7 +5,7 @@ import {
   deleteCollection,
   type SupabaseEnv,
 } from './supabaseClient';
-import { json, extractBearerToken, extractUserIdFromJwt } from './workerUtils';
+import { json, requireAuth } from './workerUtils';
 
 export type RouterEnv = SupabaseEnv;
 
@@ -25,35 +25,29 @@ function parseParentId(raw: unknown): string | null | undefined {
 }
 
 async function handleGetAll(request: Request, env: RouterEnv): Promise<Response> {
-  const userJwt = extractBearerToken(request);
-  if (!userJwt) return json({ error: 'Unauthorized' }, 401);
+  const auth = requireAuth(request);
+  if (auth instanceof Response) return auth;
 
-  const userId = extractUserIdFromJwt(userJwt);
-  if (!userId) return json({ error: 'Invalid token' }, 401);
-
-  const collections = await getCollections(env, userId, userJwt);
+  const collections = await getCollections(env, auth.userId, auth.jwt);
   return json({ collections });
 }
 
 async function handlePost(request: Request, env: RouterEnv): Promise<Response> {
-  const userJwt = extractBearerToken(request);
-  if (!userJwt) return json({ error: 'Unauthorized' }, 401);
-
-  const userId = extractUserIdFromJwt(userJwt);
-  if (!userId) return json({ error: 'Invalid token' }, 401);
+  const auth = requireAuth(request);
+  if (auth instanceof Response) return auth;
 
   const body = (await request.json()) as { name?: unknown; parent_id?: unknown };
   const name = parseName(body.name);
   if (!name) return json({ error: 'name must be a non-empty string (max 200 chars)' }, 400);
 
   const parentId = parseParentId(body.parent_id);
-  const collection = await createCollection(env, { name, parentId, userId, userJwt });
+  const collection = await createCollection(env, { name, parentId, userId: auth.userId, userJwt: auth.jwt });
   return json(collection, 201);
 }
 
 async function handlePatch(request: Request, id: string, env: RouterEnv): Promise<Response> {
-  const userJwt = extractBearerToken(request);
-  if (!userJwt) return json({ error: 'Unauthorized' }, 401);
+  const auth = requireAuth(request);
+  if (auth instanceof Response) return auth;
 
   const body = (await request.json()) as { name?: unknown; parent_id?: unknown; position?: unknown };
   const name = parseName(body.name);
@@ -64,15 +58,15 @@ async function handlePatch(request: Request, id: string, env: RouterEnv): Promis
     return json({ error: 'name, parent_id, or position is required' }, 400);
   }
 
-  const collection = await updateCollection(env, id, { name, parentId, position, userJwt });
+  const collection = await updateCollection(env, id, { name, parentId, position, userJwt: auth.jwt });
   return json(collection);
 }
 
 async function handleDelete(request: Request, id: string, env: RouterEnv): Promise<Response> {
-  const userJwt = extractBearerToken(request);
-  if (!userJwt) return json({ error: 'Unauthorized' }, 401);
+  const auth = requireAuth(request);
+  if (auth instanceof Response) return auth;
 
-  await deleteCollection(env, id, userJwt);
+  await deleteCollection(env, id, auth.jwt);
   return new Response(null, { status: 204 });
 }
 
