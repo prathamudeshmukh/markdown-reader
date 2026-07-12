@@ -1,3 +1,5 @@
+import { cfCache } from './workerUtils';
+
 const API_DOCS_PREFIX = '/api/docs';
 const DOC_PAGE_PREFIX = '/d';
 const OG_IMAGE_PREFIX = '/api/og';
@@ -16,12 +18,6 @@ export function ogImageCacheUrl(origin: string, slug: string): string {
 
 export function toCacheKeyRequest(url: string): Request {
   return new Request(url, { method: 'GET' });
-}
-
-// Lazily accessed so tests can mock `caches` before the first call.
-// caches.default is a Cloudflare Workers extension not in standard lib types.
-function cfCache(): Cache {
-  return (caches as unknown as { default: Cache }).default;
 }
 
 export async function invalidateDocCaches(origin: string, slug: string): Promise<void> {
