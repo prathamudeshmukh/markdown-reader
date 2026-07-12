@@ -1,3 +1,5 @@
+import { json } from './workerUtils';
+
 interface R2PutOptions {
   httpMetadata?: { contentType?: string };
 }
@@ -33,13 +35,6 @@ interface PdfApiResponse {
   markdown: string;
   pages_processed: number;
   model_used: string;
-}
-
-function json(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
 }
 
 async function handleConvert(request: Request, env: PdfRouterEnv): Promise<Response> {
