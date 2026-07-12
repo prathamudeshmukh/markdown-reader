@@ -1,7 +1,6 @@
 import { nanoid } from 'nanoid';
 import { createDoc, getDoc, updateDoc, getUserDocs, deleteDoc, type SupabaseEnv } from './supabaseClient';
-import { json, extractBearerToken, extractUserIdFromJwt } from './workerUtils';
-import { resolveApiKey } from './apiKeyAuth';
+import { json, extractBearerToken, extractUserIdFromJwt, requireAuth, injectApiKeyAuth, cfCache } from './workerUtils';
 import { invalidateDocCaches } from './docCacheKeys';
 
 export type RouterEnv = SupabaseEnv;
@@ -11,19 +10,6 @@ const MAX_CONTENT_BYTES = 500_000;
 const MAX_TITLE_CHARS = 300;
 const SLUG_LENGTH = 7;
 const CREATOR_TOKEN_LENGTH = 21;
-
-// Builds a minimal fake JWT with sub=userId consumed by extractUserIdFromJwt.
-// Never sent to external systems; used purely to thread the userId through existing handlers.
-function buildSyntheticJwt(userId: string): string {
-  const payload = btoa(JSON.stringify({ sub: userId }));
-  return `synthetic.${payload}.internal`;
-}
-
-function injectBearerToken(request: Request, jwt: string): Request {
-  const headers = new Headers(request.headers);
-  headers.set('Authorization', `Bearer ${jwt}`);
-  return new Request(request, { headers });
-}
 
 function parseTitle(raw: unknown): string | undefined {
   if (typeof raw !== 'string') return undefined;
@@ -72,12 +58,6 @@ function docCacheKey(url: string): Request {
   return new Request(url, { method: 'GET' });
 }
 
-// Lazily accessed so tests can mock `caches` before the first call.
-// caches.default is a Cloudflare Workers extension not in standard lib types.
-function cfCache(): Cache {
-  return (caches as unknown as { default: Cache }).default;
-}
-
 async function handleGet(request: Request, slug: string, env: RouterEnv): Promise<Response> {
   const cacheKey = docCacheKey(request.url);
   let cached: Response | undefined;
@@ -106,13 +86,10 @@ async function handleGet(request: Request, slug: string, env: RouterEnv): Promis
 }
 
 async function handleGetUserDocs(request: Request, env: RouterEnv): Promise<Response> {
-  const userJwt = extractBearerToken(request);
-  if (!userJwt) return json({ error: 'Unauthorized' }, 401);
+  const auth = requireAuth(request);
+  if (auth instanceof Response) return auth;
 
-  const userId = extractUserIdFromJwt(userJwt);
-  if (!userId) return json({ error: 'Invalid token' }, 401);
-
-  const docs = await getUserDocs(env, userId, userJwt);
+  const docs = await getUserDocs(env, auth.userId, auth.jwt);
   return json({ docs });
 }
 
@@ -129,11 +106,8 @@ async function handlePut(request: Request, slug: string, env: RouterEnv): Promis
   const isClaim = body.claim === true;
 
   if (isClaim) {
-    const userJwt = extractBearerToken(request);
-    if (!userJwt) return json({ error: 'Unauthorized' }, 401);
-
-    const userId = extractUserIdFromJwt(userJwt);
-    if (!userId) return json({ error: 'Invalid token' }, 401);
+    const auth = requireAuth(request);
+    if (auth instanceof Response) return auth;
 
     if (typeof body.creatorToken !== 'string') {
       return json({ error: 'creatorToken is required for claim' }, 400);
@@ -149,27 +123,24 @@ async function handlePut(request: Request, slug: string, env: RouterEnv): Promis
     const { origin } = new URL(request.url);
     await invalidateDocCaches(origin, slug);
 
-    const doc = await updateDoc(env, slug, { userJwt, userId, clearCreatorToken: true });
+    const doc = await updateDoc(env, slug, { userJwt: auth.jwt, userId: auth.userId, clearCreatorToken: true });
     return json({ slug: doc.slug });
   }
 
   // edit_access toggle — owner-only
   if (typeof body.edit_access === 'boolean') {
-    const userJwt = extractBearerToken(request);
-    if (!userJwt) return json({ error: 'Unauthorized' }, 401);
-
-    const userId = extractUserIdFromJwt(userJwt);
-    if (!userId) return json({ error: 'Invalid token' }, 401);
+    const auth = requireAuth(request);
+    if (auth instanceof Response) return auth;
 
     const existing = await getDoc(env, slug);
     if (!existing) return json({ error: 'Not found' }, 404);
 
-    if (existing.user_id !== userId) return json({ error: 'Forbidden' }, 403);
+    if (existing.user_id !== auth.userId) return json({ error: 'Forbidden' }, 403);
 
     const { origin } = new URL(request.url);
     await invalidateDocCaches(origin, slug);
 
-    const doc = await updateDoc(env, slug, { userJwt, editAccess: body.edit_access });
+    const doc = await updateDoc(env, slug, { userJwt: auth.jwt, editAccess: body.edit_access });
     return json({ slug: doc.slug });
   }
 
@@ -217,21 +188,18 @@ async function handlePut(request: Request, slug: string, env: RouterEnv): Promis
 }
 
 async function handleDelete(request: Request, slug: string, env: RouterEnv): Promise<Response> {
-  const userJwt = extractBearerToken(request);
-  if (!userJwt) return json({ error: 'Unauthorized' }, 401);
-
-  const userId = extractUserIdFromJwt(userJwt);
-  if (!userId) return json({ error: 'Invalid token' }, 401);
+  const auth = requireAuth(request);
+  if (auth instanceof Response) return auth;
 
   const doc = await getDoc(env, slug);
   if (!doc) return json({ error: 'Not found' }, 404);
 
-  if (doc.user_id !== userId) return json({ error: 'Forbidden' }, 403);
+  if (doc.user_id !== auth.userId) return json({ error: 'Forbidden' }, 403);
 
   const { origin } = new URL(request.url);
   await invalidateDocCaches(origin, slug);
 
-  await deleteDoc(env, slug, userJwt);
+  await deleteDoc(env, slug, auth.jwt);
   return new Response(null, { status: 204 });
 }
 
@@ -242,18 +210,11 @@ export async function handleDocsRequest(
   const { pathname } = new URL(request.url);
   const { method } = request;
 
-  // Resolve API key auth before routing. When valid, inject a synthetic bearer
-  // token so existing handlers can remain agnostic to the auth mechanism.
-  if (request.headers.has('X-OpenMark-Key')) {
-    try {
-      const ctx = await resolveApiKey(request, env);
-      if (ctx) {
-        request = injectBearerToken(request, buildSyntheticJwt(ctx.userId));
-      }
-    } catch {
-      return json({ error: 'Invalid API key' }, 401);
-    }
-  }
+  // Resolve API key auth before routing. When valid, request carries a synthetic
+  // bearer token so downstream handlers stay agnostic to the auth mechanism.
+  const authResult = await injectApiKeyAuth(request, env);
+  if (authResult instanceof Response) return authResult;
+  request = authResult;
 
   if (pathname === API_PREFIX) {
     if (method === 'POST') return handlePost(request, env);

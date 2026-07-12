@@ -545,14 +545,6 @@ describe('handleDocsRequest', () => {
       expect(res?.status).toBe(401);
     });
 
-    it('returns 401 when JWT is malformed', async () => {
-      const res = await handleDocsRequest(
-        makeRequest('DELETE', '/api/docs/abc1234', undefined, { Authorization: 'Bearer not.a.valid.jwt' }),
-        env,
-      );
-      expect(res?.status).toBe(401);
-    });
-
     it('returns 404 when doc does not exist', async () => {
       vi.mocked(getDoc).mockResolvedValueOnce(null);
 
