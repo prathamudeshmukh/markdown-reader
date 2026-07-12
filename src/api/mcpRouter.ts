@@ -1,6 +1,7 @@
 import { nanoid } from 'nanoid';
 import { createDoc, getDoc, updateDoc, type SupabaseEnv } from './supabaseClient';
 import { resolveApiKey } from './apiKeyAuth';
+import { buildSyntheticJwt } from './workerUtils';
 
 export type RouterEnv = SupabaseEnv;
 
@@ -125,7 +126,7 @@ async function toolCreateDoc(args: unknown, userId: string, env: RouterEnv): Pro
   const parsedTitle = typeof title === 'string' ? title.slice(0, MAX_TITLE_CHARS) : undefined;
 
   // Minimal synthetic JWT embedding userId so createDoc can set user_id
-  const syntheticJwt = `synthetic.${btoa(JSON.stringify({ sub: userId }))}.internal`;
+  const syntheticJwt = buildSyntheticJwt(userId);
 
   const slug = nanoid(SLUG_LENGTH);
   const doc = await createDoc(env, slug, { content, title: parsedTitle, userJwt: syntheticJwt });
@@ -170,7 +171,7 @@ async function toolUpdateDoc(args: unknown, userId: string, env: RouterEnv): Pro
   }
 
   const parsedTitle = typeof title === 'string' ? title.slice(0, MAX_TITLE_CHARS) : undefined;
-  const syntheticJwt = `synthetic.${btoa(JSON.stringify({ sub: userId }))}.internal`;
+  const syntheticJwt = buildSyntheticJwt(userId);
 
   const doc = await updateDoc(env, slug, { content, title: parsedTitle, userJwt: syntheticJwt });
   return `Updated: ${docUrl(doc.slug)}`;
