@@ -9,6 +9,7 @@ import { deriveTitle, deriveDescription, type DocMeta } from './src/api/docMeta'
 import { injectDocMeta } from './src/api/metaRewriter';
 import { docPageCacheUrl, toCacheKeyRequest } from './src/api/docCacheKeys';
 import { handleOgImageRequest } from './src/api/ogImageRouter';
+import { cfCache } from './src/api/workerUtils';
 
 interface Env {
   ASSETS: { fetch(request: Request): Promise<Response> };
@@ -23,12 +24,6 @@ const OLD_HOST = 'app.prathamesh.cloud';
 const OLD_PREFIX = '/mreader';
 const DOC_PATH_PREFIX = '/d/';
 const DOC_PAGE_CACHE_CONTROL = 'public, s-maxage=30, stale-while-revalidate=300';
-
-// Lazily accessed so tests can mock `caches` before the first call.
-// caches.default is a Cloudflare Workers extension not in standard lib types.
-function cfCache(): Cache {
-  return (caches as unknown as { default: Cache }).default;
-}
 
 async function handleDocPageRequest(request: Request, slug: string, env: Env): Promise<Response> {
   const indexUrl = new URL(request.url);

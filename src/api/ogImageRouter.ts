@@ -3,6 +3,7 @@ import { getDoc, type SupabaseEnv } from './supabaseClient';
 import { deriveTitle } from './docMeta';
 import { ogImageCacheUrl, toCacheKeyRequest } from './docCacheKeys';
 import { buildOgImageHtml, OG_IMAGE_FONT_NAME } from './ogImageTemplate';
+import { cfCache } from './workerUtils';
 
 export type OgImageRouterEnv = SupabaseEnv & {
   ASSETS: { fetch(request: Request): Promise<Response> };
@@ -15,10 +16,6 @@ const OG_IMAGE_MAX_AGE = 86400;
 const OG_IMAGE_STALE_WHILE_REVALIDATE = 604800;
 const OG_IMAGE_FONT_PATH = '/fonts/Inter-Bold.woff';
 const OG_IMAGE_CACHE_CONTROL = `public, max-age=${OG_IMAGE_MAX_AGE}, stale-while-revalidate=${OG_IMAGE_STALE_WHILE_REVALIDATE}`;
-
-function cfCache(): Cache {
-  return (caches as unknown as { default: Cache }).default;
-}
 
 function redirectToLogo(origin: string): Response {
   return Response.redirect(`${origin}/logo.png`, 302);
