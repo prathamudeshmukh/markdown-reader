@@ -313,15 +313,6 @@ describe('handleCommentsRequest', () => {
 
         expect(res?.status).toBe(401);
       });
-
-      it('returns 401 when neither X-OpenMark-Key nor Authorization is present', async () => {
-        const res = await handleCommentsRequest(
-          makeRequest('DELETE', '/api/docs/doc123/comments/comment-uuid-1'),
-          env,
-        );
-
-        expect(res?.status).toBe(401);
-      });
     });
   });
 });

@@ -8,8 +8,7 @@ import {
   type SupabaseEnv,
   type CommentRow,
 } from './supabaseClient';
-import { json, extractBearerToken, extractUserIdFromJwt } from './workerUtils';
-import { resolveApiKey } from './apiKeyAuth';
+import { json, extractBearerToken, extractUserIdFromJwt, requireAuth, injectApiKeyAuth } from './workerUtils';
 import type { Comment } from '../types/comments';
 
 export type CommentsRouterEnv = SupabaseEnv & {
@@ -23,19 +22,6 @@ const MAX_CONTENT_CHARS = 2000;
 const MAX_ANCHOR_CHARS = 500;
 const MAX_AUTHOR_CHARS = 100;
 const COMMENT_LIMIT = 500;
-
-// Builds a minimal fake JWT with sub=userId consumed by extractUserIdFromJwt.
-// Never sent to external systems; used purely to thread the userId through existing handlers.
-function buildSyntheticJwt(userId: string): string {
-  const payload = btoa(JSON.stringify({ sub: userId }));
-  return `synthetic.${payload}.internal`;
-}
-
-function injectBearerToken(request: Request, jwt: string): Request {
-  const headers = new Headers(request.headers);
-  headers.set('Authorization', `Bearer ${jwt}`);
-  return new Request(request, { headers });
-}
 
 function rowToComment(row: CommentRow): Comment {
   return {
@@ -155,18 +141,15 @@ async function handlePatch(request: Request, id: string, env: CommentsRouterEnv)
 }
 
 async function handleDelete(request: Request, slug: string, id: string, env: CommentsRouterEnv): Promise<Response> {
-  const jwt = extractBearerToken(request);
-  if (!jwt) return json({ error: 'Unauthorized' }, 401);
-
-  const callerId = extractUserIdFromJwt(jwt);
-  if (!callerId) return json({ error: 'Invalid token' }, 401);
+  const auth = requireAuth(request);
+  if (auth instanceof Response) return auth;
 
   const doc = await getDoc(env, slug);
   if (!doc) return json({ error: 'Not found' }, 404);
 
-  if (doc.user_id !== callerId) return json({ error: 'Forbidden' }, 403);
+  if (doc.user_id !== auth.userId) return json({ error: 'Forbidden' }, 403);
 
-  await deleteComment(env, id, jwt);
+  await deleteComment(env, id, auth.jwt);
   return new Response(null, { status: 204 });
 }
 
@@ -196,17 +179,9 @@ export async function handleCommentsRequest(
     if (method === 'PATCH') return handlePatch(request, id, env);
     if (method === 'DELETE') {
       // API-key auth (X-OpenMark-Key) is scoped to DELETE only — GET/PATCH stay open.
-      if (request.headers.has('X-OpenMark-Key')) {
-        try {
-          const ctx = await resolveApiKey(request, env);
-          if (ctx) {
-            request = injectBearerToken(request, buildSyntheticJwt(ctx.userId));
-          }
-        } catch {
-          return json({ error: 'Invalid API key' }, 401);
-        }
-      }
-      return handleDelete(request, slug, id, env);
+      const authResult = await injectApiKeyAuth(request, env);
+      if (authResult instanceof Response) return authResult;
+      return handleDelete(authResult, slug, id, env);
     }
     return json({ error: 'Method not allowed' }, 405);
   }
