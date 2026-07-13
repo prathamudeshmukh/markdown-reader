@@ -1,4 +1,5 @@
-import { lookupApiKey, touchApiKeyLastUsed, type SupabaseEnv } from './supabaseClient';
+import { lookupApiKey, touchApiKeyLastUsed } from './repository/apiKeys';
+import type { SupabaseEnv } from './repository/shared';
 
 export interface ApiKeyContext {
   userId: string;

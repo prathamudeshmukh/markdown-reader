@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('./supabaseClient', () => ({
+vi.mock('./repository/apiKeys', () => ({
   insertApiKey: vi.fn(),
   listApiKeys: vi.fn(),
   deleteApiKey: vi.fn(),
@@ -11,7 +11,7 @@ vi.mock('nanoid', () => ({
 }));
 
 import { handleApiKeysRequest } from './apiKeysRouter';
-import { insertApiKey, listApiKeys, deleteApiKey } from './supabaseClient';
+import { insertApiKey, listApiKeys, deleteApiKey } from './repository/apiKeys';
 
 const env = {
   SUPABASE_URL: 'https://test.supabase.co',
@@ -47,11 +47,10 @@ describe('handleApiKeysRequest', () => {
       expect(res?.status).toBe(401);
     });
 
-    it('returns list of keys without key_hash field', async () => {
-      const keys = [
-        { id: 'key-1', label: 'CI bot', created_at: '2026-01-01T00:00:00Z', last_used_at: null },
-      ];
-      vi.mocked(listApiKeys).mockResolvedValueOnce(keys);
+    it('returns list of keys mapped back to the snake_case wire contract, without key_hash', async () => {
+      vi.mocked(listApiKeys).mockResolvedValueOnce([
+        { id: 'key-1', label: 'CI bot', createdAt: '2026-01-01T00:00:00Z', lastUsedAt: null },
+      ]);
 
       const res = await handleApiKeysRequest(
         makeRequest('GET', '/api/keys', undefined, { Authorization: `Bearer ${fakeJwt}` }),
@@ -59,8 +58,8 @@ describe('handleApiKeysRequest', () => {
       );
 
       expect(res?.status).toBe(200);
-      const body = await res?.json() as { keys: typeof keys };
-      expect(body.keys).toEqual(keys);
+      const body = await res?.json() as { keys: unknown };
+      expect(body.keys).toEqual([{ id: 'key-1', label: 'CI bot', created_at: '2026-01-01T00:00:00Z', last_used_at: null }]);
       expect(JSON.stringify(body)).not.toContain('key_hash');
     });
   });
@@ -99,8 +98,8 @@ describe('handleApiKeysRequest', () => {
       vi.mocked(insertApiKey).mockResolvedValueOnce({
         id: 'new-key-id',
         label: 'CI bot',
-        created_at: '2026-01-01T00:00:00Z',
-        last_used_at: null,
+        createdAt: '2026-01-01T00:00:00Z',
+        lastUsedAt: null,
       });
 
       const res = await handleApiKeysRequest(
@@ -121,8 +120,8 @@ describe('handleApiKeysRequest', () => {
       vi.mocked(insertApiKey).mockResolvedValueOnce({
         id: 'new-key-id',
         label: 'CI bot',
-        created_at: '2026-01-01T00:00:00Z',
-        last_used_at: null,
+        createdAt: '2026-01-01T00:00:00Z',
+        lastUsedAt: null,
       });
 
       const res = await handleApiKeysRequest(
@@ -138,8 +137,8 @@ describe('handleApiKeysRequest', () => {
       vi.mocked(insertApiKey).mockResolvedValueOnce({
         id: 'new-key-id',
         label: 'CI bot',
-        created_at: '2026-01-01T00:00:00Z',
-        last_used_at: null,
+        createdAt: '2026-01-01T00:00:00Z',
+        lastUsedAt: null,
       });
 
       await handleApiKeysRequest(

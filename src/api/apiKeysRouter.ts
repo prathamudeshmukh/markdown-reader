@@ -1,6 +1,7 @@
 import { nanoid } from 'nanoid';
-import { insertApiKey, listApiKeys, deleteApiKey, type SupabaseEnv } from './supabaseClient';
-import { json, extractBearerToken, extractUserIdFromJwt } from './workerUtils';
+import { insertApiKey, listApiKeys, deleteApiKey, type ApiKeyRecord } from './repository/apiKeys';
+import type { SupabaseEnv } from './repository/shared';
+import { json, requireAuth } from './workerUtils';
 
 export type RouterEnv = SupabaseEnv;
 
@@ -17,26 +18,23 @@ async function sha256Hex(input: string): Promise<string> {
     .join('');
 }
 
-function requireJwt(request: Request): { jwt: string; userId: string } | Response {
-  const jwt = extractBearerToken(request);
-  if (!jwt) return json({ error: 'Unauthorized' }, 401);
-
-  const userId = extractUserIdFromJwt(jwt);
-  if (!userId) return json({ error: 'Invalid token' }, 401);
-
-  return { jwt, userId };
+// The public GET /api/keys contract stays snake_case (matching what
+// apiKeysApi.ts's fetchApiKeys already parses) regardless of the
+// repository's internal camelCase shape.
+function toWireApiKey(record: ApiKeyRecord): unknown {
+  return { id: record.id, label: record.label, created_at: record.createdAt, last_used_at: record.lastUsedAt };
 }
 
 async function handleGet(request: Request, env: RouterEnv): Promise<Response> {
-  const auth = requireJwt(request);
+  const auth = requireAuth(request);
   if (auth instanceof Response) return auth;
 
   const keys = await listApiKeys(env, auth.userId, auth.jwt);
-  return json({ keys });
+  return json({ keys: keys.map(toWireApiKey) });
 }
 
 async function handlePost(request: Request, env: RouterEnv): Promise<Response> {
-  const auth = requireJwt(request);
+  const auth = requireAuth(request);
   if (auth instanceof Response) return auth;
 
   const body = (await request.json()) as { label?: unknown };
@@ -58,11 +56,11 @@ async function handlePost(request: Request, env: RouterEnv): Promise<Response> {
     auth.jwt,
   );
 
-  return json({ id: record.id, label: record.label, key: rawKey, createdAt: record.created_at }, 201);
+  return json({ id: record.id, label: record.label, key: rawKey, createdAt: record.createdAt }, 201);
 }
 
 async function handleDelete(request: Request, keyId: string, env: RouterEnv): Promise<Response> {
-  const auth = requireJwt(request);
+  const auth = requireAuth(request);
   if (auth instanceof Response) return auth;
 
   if (!keyId) return json({ error: 'Key id is required' }, 400);

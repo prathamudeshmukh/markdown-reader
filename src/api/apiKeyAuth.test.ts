@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('./supabaseClient', () => ({
+vi.mock('./repository/apiKeys', () => ({
   lookupApiKey: vi.fn(),
   touchApiKeyLastUsed: vi.fn(),
 }));
 
 import { resolveApiKey } from './apiKeyAuth';
-import { lookupApiKey, touchApiKeyLastUsed } from './supabaseClient';
+import { lookupApiKey, touchApiKeyLastUsed } from './repository/apiKeys';
 
 const env = {
   SUPABASE_URL: 'https://test.supabase.co',
