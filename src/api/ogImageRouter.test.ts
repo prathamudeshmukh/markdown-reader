@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('./supabaseClient', () => ({
+vi.mock('./repository/docs', () => ({
   getDoc: vi.fn(),
 }));
 
@@ -14,7 +14,7 @@ vi.mock('workers-og', () => ({
 }));
 
 import { handleOgImageRequest } from './ogImageRouter';
-import { getDoc } from './supabaseClient';
+import { getDoc } from './repository/docs';
 import { ImageResponse } from 'workers-og';
 
 const mockCache = {
@@ -59,10 +59,10 @@ describe('handleOgImageRequest', () => {
       slug: 'abc1234',
       content: '# My Doc',
       title: null,
-      user_id: null,
-      collection_id: null,
-      creator_token: null,
-      edit_access: false,
+      userId: null,
+      collectionId: null,
+      creatorToken: null,
+      editAccess: false,
     });
 
     const response = await handleOgImageRequest(makeRequest('/api/og/abc1234.png'), env);
@@ -96,10 +96,10 @@ describe('handleOgImageRequest', () => {
       slug: 'abc1234',
       content: '# My Doc',
       title: null,
-      user_id: null,
-      collection_id: null,
-      creator_token: null,
-      edit_access: false,
+      userId: null,
+      collectionId: null,
+      creatorToken: null,
+      editAccess: false,
     });
 
     const response = await handleOgImageRequest(makeRequest('/api/og/abc1234.png'), env);
@@ -113,10 +113,10 @@ describe('handleOgImageRequest', () => {
       slug: 'abc1234',
       content: 'body',
       title: longTitle,
-      user_id: null,
-      collection_id: null,
-      creator_token: null,
-      edit_access: false,
+      userId: null,
+      collectionId: null,
+      creatorToken: null,
+      editAccess: false,
     });
 
     await handleOgImageRequest(makeRequest('/api/og/abc1234.png'), env);

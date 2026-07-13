@@ -1,5 +1,6 @@
 import { nanoid } from 'nanoid';
-import { createDoc, getDoc, updateDoc, getUserDocs, deleteDoc, type SupabaseEnv } from './supabaseClient';
+import { createDoc, getDoc, updateDoc, getUserDocs, deleteDoc, type Doc } from './repository/docs';
+import { RepositoryError, type SupabaseEnv } from './repository/shared';
 import { json, extractBearerToken, extractUserIdFromJwt, requireAuth, injectApiKeyAuth, cfCache } from './workerUtils';
 import { invalidateDocCaches } from './docCacheKeys';
 
@@ -46,7 +47,7 @@ async function handlePost(request: Request, env: RouterEnv): Promise<Response> {
       const doc = await createDoc(env, slug, { content: body.content, title, userJwt, collectionId, creatorToken });
       return json({ slug: doc.slug, creatorToken }, 201);
     } catch (err) {
-      const isDuplicate = err instanceof Error && err.message.includes('duplicate');
+      const isDuplicate = err instanceof RepositoryError && err.kind === 'conflict';
       if (attempt === 1 || !isDuplicate) throw err;
     }
   }
@@ -56,6 +57,20 @@ async function handlePost(request: Request, env: RouterEnv): Promise<Response> {
 
 function docCacheKey(url: string): Request {
   return new Request(url, { method: 'GET' });
+}
+
+// The public HTTP contract (consumed by the frontend and any X-OpenMark-Key/MCP
+// caller) stays snake_case regardless of the repository's internal Doc shape.
+function toWireDoc(doc: Doc): unknown {
+  return {
+    slug: doc.slug,
+    content: doc.content,
+    title: doc.title,
+    user_id: doc.userId,
+    collection_id: doc.collectionId,
+    creator_token: doc.creatorToken,
+    edit_access: doc.editAccess,
+  };
 }
 
 async function handleGet(request: Request, slug: string, env: RouterEnv): Promise<Response> {
@@ -71,7 +86,7 @@ async function handleGet(request: Request, slug: string, env: RouterEnv): Promis
   const doc = await getDoc(env, slug);
   if (!doc) return json({ error: 'Not found' }, 404);
 
-  const response = new Response(JSON.stringify(doc), {
+  const response = new Response(JSON.stringify(toWireDoc(doc)), {
     headers: {
       'Content-Type': 'application/json',
       'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=300',
@@ -116,7 +131,7 @@ async function handlePut(request: Request, slug: string, env: RouterEnv): Promis
     const existing = await getDoc(env, slug);
     if (!existing) return json({ error: 'Not found' }, 404);
 
-    if (!existing.creator_token || existing.creator_token !== body.creatorToken) {
+    if (!existing.creatorToken || existing.creatorToken !== body.creatorToken) {
       return json({ error: 'Invalid creator token' }, 403);
     }
 
@@ -135,7 +150,7 @@ async function handlePut(request: Request, slug: string, env: RouterEnv): Promis
     const existing = await getDoc(env, slug);
     if (!existing) return json({ error: 'Not found' }, 404);
 
-    if (existing.user_id !== auth.userId) return json({ error: 'Forbidden' }, 403);
+    if (existing.userId !== auth.userId) return json({ error: 'Forbidden' }, 403);
 
     const { origin } = new URL(request.url);
     await invalidateDocCaches(origin, slug);
@@ -166,9 +181,9 @@ async function handlePut(request: Request, slug: string, env: RouterEnv): Promis
   if (!existing) return json({ error: 'Not found' }, 404);
 
   const requesterId = extractUserIdFromJwt(userJwt ?? '');
-  // Unowned docs (user_id === null) remain editable by anyone — they use the
-  // creator-token claim flow. Only restrict writes on owned docs without edit_access.
-  if (existing.user_id !== null && !existing.edit_access && existing.user_id !== requesterId) {
+  // Unowned docs (userId === null) remain editable by anyone — they use the
+  // creator-token claim flow. Only restrict writes on owned docs without editAccess.
+  if (existing.userId !== null && !existing.editAccess && existing.userId !== requesterId) {
     return json({ error: 'Forbidden' }, 403);
   }
 
@@ -194,7 +209,7 @@ async function handleDelete(request: Request, slug: string, env: RouterEnv): Pro
   const doc = await getDoc(env, slug);
   if (!doc) return json({ error: 'Not found' }, 404);
 
-  if (doc.user_id !== auth.userId) return json({ error: 'Forbidden' }, 403);
+  if (doc.userId !== auth.userId) return json({ error: 'Forbidden' }, 403);
 
   const { origin } = new URL(request.url);
   await invalidateDocCaches(origin, slug);

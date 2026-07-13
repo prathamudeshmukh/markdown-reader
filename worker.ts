@@ -4,7 +4,7 @@ import { handleCollectionsRequest } from './src/api/collectionsRouter';
 import { handleCommentsRequest } from './src/api/commentsRouter';
 import { handleApiKeysRequest } from './src/api/apiKeysRouter';
 import { handleMcpRequest } from './src/api/mcpRouter';
-import { getDoc } from './src/api/supabaseClient';
+import { getDoc } from './src/api/repository/docs';
 import { deriveTitle, deriveDescription, type DocMeta } from './src/api/docMeta';
 import { injectDocMeta } from './src/api/metaRewriter';
 import { docPageCacheUrl, toCacheKeyRequest } from './src/api/docCacheKeys';

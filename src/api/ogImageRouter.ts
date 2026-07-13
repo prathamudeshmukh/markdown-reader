@@ -1,5 +1,6 @@
 import { ImageResponse } from 'workers-og';
-import { getDoc, type SupabaseEnv } from './supabaseClient';
+import { getDoc } from './repository/docs';
+import type { SupabaseEnv } from './repository/shared';
 import { deriveTitle } from './docMeta';
 import { ogImageCacheUrl, toCacheKeyRequest } from './docCacheKeys';
 import { buildOgImageHtml, OG_IMAGE_FONT_NAME } from './ogImageTemplate';

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('./supabaseClient', () => ({
+vi.mock('./repository/docs', () => ({
   createDoc: vi.fn(),
   getDoc: vi.fn(),
   updateDoc: vi.fn(),
@@ -17,7 +17,8 @@ vi.mock('nanoid', () => ({
 }));
 
 import { handleDocsRequest } from './docsRouter';
-import { createDoc, getDoc, updateDoc, getUserDocs, deleteDoc } from './supabaseClient';
+import { createDoc, getDoc, updateDoc, getUserDocs, deleteDoc } from './repository/docs';
+import { RepositoryError } from './repository/shared';
 import { resolveApiKey } from './apiKeyAuth';
 
 const mockCache = {
@@ -81,7 +82,7 @@ describe('handleDocsRequest', () => {
 
   describe('POST /api/docs', () => {
     it('creates a doc and returns 201 with slug and creatorToken', async () => {
-      vi.mocked(createDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null, creator_token: 'tok', edit_access: false });
+      vi.mocked(createDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: null, collectionId: null, creatorToken: 'tok', editAccess: false });
 
       const res = await handleDocsRequest(
         makeRequest('POST', '/api/docs', { content: '# Hello' }),
@@ -96,7 +97,7 @@ describe('handleDocsRequest', () => {
     });
 
     it('passes creatorToken to createDoc', async () => {
-      vi.mocked(createDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null, creator_token: 'tok', edit_access: false });
+      vi.mocked(createDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: null, collectionId: null, creatorToken: 'tok', editAccess: false });
 
       await handleDocsRequest(
         makeRequest('POST', '/api/docs', { content: '# Hello' }),
@@ -111,7 +112,7 @@ describe('handleDocsRequest', () => {
     });
 
     it('passes title to createDoc when provided', async () => {
-      vi.mocked(createDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: 'My Doc', user_id: null, collection_id: null, creator_token: null, edit_access: false });
+      vi.mocked(createDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: 'My Doc', userId: null, collectionId: null, creatorToken: null, editAccess: false });
 
       await handleDocsRequest(
         makeRequest('POST', '/api/docs', { content: '# Hello', title: 'My Doc' }),
@@ -126,7 +127,7 @@ describe('handleDocsRequest', () => {
     });
 
     it('passes userJwt to createDoc when Authorization header present', async () => {
-      vi.mocked(createDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId, collection_id: null, creator_token: null, edit_access: false });
+      vi.mocked(createDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: userId, collectionId: null, creatorToken: null, editAccess: false });
 
       await handleDocsRequest(
         makeRequest('POST', '/api/docs', { content: '# Hello' }, { Authorization: `Bearer ${fakeJwt}` }),
@@ -163,6 +164,29 @@ describe('handleDocsRequest', () => {
       );
       expect(res?.status).toBe(413);
     });
+
+    it('retries with a new slug when createDoc reports a conflict', async () => {
+      vi.mocked(createDoc)
+        .mockRejectedValueOnce(new RepositoryError('conflict', 'conflict', 409))
+        .mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: null, collectionId: null, creatorToken: 'tok', editAccess: false });
+
+      const res = await handleDocsRequest(
+        makeRequest('POST', '/api/docs', { content: '# Hello' }),
+        env,
+      );
+
+      expect(res?.status).toBe(201);
+      expect(createDoc).toHaveBeenCalledTimes(2);
+    });
+
+    it('propagates a non-conflict error from createDoc without retrying', async () => {
+      vi.mocked(createDoc).mockRejectedValueOnce(new RepositoryError('rls denied', 'rls_denied', 403));
+
+      await expect(
+        handleDocsRequest(makeRequest('POST', '/api/docs', { content: '# Hello' }), env),
+      ).rejects.toThrow('rls denied');
+      expect(createDoc).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('GET /api/docs (user docs list)', () => {
@@ -188,7 +212,7 @@ describe('handleDocsRequest', () => {
 
   describe('GET /api/docs/:slug', () => {
     it('returns 200 with doc when found', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null, creator_token: null, edit_access: false });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: null, collectionId: null, creatorToken: null, editAccess: false });
 
       const res = await handleDocsRequest(makeRequest('GET', '/api/docs/abc1234'), env);
 
@@ -197,7 +221,7 @@ describe('handleDocsRequest', () => {
     });
 
     it('calls getDoc with env and slug only (service role handles auth)', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId, collection_id: null, creator_token: null, edit_access: false });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: userId, collectionId: null, creatorToken: null, editAccess: false });
 
       await handleDocsRequest(makeRequest('GET', '/api/docs/abc1234'), env);
 
@@ -213,7 +237,7 @@ describe('handleDocsRequest', () => {
 
     it('returns 200 and falls through to DB when cache.match throws', async () => {
       mockCache.match.mockRejectedValueOnce(new Error('cache unavailable'));
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null, creator_token: null, edit_access: false });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: null, collectionId: null, creatorToken: null, editAccess: false });
 
       const res = await handleDocsRequest(makeRequest('GET', '/api/docs/abc1234'), env);
 
@@ -223,7 +247,7 @@ describe('handleDocsRequest', () => {
 
     it('returns 200 even when cache.put throws', async () => {
       mockCache.put.mockRejectedValueOnce(new Error('cache write failed'));
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null, creator_token: null, edit_access: false });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: null, collectionId: null, creatorToken: null, editAccess: false });
 
       const res = await handleDocsRequest(makeRequest('GET', '/api/docs/abc1234'), env);
 
@@ -233,8 +257,8 @@ describe('handleDocsRequest', () => {
 
   describe('PUT /api/docs/:slug', () => {
     it('returns 200 with slug on successful update', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null, creator_token: null, edit_access: true });
-      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Updated', title: null, user_id: null, collection_id: null, creator_token: null, edit_access: true });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: null, collectionId: null, creatorToken: null, editAccess: true });
+      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Updated', title: null, userId: null, collectionId: null, creatorToken: null, editAccess: true });
 
       const res = await handleDocsRequest(
         makeRequest('PUT', '/api/docs/abc1234', { content: '# Updated' }),
@@ -246,8 +270,8 @@ describe('handleDocsRequest', () => {
     });
 
     it('passes title to updateDoc when provided', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null, creator_token: null, edit_access: true });
-      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Updated', title: 'New Title', user_id: null, collection_id: null, creator_token: null, edit_access: true });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: null, collectionId: null, creatorToken: null, editAccess: true });
+      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Updated', title: 'New Title', userId: null, collectionId: null, creatorToken: null, editAccess: true });
 
       await handleDocsRequest(
         makeRequest('PUT', '/api/docs/abc1234', { content: '# Updated', title: 'New Title' }),
@@ -262,8 +286,8 @@ describe('handleDocsRequest', () => {
     });
 
     it('returns 200 for title-only update', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null, creator_token: null, edit_access: true });
-      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: 'New Title', user_id: null, collection_id: null, creator_token: null, edit_access: true });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: null, collectionId: null, creatorToken: null, editAccess: true });
+      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: 'New Title', userId: null, collectionId: null, creatorToken: null, editAccess: true });
 
       const res = await handleDocsRequest(
         makeRequest('PUT', '/api/docs/abc1234', { title: 'New Title' }),
@@ -280,8 +304,8 @@ describe('handleDocsRequest', () => {
 
     it('still calls updateDoc and returns 200 when cache.delete throws', async () => {
       mockCache.delete.mockRejectedValueOnce(new Error('cache delete failed'));
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null, creator_token: null, edit_access: true });
-      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Updated', title: null, user_id: null, collection_id: null, creator_token: null, edit_access: true });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: null, collectionId: null, creatorToken: null, editAccess: true });
+      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Updated', title: null, userId: null, collectionId: null, creatorToken: null, editAccess: true });
 
       const res = await handleDocsRequest(
         makeRequest('PUT', '/api/docs/abc1234', { content: '# Updated' }),
@@ -293,8 +317,8 @@ describe('handleDocsRequest', () => {
     });
 
     it('invalidates all three per-slug cache keys on content update', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null, creator_token: null, edit_access: true });
-      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Updated', title: null, user_id: null, collection_id: null, creator_token: null, edit_access: true });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: null, collectionId: null, creatorToken: null, editAccess: true });
+      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Updated', title: null, userId: null, collectionId: null, creatorToken: null, editAccess: true });
 
       await handleDocsRequest(
         makeRequest('PUT', '/api/docs/abc1234', { content: '# Updated' }),
@@ -314,7 +338,7 @@ describe('handleDocsRequest', () => {
     });
 
     it('returns 403 when edit_access is false, doc is owned, and requester is not the owner', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: 'owner-id', collection_id: null, creator_token: null, edit_access: false });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: 'owner-id', collectionId: null, creatorToken: null, editAccess: false });
 
       const res = await handleDocsRequest(
         makeRequest('PUT', '/api/docs/abc1234', { content: '# Updated' }),
@@ -326,8 +350,8 @@ describe('handleDocsRequest', () => {
     });
 
     it('returns 200 for unowned doc (user_id null) even without JWT', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null, creator_token: 'tok', edit_access: false });
-      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Updated', title: null, user_id: null, collection_id: null, creator_token: 'tok', edit_access: false });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: null, collectionId: null, creatorToken: 'tok', editAccess: false });
+      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Updated', title: null, userId: null, collectionId: null, creatorToken: 'tok', editAccess: false });
 
       const res = await handleDocsRequest(
         makeRequest('PUT', '/api/docs/abc1234', { content: '# Updated' }),
@@ -338,8 +362,8 @@ describe('handleDocsRequest', () => {
     });
 
     it('returns 200 when edit_access is true and requester has no JWT', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: 'owner-id', collection_id: null, creator_token: null, edit_access: true });
-      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Updated', title: null, user_id: 'owner-id', collection_id: null, creator_token: null, edit_access: true });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: 'owner-id', collectionId: null, creatorToken: null, editAccess: true });
+      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Updated', title: null, userId: 'owner-id', collectionId: null, creatorToken: null, editAccess: true });
 
       const res = await handleDocsRequest(
         makeRequest('PUT', '/api/docs/abc1234', { content: '# Updated' }),
@@ -350,8 +374,8 @@ describe('handleDocsRequest', () => {
     });
 
     it('returns 200 when edit_access is false but requester is the owner', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId, collection_id: null, creator_token: null, edit_access: false });
-      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Updated', title: null, user_id: userId, collection_id: null, creator_token: null, edit_access: false });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: userId, collectionId: null, creatorToken: null, editAccess: false });
+      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Updated', title: null, userId: userId, collectionId: null, creatorToken: null, editAccess: false });
 
       const res = await handleDocsRequest(
         makeRequest('PUT', '/api/docs/abc1234', { content: '# Updated' }, { Authorization: `Bearer ${fakeJwt}` }),
@@ -393,7 +417,7 @@ describe('handleDocsRequest', () => {
     });
 
     it('returns 403 when requester is not the owner', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: 'other-user', collection_id: null, creator_token: null, edit_access: false });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: 'other-user', collectionId: null, creatorToken: null, editAccess: false });
 
       const res = await handleDocsRequest(
         makeRequest('PUT', '/api/docs/abc1234', { edit_access: true }, { Authorization: `Bearer ${fakeJwt}` }),
@@ -404,8 +428,8 @@ describe('handleDocsRequest', () => {
     });
 
     it('returns 200 and calls updateDoc with editAccess when owner toggles on', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId, collection_id: null, creator_token: null, edit_access: false });
-      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId, collection_id: null, creator_token: null, edit_access: true });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: userId, collectionId: null, creatorToken: null, editAccess: false });
+      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: userId, collectionId: null, creatorToken: null, editAccess: true });
 
       const res = await handleDocsRequest(
         makeRequest('PUT', '/api/docs/abc1234', { edit_access: true }, { Authorization: `Bearer ${fakeJwt}` }),
@@ -417,8 +441,8 @@ describe('handleDocsRequest', () => {
     });
 
     it('returns 200 and calls updateDoc with editAccess when owner toggles off', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId, collection_id: null, creator_token: null, edit_access: true });
-      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId, collection_id: null, creator_token: null, edit_access: false });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: userId, collectionId: null, creatorToken: null, editAccess: true });
+      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: userId, collectionId: null, creatorToken: null, editAccess: false });
 
       const res = await handleDocsRequest(
         makeRequest('PUT', '/api/docs/abc1234', { edit_access: false }, { Authorization: `Bearer ${fakeJwt}` }),
@@ -430,8 +454,8 @@ describe('handleDocsRequest', () => {
     });
 
     it('invalidates all three per-slug cache keys after toggle', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId, collection_id: null, creator_token: null, edit_access: false });
-      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId, collection_id: null, creator_token: null, edit_access: true });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: userId, collectionId: null, creatorToken: null, editAccess: false });
+      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: userId, collectionId: null, creatorToken: null, editAccess: true });
 
       await handleDocsRequest(
         makeRequest('PUT', '/api/docs/abc1234', { edit_access: true }, { Authorization: `Bearer ${fakeJwt}` }),
@@ -453,7 +477,7 @@ describe('handleDocsRequest', () => {
     });
 
     it('returns 403 when creatorToken does not match', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null, creator_token: 'correct-token', edit_access: false });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: null, collectionId: null, creatorToken: 'correct-token', editAccess: false });
 
       const res = await handleDocsRequest(
         makeRequest('PUT', '/api/docs/abc1234', { claim: true, creatorToken: 'wrong-token' }, { Authorization: `Bearer ${fakeJwt}` }),
@@ -464,7 +488,7 @@ describe('handleDocsRequest', () => {
     });
 
     it('returns 403 when creator_token is already null (already claimed)', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null, creator_token: null, edit_access: false });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: null, collectionId: null, creatorToken: null, editAccess: false });
 
       const res = await handleDocsRequest(
         makeRequest('PUT', '/api/docs/abc1234', { claim: true, creatorToken: 'any-token' }, { Authorization: `Bearer ${fakeJwt}` }),
@@ -493,8 +517,8 @@ describe('handleDocsRequest', () => {
     });
 
     it('returns 200 and calls updateDoc with userId and clearCreatorToken on valid claim', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null, creator_token: 'correct-token', edit_access: false });
-      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId, collection_id: null, creator_token: null, edit_access: false });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: null, collectionId: null, creatorToken: 'correct-token', editAccess: false });
+      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: userId, collectionId: null, creatorToken: null, editAccess: false });
 
       const res = await handleDocsRequest(
         makeRequest('PUT', '/api/docs/abc1234', { claim: true, creatorToken: 'correct-token' }, { Authorization: `Bearer ${fakeJwt}` }),
@@ -510,8 +534,8 @@ describe('handleDocsRequest', () => {
     });
 
     it('invalidates all three per-slug cache keys on claim', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, collection_id: null, creator_token: 'correct-token', edit_access: false });
-      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId, collection_id: null, creator_token: null, edit_access: false });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: null, collectionId: null, creatorToken: 'correct-token', editAccess: false });
+      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: userId, collectionId: null, creatorToken: null, editAccess: false });
 
       await handleDocsRequest(
         makeRequest('PUT', '/api/docs/abc1234', { claim: true, creatorToken: 'correct-token' }, { Authorization: `Bearer ${fakeJwt}` }),
@@ -525,7 +549,7 @@ describe('handleDocsRequest', () => {
 
   describe('DELETE /api/docs/:slug', () => {
     it('returns 204 on successful delete by the doc owner', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId, collection_id: null, creator_token: null, edit_access: false });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: userId, collectionId: null, creatorToken: null, editAccess: false });
       vi.mocked(deleteDoc).mockResolvedValueOnce(undefined);
 
       const res = await handleDocsRequest(
@@ -556,7 +580,7 @@ describe('handleDocsRequest', () => {
     });
 
     it('returns 403 when doc is owned by a different user', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: 'other-user', collection_id: null, creator_token: null, edit_access: false });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: 'other-user', collectionId: null, creatorToken: null, editAccess: false });
 
       const res = await handleDocsRequest(
         makeRequest('DELETE', '/api/docs/abc1234', undefined, { Authorization: `Bearer ${fakeJwt}` }),
@@ -569,7 +593,7 @@ describe('handleDocsRequest', () => {
 
     it('still returns 204 when cache invalidation throws (non-fatal)', async () => {
       mockCache.delete.mockRejectedValueOnce(new Error('cache unavailable'));
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId, collection_id: null, creator_token: null, edit_access: false });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: userId, collectionId: null, creatorToken: null, editAccess: false });
       vi.mocked(deleteDoc).mockResolvedValueOnce(undefined);
 
       const res = await handleDocsRequest(
@@ -582,7 +606,7 @@ describe('handleDocsRequest', () => {
     });
 
     it('invalidates all three per-slug cache keys on delete', async () => {
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId, collection_id: null, creator_token: null, edit_access: false });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: userId, collectionId: null, creatorToken: null, editAccess: false });
       vi.mocked(deleteDoc).mockResolvedValueOnce(undefined);
 
       await handleDocsRequest(
@@ -616,7 +640,7 @@ describe('handleDocsRequest', () => {
   describe('API key auth (X-OpenMark-Key)', () => {
     it('creates a doc when API key resolves to a valid user', async () => {
       vi.mocked(resolveApiKey).mockResolvedValueOnce({ userId: 'api-key-user', keyId: 'key-id-1' });
-      vi.mocked(createDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: 'api-key-user', collection_id: null, creator_token: null, edit_access: false });
+      vi.mocked(createDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: 'api-key-user', collectionId: null, creatorToken: null, editAccess: false });
 
       const res = await handleDocsRequest(
         makeRequest('POST', '/api/docs', { content: '# Hello' }, { 'X-OpenMark-Key': 'omk_test' }),
@@ -644,7 +668,7 @@ describe('handleDocsRequest', () => {
 
     it('reads a doc with API key (no auth required for GET)', async () => {
       vi.mocked(resolveApiKey).mockResolvedValueOnce({ userId: 'api-key-user', keyId: 'key-id-1' });
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: 'api-key-user', collection_id: null, creator_token: null, edit_access: false });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: 'api-key-user', collectionId: null, creatorToken: null, editAccess: false });
 
       const res = await handleDocsRequest(
         makeRequest('GET', '/api/docs/abc1234', undefined, { 'X-OpenMark-Key': 'omk_test' }),
