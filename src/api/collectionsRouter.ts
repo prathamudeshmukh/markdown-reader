@@ -1,10 +1,5 @@
-import {
-  getCollections,
-  createCollection,
-  updateCollection,
-  deleteCollection,
-  type SupabaseEnv,
-} from './supabaseClient';
+import { getCollections, createCollection, updateCollection, deleteCollection } from './repository/collections';
+import type { SupabaseEnv } from './repository/shared';
 import { json, requireAuth } from './workerUtils';
 
 export type RouterEnv = SupabaseEnv;
