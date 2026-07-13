@@ -1,5 +1,6 @@
 import { nanoid } from 'nanoid';
-import { createDoc, getDoc, updateDoc, type SupabaseEnv } from './supabaseClient';
+import { createDoc, getDoc, updateDoc } from './repository/docs';
+import type { SupabaseEnv } from './repository/shared';
 import { resolveApiKey } from './apiKeyAuth';
 import { buildSyntheticJwt } from './workerUtils';
 
@@ -166,7 +167,7 @@ async function toolUpdateDoc(args: unknown, userId: string, env: RouterEnv): Pro
   const slug = extractSlug(rawSlug);
   const existing = await getDoc(env, slug);
   if (!existing) throw { code: -32602, message: 'Document not found' };
-  if (existing.user_id !== null && existing.user_id !== userId) {
+  if (existing.userId !== null && existing.userId !== userId) {
     throw { code: -32602, message: 'Forbidden: you do not own this document' };
   }
 

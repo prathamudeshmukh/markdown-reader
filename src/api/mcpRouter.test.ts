@@ -4,7 +4,7 @@ vi.mock('./apiKeyAuth', () => ({
   resolveApiKey: vi.fn(),
 }));
 
-vi.mock('./supabaseClient', () => ({
+vi.mock('./repository/docs', () => ({
   createDoc: vi.fn(),
   getDoc: vi.fn(),
   updateDoc: vi.fn(),
@@ -16,7 +16,7 @@ vi.mock('nanoid', () => ({
 
 import { handleMcpRequest } from './mcpRouter';
 import { resolveApiKey } from './apiKeyAuth';
-import { createDoc, getDoc, updateDoc } from './supabaseClient';
+import { createDoc, getDoc, updateDoc } from './repository/docs';
 
 const env = {
   SUPABASE_URL: 'https://test.supabase.co',
@@ -124,7 +124,7 @@ describe('handleMcpRequest', () => {
   describe('tools/call — openmark_create_doc', () => {
     it('returns Created URL on success', async () => {
       vi.mocked(resolveApiKey).mockResolvedValueOnce({ userId, keyId: 'k1' });
-      vi.mocked(createDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: userId, collection_id: null, creator_token: null, edit_access: false });
+      vi.mocked(createDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, userId: userId, collectionId: null, creatorToken: null, editAccess: false });
 
       const res = await handleMcpRequest(
         makeRequest({
@@ -174,7 +174,7 @@ describe('handleMcpRequest', () => {
   describe('tools/call — openmark_read_doc', () => {
     it('returns formatted title, URL, and content', async () => {
       vi.mocked(resolveApiKey).mockResolvedValueOnce({ userId, keyId: 'k1' });
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Design', title: 'Design Doc', user_id: userId, collection_id: null, creator_token: null, edit_access: false });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Design', title: 'Design Doc', userId: userId, collectionId: null, creatorToken: null, editAccess: false });
 
       const res = await handleMcpRequest(
         makeRequest({
@@ -210,7 +210,7 @@ describe('handleMcpRequest', () => {
 
     it('strips URL prefix when full URL is provided as slug', async () => {
       vi.mocked(resolveApiKey).mockResolvedValueOnce({ userId, keyId: 'k1' });
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hi', title: null, user_id: userId, collection_id: null, creator_token: null, edit_access: false });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hi', title: null, userId: userId, collectionId: null, creatorToken: null, editAccess: false });
 
       await handleMcpRequest(
         makeRequest({
@@ -227,8 +227,8 @@ describe('handleMcpRequest', () => {
   describe('tools/call — openmark_update_doc', () => {
     it('returns Updated URL on success', async () => {
       vi.mocked(resolveApiKey).mockResolvedValueOnce({ userId, keyId: 'k1' });
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Old', title: null, user_id: userId, collection_id: null, creator_token: null, edit_access: false });
-      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# New', title: null, user_id: userId, collection_id: null, creator_token: null, edit_access: false });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Old', title: null, userId: userId, collectionId: null, creatorToken: null, editAccess: false });
+      vi.mocked(updateDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# New', title: null, userId: userId, collectionId: null, creatorToken: null, editAccess: false });
 
       const res = await handleMcpRequest(
         makeRequest({
@@ -261,7 +261,7 @@ describe('handleMcpRequest', () => {
 
     it('returns error -32602 when user does not own the doc', async () => {
       vi.mocked(resolveApiKey).mockResolvedValueOnce({ userId, keyId: 'k1' });
-      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Old', title: null, user_id: 'other-user', collection_id: null, creator_token: null, edit_access: false });
+      vi.mocked(getDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Old', title: null, userId: 'other-user', collectionId: null, creatorToken: null, editAccess: false });
 
       const res = await handleMcpRequest(
         makeRequest({
