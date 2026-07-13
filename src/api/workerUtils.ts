@@ -1,5 +1,5 @@
 import { resolveApiKey } from './apiKeyAuth';
-import type { SupabaseEnv } from './supabaseClient';
+import type { SupabaseEnv } from './repository/shared';
 
 export function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -39,10 +39,11 @@ export function requireAuth(request: Request): { jwt: string; userId: string } |
   return { jwt, userId };
 }
 
-// Bridge: supabaseClient.ts's write functions take a userJwt rather than a
+// Bridge: the repository's write functions take a userJwt rather than a
 // plain userId, so callers that only have a userId (API-key auth, MCP tools)
-// fake a JWT just to thread it through. Remove once supabaseClient.ts accepts
-// userId directly.
+// fake a JWT just to thread it through. Remove if the repository ever accepts
+// userId directly — see the "RLS defense-in-depth" discussion for why that's
+// a deliberate security-posture decision, not a mechanical one.
 export function buildSyntheticJwt(userId: string): string {
   const payload = btoa(JSON.stringify({ sub: userId }));
   return `synthetic.${payload}.internal`;

@@ -118,8 +118,8 @@ PostHog integration lives in [src/telemetry/](src/telemetry/). `initTelemetry()`
 | [src/api/collectionsRouter.ts](src/api/collectionsRouter.ts) | Worker handler for collections CRUD |
 | [src/api/commentsRouter.ts](src/api/commentsRouter.ts) | Worker handler for `GET/POST/PATCH/DELETE /api/docs/:slug/comments` |
 | [src/api/pdfRouter.ts](src/api/pdfRouter.ts) | Worker handler for PDF → Markdown via R2 + external API |
-| [src/api/supabaseClient.ts](src/api/supabaseClient.ts) | Supabase data access (`createDoc`, `getDoc`, `updateDoc`, comments CRUD) |
-| [src/api/workerUtils.ts](src/api/workerUtils.ts) | Shared Worker helpers: `json()`, `extractBearerToken()`, `extractUserIdFromJwt()` |
+| [src/api/repository/](src/api/repository/) | Supabase data access, split by resource (`docs.ts`, `collections.ts`, `comments.ts`, `apiKeys.ts`) on a shared PostgREST request helper (`shared.ts`) — camelCase domain types, typed `RepositoryError` (`not_found`/`conflict`/`rls_denied`/`network`) |
+| [src/api/workerUtils.ts](src/api/workerUtils.ts) | Shared Worker helpers: `json()`, `cfCache()`, `requireAuth()`, `injectApiKeyAuth()`, `buildSyntheticJwt()` |
 | [src/realtime/useDocChannel.ts](src/realtime/useDocChannel.ts) | Supabase Realtime channel — content + comment broadcast, presence |
 | [src/utils/creatorTokens.ts](src/utils/creatorTokens.ts) | localStorage-backed creator tokens for anonymous doc ownership |
 | [src/utils/collectionTree.ts](src/utils/collectionTree.ts) | Builds nested tree from flat collections + docs rows |
