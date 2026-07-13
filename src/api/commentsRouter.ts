@@ -1,15 +1,7 @@
-import {
-  getDoc,
-  getComments,
-  createComment,
-  resolveComment,
-  deleteComment,
-  countComments,
-  type SupabaseEnv,
-  type CommentRow,
-} from './supabaseClient';
+import { getDoc } from './repository/docs';
+import { getComments, createComment, resolveComment, deleteComment, countComments } from './repository/comments';
+import type { SupabaseEnv } from './repository/shared';
 import { json, extractBearerToken, extractUserIdFromJwt, requireAuth, injectApiKeyAuth } from './workerUtils';
-import type { Comment } from '../types/comments';
 
 export type CommentsRouterEnv = SupabaseEnv & {
   SUPABASE_URL: string;
@@ -22,20 +14,6 @@ const MAX_CONTENT_CHARS = 2000;
 const MAX_ANCHOR_CHARS = 500;
 const MAX_AUTHOR_CHARS = 100;
 const COMMENT_LIMIT = 500;
-
-function rowToComment(row: CommentRow): Comment {
-  return {
-    id: row.id,
-    docSlug: row.doc_slug,
-    userId: row.user_id,
-    authorName: row.author_name,
-    content: row.content,
-    anchorText: row.anchor_text,
-    resolved: row.resolved,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
-}
 
 function parseAuthorName(raw: unknown): string {
   if (typeof raw !== 'string') return 'Anonymous';
@@ -78,8 +56,8 @@ async function handleGet(slug: string, env: CommentsRouterEnv): Promise<Response
   const doc = await getDoc(env, slug);
   if (!doc) return json({ error: 'Not found' }, 404);
 
-  const rows = await getComments(env, slug);
-  return json({ comments: rows.map(rowToComment) });
+  const comments = await getComments(env, slug);
+  return json({ comments });
 }
 
 async function handlePost(request: Request, slug: string, env: CommentsRouterEnv): Promise<Response> {
@@ -111,7 +89,7 @@ async function handlePost(request: Request, slug: string, env: CommentsRouterEnv
   // Attach env for resolveAuthorName to use
   (request as Request & { _env?: CommentsRouterEnv })._env = env;
 
-  const row = await createComment(env, {
+  const comment = await createComment(env, {
     docSlug: slug,
     userId,
     authorName,
@@ -119,7 +97,7 @@ async function handlePost(request: Request, slug: string, env: CommentsRouterEnv
     anchorText,
   });
 
-  return json({ comment: rowToComment(row) }, 201);
+  return json({ comment }, 201);
 }
 
 async function handlePatch(request: Request, id: string, env: CommentsRouterEnv): Promise<Response> {
@@ -134,10 +112,10 @@ async function handlePatch(request: Request, id: string, env: CommentsRouterEnv)
     return json({ error: 'resolved must be a boolean' }, 400);
   }
 
-  const row = await resolveComment(env, id, body.resolved);
-  if (!row) return json({ error: 'Not found' }, 404);
+  const comment = await resolveComment(env, id, body.resolved);
+  if (!comment) return json({ error: 'Not found' }, 404);
 
-  return json({ comment: rowToComment(row) });
+  return json({ comment });
 }
 
 async function handleDelete(request: Request, slug: string, id: string, env: CommentsRouterEnv): Promise<Response> {
@@ -147,7 +125,7 @@ async function handleDelete(request: Request, slug: string, id: string, env: Com
   const doc = await getDoc(env, slug);
   if (!doc) return json({ error: 'Not found' }, 404);
 
-  if (doc.user_id !== auth.userId) return json({ error: 'Forbidden' }, 403);
+  if (doc.userId !== auth.userId) return json({ error: 'Forbidden' }, 403);
 
   await deleteComment(env, id, auth.jwt);
   return new Response(null, { status: 204 });

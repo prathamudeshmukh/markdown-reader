@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('./supabaseClient', () => ({
+vi.mock('./repository/docs', () => ({
   getDoc: vi.fn(),
+}));
+
+vi.mock('./repository/comments', () => ({
   getComments: vi.fn(),
   createComment: vi.fn(),
   resolveComment: vi.fn(),
@@ -14,7 +17,8 @@ vi.mock('./apiKeyAuth', () => ({
 }));
 
 import { handleCommentsRequest } from './commentsRouter';
-import { getDoc, getComments, createComment, resolveComment, deleteComment, countComments } from './supabaseClient';
+import { getDoc } from './repository/docs';
+import { getComments, createComment, resolveComment, deleteComment, countComments } from './repository/comments';
 import { resolveApiKey } from './apiKeyAuth';
 
 const env = {
@@ -35,18 +39,18 @@ function makeRequest(method: string, path: string, body?: unknown, headers?: Rec
   });
 }
 
-const mockDoc = { slug: 'doc123', content: '# Hello', title: null, user_id: userId, collection_id: null, creator_token: null, edit_access: false };
+const mockDoc = { slug: 'doc123', content: '# Hello', title: null, userId, collectionId: null, creatorToken: null, editAccess: false };
 
 const mockComment = {
   id: 'comment-uuid-1',
-  doc_slug: 'doc123',
-  user_id: null,
-  author_name: 'Anonymous',
+  docSlug: 'doc123',
+  userId: null,
+  authorName: 'Anonymous',
   content: 'Test comment',
-  anchor_text: 'Hello',
+  anchorText: 'Hello',
   resolved: false,
-  created_at: '2026-01-01T00:00:00.000Z',
-  updated_at: '2026-01-01T00:00:00.000Z',
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z',
 };
 
 describe('handleCommentsRequest', () => {
@@ -132,7 +136,7 @@ describe('handleCommentsRequest', () => {
     it('stores Anonymous when authorName is blank', async () => {
       vi.mocked(getDoc).mockResolvedValueOnce(mockDoc);
       vi.mocked(countComments).mockResolvedValueOnce(0);
-      vi.mocked(createComment).mockResolvedValueOnce({ ...mockComment, author_name: 'Anonymous' });
+      vi.mocked(createComment).mockResolvedValueOnce({ ...mockComment, authorName: 'Anonymous' });
 
       await handleCommentsRequest(
         makeRequest('POST', '/api/docs/doc123/comments', { content: 'Hi', authorName: '' }),

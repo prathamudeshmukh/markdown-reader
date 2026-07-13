@@ -104,6 +104,17 @@ describe('request', () => {
     );
   });
 
+  it('sets Prefer: count=exact when countExact is requested', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(new Response('[]', { status: 200 }));
+
+    await request(env, 'comments', { auth: { type: 'service-role' }, countExact: true });
+
+    expect(fetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ headers: expect.objectContaining({ Prefer: 'count=exact' }) }),
+    );
+  });
+
   it('classifies a 404 as not_found', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(new Response('not found', { status: 404 }));
 

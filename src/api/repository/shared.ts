@@ -74,6 +74,14 @@ interface RequestOptions {
   body?: unknown;
   auth: AuthMode;
   representation?: boolean;
+  countExact?: boolean;
+}
+
+function preferHeader(options: RequestOptions): string | undefined {
+  const prefs: string[] = [];
+  if (options.representation) prefs.push('return=representation');
+  if (options.countExact) prefs.push('count=exact');
+  return prefs.length ? prefs.join(',') : undefined;
 }
 
 // Every PostgREST call in the repository routes through here — one place that
@@ -84,7 +92,8 @@ export async function request(env: SupabaseEnv, path: string, options: RequestOp
     Authorization: `Bearer ${authToken(env, options.auth)}`,
   };
   if (options.body !== undefined) headers['Content-Type'] = 'application/json';
-  if (options.representation) headers.Prefer = 'return=representation';
+  const prefer = preferHeader(options);
+  if (prefer) headers.Prefer = prefer;
 
   let res: Response;
   try {
