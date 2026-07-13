@@ -14,7 +14,7 @@ export interface DocumentState {
 }
 
 export interface UiState {
-  mode: 'editor' | 'preview' | 'beautify';
+  mode: 'editor' | 'preview';
   isSaving: boolean;
   isLoading: boolean;
   copied: boolean;
