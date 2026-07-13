@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { request, requestJson, RepositoryError, eq, restPath } from './shared';
+import { request, requestJson, RepositoryError, eq, restPath, callerAuth } from './shared';
 
 const env = {
   SUPABASE_URL: 'https://test.supabase.co',
@@ -26,6 +26,16 @@ describe('restPath', () => {
 
   it('returns just the table name when no params are given', () => {
     expect(restPath('docs')).toBe('docs');
+  });
+});
+
+describe('callerAuth', () => {
+  it('returns a caller auth mode when a jwt is given', () => {
+    expect(callerAuth('some.jwt.token')).toEqual({ type: 'caller', jwt: 'some.jwt.token' });
+  });
+
+  it('returns anon auth mode when no jwt is given', () => {
+    expect(callerAuth(undefined)).toEqual({ type: 'anon' });
   });
 });
 

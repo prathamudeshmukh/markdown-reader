@@ -51,6 +51,13 @@ export type AuthMode =
   // service-role key. Ownership is enforced at the Worker layer before this call.
   | { type: 'caller'; jwt: string };
 
+// Most writes are made on behalf of the caller when a JWT is present, falling
+// back to the anon key for unauthenticated writes RLS permits (e.g. anonymous
+// comments, unowned-doc claims).
+export function callerAuth(jwt: string | undefined): AuthMode {
+  return jwt ? { type: 'caller', jwt } : { type: 'anon' };
+}
+
 function authToken(env: SupabaseEnv, auth: AuthMode): string {
   switch (auth.type) {
     case 'anon':
