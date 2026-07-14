@@ -1,5 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useMarkdownState } from './hooks/useMarkdownState';
+import { useRealtimeDocSync } from './realtime/useRealtimeDocSync';
+import { getSlugFromPath } from './utils/route';
 import { useOnboarding } from './hooks/useOnboarding';
 import OnboardingTooltips from './components/OnboardingTooltips';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
@@ -35,7 +37,7 @@ import { extractLeadingH1 } from './utils/mdHeading';
 import { pdfFileToMarkdown, PdfApiError } from './utils/pdfApiClient';
 import { readFeatureFlags } from './config/features';
 import { EMPTY_TREE } from './types/collections';
-import type { Comment, CreateCommentInput } from './types/comments';
+import type { CreateCommentInput } from './types/comments';
 
 const FEATURES = readFeatureFlags();
 
@@ -55,32 +57,11 @@ export default function App() {
   const { user, isAuthLoading, signInWithEmail, signOut } = useAuth();
   const [previewTheme, setPreviewTheme] = usePreviewTheme();
 
-  // Refs used to break the hook ordering circular dependency:
-  // useMarkdownState (which calls useDocChannel) needs comment callbacks,
-  // but those callbacks need setComments from useComments(slug), which needs slug
-  // from useMarkdownState. We thread stable ref-based callbacks into useMarkdownState
-  // and wire them to setComments in a useEffect after useComments is initialized.
-  const commentAddedHandlerRef = useRef<((c: Comment) => void) | null>(null);
-  const commentUpdatedHandlerRef = useRef<((c: Comment) => void) | null>(null);
-  const commentDeletedHandlerRef = useRef<((id: string) => void) | null>(null);
+  const [slug, setSlug] = useState<string | null>(() => getSlugFromPath());
+  const sync = useRealtimeDocSync(slug);
 
-  const stableOnCommentAdded = useCallback((c: Comment) => {
-    commentAddedHandlerRef.current?.(c);
-  }, []);
-  const stableOnCommentUpdated = useCallback((c: Comment) => {
-    commentUpdatedHandlerRef.current?.(c);
-  }, []);
-  const stableOnCommentDeleted = useCallback((id: string) => {
-    commentDeletedHandlerRef.current?.(id);
-  }, []);
-
-  const { markdownText, title, slug, docUserId, editAccess, isOwner, canEdit, mode, isLoading, isSaving, error, presenceCount, setMarkdownText, setTitle, toggleMode, onSave, navigateToDoc, openMdFile, confirmOpenMdFile, openMdFileGuardOpen, setEditAccess, broadcastCommentAdded, broadcastCommentUpdated, broadcastCommentDeleted } =
-    useMarkdownState({
-      userId: user?.id,
-      onCommentAdded: stableOnCommentAdded,
-      onCommentUpdated: stableOnCommentUpdated,
-      onCommentDeleted: stableOnCommentDeleted,
-    });
+  const { markdownText, title, docUserId, editAccess, isOwner, canEdit, mode, isLoading, isSaving, error, setMarkdownText, setTitle, toggleMode, onSave, navigateToDoc, openMdFile, confirmOpenMdFile, openMdFileGuardOpen, setEditAccess } =
+    useMarkdownState({ slug, setSlug, sync, userId: user?.id });
 
   const [editAccessPending, setEditAccessPending] = useState(false);
 
@@ -99,31 +80,7 @@ export default function App() {
     : EMPTY_TREE;
 
   // Comments
-  const { comments, addComment, toggleResolve, removeComment, unresolvedCount, setComments } = useComments(slug);
-
-  // Wire realtime comment events into setComments
-  useEffect(() => {
-    commentAddedHandlerRef.current = (comment: Comment) => {
-      setComments((prev) => ({
-        ...prev,
-        comments: prev.comments.some((c) => c.id === comment.id)
-          ? prev.comments
-          : [...prev.comments, comment],
-      }));
-    };
-    commentUpdatedHandlerRef.current = (comment: Comment) => {
-      setComments((prev) => ({
-        ...prev,
-        comments: prev.comments.map((c) => (c.id === comment.id ? comment : c)),
-      }));
-    };
-    commentDeletedHandlerRef.current = (id: string) => {
-      setComments((prev) => ({
-        ...prev,
-        comments: prev.comments.filter((c) => c.id !== id),
-      }));
-    };
-  }, [setComments]);
+  const { comments, addComment, toggleResolve, removeComment, unresolvedCount } = useComments(slug, sync);
 
   const [commentsPanelOpen, setCommentsPanelOpen] = useState(false);
   const [activeSelection, setActiveSelection] = useState<string | null>(null);
@@ -175,33 +132,27 @@ export default function App() {
   const handleCommentSubmit = useCallback(async (input: CreateCommentInput) => {
     setIsSubmittingComment(true);
     try {
-      const created = await addComment(input);
+      await addComment(input);
       track('comment_posted', { has_anchor: input.anchorText !== null });
-      if (created) broadcastCommentAdded(created);
       setCommentFormOpen(false);
       setActiveSelection(null);
       setSelectionRect(null);
     } finally {
       setIsSubmittingComment(false);
     }
-  }, [addComment, broadcastCommentAdded]);
+  }, [addComment]);
 
   const handleResolve = useCallback((id: string, resolved: boolean) => {
-    void toggleResolve(id, resolved).then(() => {
-      const updated = comments.find((c) => c.id === id);
-      if (updated) broadcastCommentUpdated({ ...updated, resolved });
-    });
+    void toggleResolve(id, resolved);
     track('comment_resolved', { resolved });
-  }, [toggleResolve, comments, broadcastCommentUpdated]);
+  }, [toggleResolve]);
 
   const handleDelete = useCallback((id: string) => {
     const jwt = getAuthToken();
     if (!jwt) return;
-    void removeComment(id, jwt).then(() => {
-      broadcastCommentDeleted(id);
-    });
+    void removeComment(id, jwt);
     track('comment_deleted', {});
-  }, [removeComment, broadcastCommentDeleted]);
+  }, [removeComment]);
 
   const handleSave = useCallback(async (source: InteractionSource = 'button') => {
     const isNewDoc = slug === null;
@@ -369,7 +320,7 @@ export default function App() {
       style={{ backgroundColor: 'var(--bg-primary)' }}
     >
       <Header
-        document={{ slug, markdownText, presenceCount }}
+        document={{ slug, markdownText, presenceCount: sync.presenceCount }}
         ui={{ mode, isSaving, isLoading, copied, copiedMarkdown, sidebarOpen, isPdfImporting, commentsPanelOpen, unresolvedCommentCount: unresolvedCount }}
         share={{ editAccess, isOwner, editAccessPending }}
         theme={{ theme: previewTheme }}
@@ -568,7 +519,7 @@ export default function App() {
       )}
 
       <BottomActionBar
-        document={{ slug, markdownText, presenceCount }}
+        document={{ slug, markdownText, presenceCount: sync.presenceCount }}
         ui={{ mode, isSaving, isLoading, copied, copiedMarkdown, sidebarOpen, isPdfImporting, commentsPanelOpen, unresolvedCommentCount: unresolvedCount }}
         actions={{
           onToggle: () => {

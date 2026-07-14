@@ -6,6 +6,7 @@ import {
   deleteComment as apiDeleteComment,
 } from '../api/commentsApi';
 import type { Comment, CreateCommentInput } from '../types/comments';
+import type { RealtimeDocSyncResult } from '../realtime/useRealtimeDocSync';
 
 interface CommentsState {
   comments: Comment[];
@@ -21,7 +22,6 @@ interface UseCommentsResult {
   toggleResolve: (id: string, resolved: boolean) => Promise<void>;
   removeComment: (id: string, jwt: string) => Promise<void>;
   unresolvedCount: number;
-  setComments: React.Dispatch<React.SetStateAction<CommentsState>>;
 }
 
 function buildOptimisticComment(input: CreateCommentInput, slug: string): Comment {
@@ -38,7 +38,7 @@ function buildOptimisticComment(input: CreateCommentInput, slug: string): Commen
   };
 }
 
-export function useComments(slug: string | null): UseCommentsResult {
+export function useComments(slug: string | null, sync: RealtimeDocSyncResult): UseCommentsResult {
   const [state, setState] = useState<CommentsState>({
     comments: [],
     isLoading: false,
@@ -58,6 +58,33 @@ export function useComments(slug: string | null): UseCommentsResult {
       });
   }, [slug]);
 
+  useEffect(() => {
+    const unsubscribeAdded = sync.subscribeCommentAdded((comment) => {
+      setState((prev) => ({
+        ...prev,
+        comments: prev.comments.some((c) => c.id === comment.id) ? prev.comments : [...prev.comments, comment],
+      }));
+    });
+    const unsubscribeUpdated = sync.subscribeCommentUpdated((comment) => {
+      setState((prev) => ({
+        ...prev,
+        comments: prev.comments.map((c) => (c.id === comment.id ? comment : c)),
+      }));
+    });
+    const unsubscribeDeleted = sync.subscribeCommentDeleted((id) => {
+      setState((prev) => ({
+        ...prev,
+        comments: prev.comments.filter((c) => c.id !== id),
+      }));
+    });
+
+    return () => {
+      unsubscribeAdded();
+      unsubscribeUpdated();
+      unsubscribeDeleted();
+    };
+  }, [sync]);
+
   const addComment = useCallback(
     async (input: CreateCommentInput): Promise<Comment | null> => {
       if (!slug) return null;
@@ -75,6 +102,7 @@ export function useComments(slug: string | null): UseCommentsResult {
           ...prev,
           comments: prev.comments.map((c) => (c.id === optimistic.id ? created : c)),
         }));
+        sync.broadcastCommentAdded(created);
         return created;
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Failed to post comment';
@@ -86,7 +114,7 @@ export function useComments(slug: string | null): UseCommentsResult {
         return null;
       }
     },
-    [slug],
+    [slug, sync],
   );
 
   const toggleResolve = useCallback(
@@ -105,6 +133,7 @@ export function useComments(slug: string | null): UseCommentsResult {
           ...prev,
           comments: prev.comments.map((c) => (c.id === id ? updated : c)),
         }));
+        sync.broadcastCommentUpdated(updated);
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Failed to update comment';
         setState((prev) => ({
@@ -114,7 +143,7 @@ export function useComments(slug: string | null): UseCommentsResult {
         }));
       }
     },
-    [slug],
+    [slug, sync],
   );
 
   const removeComment = useCallback(
@@ -130,6 +159,7 @@ export function useComments(slug: string | null): UseCommentsResult {
 
       try {
         await apiDeleteComment(slug, id, jwt);
+        sync.broadcastCommentDeleted(id);
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Failed to delete comment';
         setState((prev) => ({
@@ -139,7 +169,7 @@ export function useComments(slug: string | null): UseCommentsResult {
         }));
       }
     },
-    [slug, state.comments],
+    [slug, state.comments, sync],
   );
 
   const unresolvedCount = state.comments.filter((c) => !c.resolved).length;
@@ -152,6 +182,5 @@ export function useComments(slug: string | null): UseCommentsResult {
     toggleResolve,
     removeComment,
     unresolvedCount,
-    setComments: setState,
   };
 }

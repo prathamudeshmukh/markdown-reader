@@ -2,6 +2,7 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('./hooks/useMarkdownState');
+vi.mock('./utils/route', () => ({ getSlugFromPath: vi.fn(() => null) }));
 vi.mock('./hooks/useKeyboardShortcuts', () => ({ useKeyboardShortcuts: vi.fn() }));
 vi.mock('./hooks/useRecentDocs', () => ({ useRecentDocs: vi.fn(() => ({ status: 'ready', docs: [] })) }));
 vi.mock('./hooks/useCollections', () => ({ useCollections: vi.fn(() => ({ state: { status: 'idle' }, refresh: vi.fn(), createCollection: vi.fn(), renameCollection: vi.fn(), deleteCollection: vi.fn(), moveDocToCollection: vi.fn() })) }));
@@ -34,6 +35,7 @@ vi.mock('./components/QrModal', () => ({
 
 import App from './App';
 import { useMarkdownState } from './hooks/useMarkdownState';
+import { getSlugFromPath } from './utils/route';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useAuth } from './auth/AuthContext';
 import { loadCreatorToken } from './utils/creatorTokens';
@@ -44,13 +46,11 @@ import { PdfApiError } from './utils/pdfApiClient';
 const baseState = {
   markdownText: '',
   title: null as string | null,
-  slug: null as string | null,
   collectionId: null as string | null,
   mode: 'editor' as const,
   isLoading: false,
   isSaving: false,
   error: null as string | null,
-  presenceCount: 1,
   setMarkdownText: vi.fn(),
   setTitle: vi.fn(),
   toggleMode: vi.fn(),
@@ -64,9 +64,6 @@ const baseState = {
   canEdit: true,
   editAccess: false,
   setEditAccess: vi.fn(),
-  broadcastCommentAdded: vi.fn(),
-  broadcastCommentUpdated: vi.fn(),
-  broadcastCommentDeleted: vi.fn(),
 };
 
 describe('App', () => {
@@ -82,6 +79,7 @@ describe('App', () => {
       configurable: true,
     });
     vi.mocked(useMarkdownState).mockReturnValue(baseState);
+    vi.mocked(getSlugFromPath).mockReturnValue(null);
   });
 
   it('renders the editor in editor mode', () => {
@@ -125,7 +123,7 @@ describe('App', () => {
     });
 
     it('opens when Show QR code button is clicked', () => {
-      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, slug: 'abc1234' });
+      vi.mocked(getSlugFromPath).mockReturnValue('abc1234');
       render(<App />);
       fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Share' }));
       fireEvent.click(screen.getByRole('button', { name: 'Show QR code' }));
@@ -134,7 +132,7 @@ describe('App', () => {
     });
 
     it('closes when onClose is called from within the modal', () => {
-      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, slug: 'abc1234' });
+      vi.mocked(getSlugFromPath).mockReturnValue('abc1234');
       render(<App />);
       fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Share' }));
       fireEvent.click(screen.getByRole('button', { name: 'Show QR code' }));
@@ -145,9 +143,9 @@ describe('App', () => {
 
   describe('copy actions', () => {
     it('tracks link copy once', async () => {
+      vi.mocked(getSlugFromPath).mockReturnValue('abc1234');
       vi.mocked(useMarkdownState).mockReturnValue({
         ...baseState,
-        slug: 'abc1234',
         markdownText: '# Hello',
       });
       render(<App />);
@@ -160,9 +158,9 @@ describe('App', () => {
     });
 
     it('tracks markdown copy once', async () => {
+      vi.mocked(getSlugFromPath).mockReturnValue('abc1234');
       vi.mocked(useMarkdownState).mockReturnValue({
         ...baseState,
-        slug: 'abc1234',
         markdownText: '# Hello',
       });
       render(<App />);
@@ -307,48 +305,53 @@ describe('App', () => {
   describe('canEdit — access control', () => {
     // Flow A: new unsaved doc — always editable
     it('new unsaved doc (no slug) is always editable', () => {
-      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, slug: null, docUserId: null });
+      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, docUserId: null });
       render(<App />);
       expect(screen.getByPlaceholderText('Start writing…')).not.toHaveAttribute('readonly');
     });
 
     // Flow B/G: anon on unowned doc — editable
     it('anon visitor on unowned doc can edit', () => {
-      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, slug: 'abc1234', docUserId: null });
+      vi.mocked(getSlugFromPath).mockReturnValue('abc1234');
+      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, docUserId: null });
       render(<App />);
       expect(screen.getByPlaceholderText('Start writing…')).not.toHaveAttribute('readonly');
     });
 
     // Flow B (after sign-up): auth user with creator token on unowned doc — editable
     it('authenticated user with creator token on unowned doc can edit', () => {
+      vi.mocked(getSlugFromPath).mockReturnValue('abc1234');
       vi.mocked(useAuth).mockReturnValue({ user: { id: 'user-a' } as never, isAuthLoading: false, signInWithEmail: vi.fn(), signOut: vi.fn() });
       vi.mocked(loadCreatorToken).mockReturnValue('valid-token');
-      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, slug: 'abc1234', docUserId: null });
+      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, docUserId: null });
       render(<App />);
       expect(screen.getByPlaceholderText('Start writing…')).not.toHaveAttribute('readonly');
     });
 
     // Flow E: auth user without creator token on unowned doc — blocked
     it('authenticated user without creator token on unowned doc is blocked', () => {
+      vi.mocked(getSlugFromPath).mockReturnValue('abc1234');
       vi.mocked(useAuth).mockReturnValue({ user: { id: 'user-b' } as never, isAuthLoading: false, signInWithEmail: vi.fn(), signOut: vi.fn() });
       vi.mocked(loadCreatorToken).mockReturnValue(null);
-      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, slug: 'abc1234', docUserId: null, canEdit: false });
+      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, docUserId: null, canEdit: false });
       render(<App />);
       expect(screen.getByPlaceholderText('Start writing…')).toHaveAttribute('readonly');
     });
 
     // Flow C: owner can edit their own doc
     it('authenticated owner of a doc can edit', () => {
+      vi.mocked(getSlugFromPath).mockReturnValue('abc1234');
       vi.mocked(useAuth).mockReturnValue({ user: { id: 'user-a' } as never, isAuthLoading: false, signInWithEmail: vi.fn(), signOut: vi.fn() });
-      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, slug: 'abc1234', docUserId: 'user-a' });
+      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, docUserId: 'user-a' });
       render(<App />);
       expect(screen.getByPlaceholderText('Start writing…')).not.toHaveAttribute('readonly');
     });
 
     // Flow D: different auth user on owned doc — blocked
     it('authenticated non-owner on someone else\'s doc is blocked', () => {
+      vi.mocked(getSlugFromPath).mockReturnValue('abc1234');
       vi.mocked(useAuth).mockReturnValue({ user: { id: 'user-b' } as never, isAuthLoading: false, signInWithEmail: vi.fn(), signOut: vi.fn() });
-      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, slug: 'abc1234', docUserId: 'user-a', canEdit: false });
+      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, docUserId: 'user-a', canEdit: false });
       render(<App />);
       expect(screen.getByPlaceholderText('Start writing…')).toHaveAttribute('readonly');
     });
@@ -356,8 +359,9 @@ describe('App', () => {
 
   describe('EditBlockedModal — isUnowned prop', () => {
     it('shows "no owner" copy when doc is unowned', () => {
+      vi.mocked(getSlugFromPath).mockReturnValue('abc1234');
       vi.mocked(useAuth).mockReturnValue({ user: { id: 'user-b' } as never, isAuthLoading: false, signInWithEmail: vi.fn(), signOut: vi.fn() });
-      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, slug: 'abc1234', docUserId: null, mode: 'preview', canEdit: false });
+      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, docUserId: null, mode: 'preview', canEdit: false });
       render(<App />);
       fireEvent.click(screen.getAllByRole('button', { name: /edit/i })[0]);
       expect(screen.getByText(/this document has no owner/i)).toBeInTheDocument();
@@ -365,8 +369,9 @@ describe('App', () => {
     });
 
     it('shows "someone else\'s document" copy and sign-in button when doc is owned by another', () => {
+      vi.mocked(getSlugFromPath).mockReturnValue('abc1234');
       vi.mocked(useAuth).mockReturnValue({ user: { id: 'user-b' } as never, isAuthLoading: false, signInWithEmail: vi.fn(), signOut: vi.fn() });
-      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, slug: 'abc1234', docUserId: 'user-a', mode: 'preview', canEdit: false });
+      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, docUserId: 'user-a', mode: 'preview', canEdit: false });
       render(<App />);
       fireEvent.click(screen.getAllByRole('button', { name: /edit/i })[0]);
       expect(screen.getByText(/someone else/i)).toBeInTheDocument();
@@ -507,7 +512,7 @@ describe('App', () => {
     });
 
     it('marks copy-link source as shortcut', async () => {
-      vi.mocked(useMarkdownState).mockReturnValue({ ...baseState, slug: 'abc1234' });
+      vi.mocked(getSlugFromPath).mockReturnValue('abc1234');
       render(<App />);
 
       const handlers = vi.mocked(useKeyboardShortcuts).mock.calls[0]?.[0];

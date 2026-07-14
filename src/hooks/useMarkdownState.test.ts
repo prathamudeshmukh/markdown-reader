@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -13,9 +14,6 @@ vi.mock('../utils/creatorTokens', () => ({
   clearCreatorToken: vi.fn(),
 }));
 vi.mock('../utils/recentDocs', () => ({ addRecentDoc: vi.fn() }));
-vi.mock('../realtime/useDocChannel', () => ({
-  useDocChannel: vi.fn(() => ({ broadcastContent: vi.fn(), presenceCount: 1 })),
-}));
 vi.mock('../telemetry', () => ({
   track: vi.fn(),
   getContentLengthBucket: vi.fn(() => 'xs'),
@@ -27,12 +25,35 @@ vi.mock('../utils/onboarding', () => ({
 }));
 
 import { useMarkdownState } from './useMarkdownState';
+import type { RealtimeDocSyncResult } from '../realtime/useRealtimeDocSync';
 import { getSlugFromPath } from '../utils/route';
 import { fetchDoc, saveDoc, updateDoc } from '../api/docsApi';
 import { addRecentDoc } from '../utils/recentDocs';
 import { track } from '../telemetry';
 import { getInitialMarkdownText, SAMPLE_DOC } from '../utils/onboarding';
 import { saveCreatorToken, loadCreatorToken, clearCreatorToken } from '../utils/creatorTokens';
+
+const mockSync: RealtimeDocSyncResult = {
+  broadcastContent: vi.fn(),
+  broadcastCommentAdded: vi.fn(),
+  broadcastCommentUpdated: vi.fn(),
+  broadcastCommentDeleted: vi.fn(),
+  subscribeContent: vi.fn(() => () => undefined),
+  subscribeCommentAdded: vi.fn(() => () => undefined),
+  subscribeCommentUpdated: vi.fn(() => () => undefined),
+  subscribeCommentDeleted: vi.fn(() => () => undefined),
+  presenceCount: 0,
+};
+
+// Mirrors how App.tsx owns slug and threads it into useMarkdownState — the
+// hook itself no longer owns slug as internal state.
+function renderMarkdownState(options: { userId?: string } = {}) {
+  return renderHook(() => {
+    const [slug, setSlug] = useState<string | null>(() => getSlugFromPath());
+    const markdownState = useMarkdownState({ slug, setSlug, sync: mockSync, ...options });
+    return { slug, ...markdownState };
+  });
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -50,7 +71,7 @@ describe('useMarkdownState', () => {
     });
 
     it('starts with empty text, not loading, no error', () => {
-      const { result } = renderHook(() => useMarkdownState());
+      const { result } = renderMarkdownState();
       expect(result.current.markdownText).toBe('');
       expect(result.current.title).toBeNull();
       expect(result.current.isLoading).toBe(false);
@@ -60,18 +81,18 @@ describe('useMarkdownState', () => {
 
     it('loads sample doc on first new-doc visit when getInitialMarkdownText returns it', () => {
       vi.mocked(getInitialMarkdownText).mockReturnValueOnce(SAMPLE_DOC);
-      const { result } = renderHook(() => useMarkdownState());
+      const { result } = renderMarkdownState();
       expect(result.current.markdownText).toBe(SAMPLE_DOC);
     });
 
     it('does not call fetchDoc on mount', () => {
-      renderHook(() => useMarkdownState());
+      renderMarkdownState();
       expect(fetchDoc).not.toHaveBeenCalled();
     });
 
     it('updates markdownText without calling updateDoc', () => {
       vi.useFakeTimers();
-      const { result } = renderHook(() => useMarkdownState());
+      const { result } = renderMarkdownState();
 
       act(() => result.current.setMarkdownText('# Hello'));
       act(() => vi.runAllTimers());
@@ -82,14 +103,14 @@ describe('useMarkdownState', () => {
     });
 
     it('onSave does nothing when text is empty', async () => {
-      const { result } = renderHook(() => useMarkdownState());
+      const { result } = renderMarkdownState();
       await act(() => result.current.onSave());
       expect(saveDoc).not.toHaveBeenCalled();
     });
 
     it('onSave stores creator token after successful save', async () => {
       vi.mocked(saveDoc).mockResolvedValueOnce({ slug: 'new1234', creatorToken: 'tok-abc' });
-      const { result } = renderHook(() => useMarkdownState());
+      const { result } = renderMarkdownState();
 
       act(() => result.current.setMarkdownText('# Hello'));
       await act(() => result.current.onSave());
@@ -99,7 +120,7 @@ describe('useMarkdownState', () => {
 
     it('onSave calls saveDoc, updates URL and slug in-place on success', async () => {
       vi.mocked(saveDoc).mockResolvedValueOnce({ slug: 'new1234', creatorToken: 'tok-abc' });
-      const { result } = renderHook(() => useMarkdownState());
+      const { result } = renderMarkdownState();
 
       act(() => result.current.setMarkdownText('# Hello'));
       await act(() => result.current.onSave());
@@ -119,7 +140,7 @@ describe('useMarkdownState', () => {
 
     it('onSave includes title when set', async () => {
       vi.mocked(saveDoc).mockResolvedValueOnce({ slug: 'new1234', creatorToken: 'tok-abc' });
-      const { result } = renderHook(() => useMarkdownState());
+      const { result } = renderMarkdownState();
 
       act(() => result.current.setMarkdownText('# Hello'));
       act(() => result.current.setTitle('My Doc'));
@@ -131,7 +152,7 @@ describe('useMarkdownState', () => {
 
     it('onSave sets error on failure', async () => {
       vi.mocked(saveDoc).mockRejectedValueOnce(new Error('Network error'));
-      const { result } = renderHook(() => useMarkdownState());
+      const { result } = renderMarkdownState();
 
       act(() => result.current.setMarkdownText('# Hello'));
       await act(() => result.current.onSave());
@@ -145,7 +166,7 @@ describe('useMarkdownState', () => {
     });
 
     it('toggleMode cycles editor → preview → editor', () => {
-      const { result } = renderHook(() => useMarkdownState());
+      const { result } = renderMarkdownState();
       expect(result.current.mode).toBe('editor');
 
       act(() => result.current.toggleMode());
@@ -167,14 +188,14 @@ describe('useMarkdownState', () => {
 
     it('starts in loading state with correct slug', () => {
       vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, edit_access: false });
-      const { result } = renderHook(() => useMarkdownState());
+      const { result } = renderMarkdownState();
       expect(result.current.isLoading).toBe(true);
       expect(result.current.slug).toBe('abc1234');
     });
 
     it('fetches doc and populates markdownText and title', async () => {
       vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: 'My Doc', user_id: null, edit_access: false });
-      const { result } = renderHook(() => useMarkdownState());
+      const { result } = renderMarkdownState();
 
       await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -186,7 +207,7 @@ describe('useMarkdownState', () => {
 
     it('sets error when fetch fails', async () => {
       vi.mocked(fetchDoc).mockRejectedValueOnce(new Error('Not found'));
-      const { result } = renderHook(() => useMarkdownState());
+      const { result } = renderMarkdownState();
 
       await waitFor(() => expect(result.current.error).toBe('Not found'));
       expect(result.current.isLoading).toBe(false);
@@ -194,7 +215,7 @@ describe('useMarkdownState', () => {
 
     it('calls fetchDoc immediately on mount without waiting for any auth state', async () => {
       vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, edit_access: false });
-      renderHook(() => useMarkdownState());
+      renderMarkdownState();
       // fetchDoc must fire on the first render tick, before any auth resolves
       await waitFor(() => expect(fetchDoc).toHaveBeenCalledWith('abc1234'));
     });
@@ -204,7 +225,7 @@ describe('useMarkdownState', () => {
       vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, edit_access: false });
       vi.mocked(updateDoc).mockResolvedValue(undefined);
 
-      const { result } = renderHook(() => useMarkdownState());
+      const { result } = renderMarkdownState();
       await act(() => vi.runAllTimersAsync());
 
       act(() => result.current.setMarkdownText('# Updated'));
@@ -220,7 +241,7 @@ describe('useMarkdownState', () => {
       vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, edit_access: false });
       vi.mocked(updateDoc).mockResolvedValue(undefined);
 
-      const { result } = renderHook(() => useMarkdownState());
+      const { result } = renderMarkdownState();
       await act(() => vi.runAllTimersAsync());
 
       act(() => result.current.setTitle('New Title'));
@@ -236,7 +257,7 @@ describe('useMarkdownState', () => {
       vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, edit_access: false });
       vi.mocked(updateDoc).mockRejectedValueOnce(new Error('Save failed'));
 
-      const { result } = renderHook(() => useMarkdownState());
+      const { result } = renderMarkdownState();
       await act(() => vi.runAllTimersAsync());
 
       act(() => result.current.setMarkdownText('# Updated'));
@@ -253,7 +274,7 @@ describe('useMarkdownState', () => {
         vi.mocked(loadCreatorToken).mockReturnValue('my-token');
         vi.mocked(updateDoc).mockResolvedValue(undefined);
 
-        const { result } = renderHook(() => useMarkdownState({ userId: 'user-uuid' }));
+        const { result } = renderMarkdownState({ userId: 'user-uuid' });
         await act(() => vi.runAllTimersAsync());
 
         act(() => result.current.setMarkdownText('# Updated'));
@@ -275,7 +296,7 @@ describe('useMarkdownState', () => {
         vi.mocked(loadCreatorToken).mockReturnValue('my-token');
         vi.mocked(updateDoc).mockResolvedValue(undefined);
 
-        const { result } = renderHook(() => useMarkdownState({ userId: 'user-uuid' }));
+        const { result } = renderMarkdownState({ userId: 'user-uuid' });
         await act(() => vi.runAllTimersAsync());
 
         act(() => result.current.setMarkdownText('# Updated'));
@@ -292,7 +313,7 @@ describe('useMarkdownState', () => {
         vi.mocked(loadCreatorToken).mockReturnValue('my-token');
         vi.mocked(updateDoc).mockResolvedValue(undefined);
 
-        const { result } = renderHook(() => useMarkdownState());
+        const { result } = renderMarkdownState();
         await act(() => vi.runAllTimersAsync());
 
         act(() => result.current.setMarkdownText('# Updated'));
@@ -309,7 +330,7 @@ describe('useMarkdownState', () => {
         vi.mocked(loadCreatorToken).mockReturnValue(null);
         vi.mocked(updateDoc).mockResolvedValue(undefined);
 
-        const { result } = renderHook(() => useMarkdownState({ userId: 'user-uuid' }));
+        const { result } = renderMarkdownState({ userId: 'user-uuid' });
         await act(() => vi.runAllTimersAsync());
 
         act(() => result.current.setMarkdownText('# Updated'));
@@ -329,7 +350,7 @@ describe('useMarkdownState', () => {
 
     it('stores edit_access from fetched doc', async () => {
       vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, edit_access: true });
-      const { result } = renderHook(() => useMarkdownState());
+      const { result } = renderMarkdownState();
 
       await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -338,7 +359,7 @@ describe('useMarkdownState', () => {
 
     it('canEdit is true for owner regardless of edit_access', async () => {
       vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: 'owner-id', edit_access: false });
-      const { result } = renderHook(() => useMarkdownState({ userId: 'owner-id' }));
+      const { result } = renderMarkdownState({ userId: 'owner-id' });
 
       await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -347,7 +368,7 @@ describe('useMarkdownState', () => {
 
     it('canEdit is true for non-owner when edit_access is true', async () => {
       vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: 'owner-id', edit_access: true });
-      const { result } = renderHook(() => useMarkdownState({ userId: 'visitor-id' }));
+      const { result } = renderMarkdownState({ userId: 'visitor-id' });
 
       await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -356,7 +377,7 @@ describe('useMarkdownState', () => {
 
     it('canEdit is false for non-owner when edit_access is false', async () => {
       vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: 'owner-id', edit_access: false });
-      const { result } = renderHook(() => useMarkdownState({ userId: 'visitor-id' }));
+      const { result } = renderMarkdownState({ userId: 'visitor-id' });
 
       await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -365,7 +386,7 @@ describe('useMarkdownState', () => {
 
     it('isOwner is true when userId matches docUserId', async () => {
       vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: 'owner-id', edit_access: false });
-      const { result } = renderHook(() => useMarkdownState({ userId: 'owner-id' }));
+      const { result } = renderMarkdownState({ userId: 'owner-id' });
 
       await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -377,7 +398,7 @@ describe('useMarkdownState', () => {
       vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: 'owner-id', edit_access: false });
       vi.mocked(updateDoc).mockResolvedValue(undefined);
 
-      const { result } = renderHook(() => useMarkdownState({ userId: 'visitor-id' }));
+      const { result } = renderMarkdownState({ userId: 'visitor-id' });
       await act(() => vi.runAllTimersAsync());
 
       act(() => result.current.setMarkdownText('# Changed'));
@@ -392,7 +413,7 @@ describe('useMarkdownState', () => {
       vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: 'owner-id', edit_access: true });
       vi.mocked(updateDoc).mockResolvedValue(undefined);
 
-      const { result } = renderHook(() => useMarkdownState({ userId: 'visitor-id' }));
+      const { result } = renderMarkdownState({ userId: 'visitor-id' });
       await act(() => vi.runAllTimersAsync());
 
       act(() => result.current.setMarkdownText('# Changed'));
@@ -406,7 +427,7 @@ describe('useMarkdownState', () => {
       vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: 'owner-id', edit_access: false });
       vi.mocked(updateDoc).mockResolvedValue(undefined);
 
-      const { result } = renderHook(() => useMarkdownState({ userId: 'owner-id' }));
+      const { result } = renderMarkdownState({ userId: 'owner-id' });
       await waitFor(() => expect(result.current.isLoading).toBe(false));
 
       await act(() => result.current.setEditAccess(true));
@@ -419,7 +440,7 @@ describe('useMarkdownState', () => {
       vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Hello', title: null, user_id: 'owner-id', edit_access: false });
       vi.mocked(updateDoc).mockRejectedValueOnce(new Error('Forbidden'));
 
-      const { result } = renderHook(() => useMarkdownState({ userId: 'owner-id' }));
+      const { result } = renderMarkdownState({ userId: 'owner-id' });
       await waitFor(() => expect(result.current.isLoading).toBe(false));
 
       await act(() => result.current.setEditAccess(true));
@@ -437,7 +458,7 @@ describe('useMarkdownState', () => {
     it('updates URL, sets new slug, and resets state to loading', async () => {
       vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Old', title: null, user_id: null, edit_access: false });
       vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'xyz5678', content: '# New', title: null, user_id: null, edit_access: false });
-      const { result } = renderHook(() => useMarkdownState());
+      const { result } = renderMarkdownState();
       await waitFor(() => expect(result.current.isLoading).toBe(false));
 
       act(() => result.current.navigateToDoc('xyz5678'));
@@ -452,7 +473,7 @@ describe('useMarkdownState', () => {
     it('fetches and loads the new doc content after navigation', async () => {
       vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Old', title: null, user_id: null, edit_access: false });
       vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'xyz5678', content: '# New', title: 'New Doc', user_id: null, edit_access: false });
-      const { result } = renderHook(() => useMarkdownState());
+      const { result } = renderMarkdownState();
       await waitFor(() => expect(result.current.isLoading).toBe(false));
 
       act(() => result.current.navigateToDoc('xyz5678'));
@@ -468,7 +489,7 @@ describe('useMarkdownState', () => {
       vi.mocked(fetchDoc).mockResolvedValue({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, edit_access: false });
       vi.mocked(updateDoc).mockResolvedValue(undefined);
 
-      const { result } = renderHook(() => useMarkdownState());
+      const { result } = renderMarkdownState();
       await act(() => vi.runAllTimersAsync());
 
       act(() => result.current.setMarkdownText('# Unsaved edit'));
@@ -484,7 +505,7 @@ describe('useMarkdownState', () => {
       vi.mocked(fetchDoc).mockResolvedValue({ slug: 'abc1234', content: '# Hello', title: null, user_id: null, edit_access: false });
       vi.mocked(updateDoc).mockResolvedValue(undefined);
 
-      const { result } = renderHook(() => useMarkdownState());
+      const { result } = renderMarkdownState();
       await act(() => vi.runAllTimersAsync());
 
       act(() => result.current.setTitle('Unsaved title'));
@@ -500,7 +521,7 @@ describe('useMarkdownState', () => {
       vi.mocked(saveDoc).mockResolvedValueOnce({ slug: 'new1234', creatorToken: 'tok-abc' });
       vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'xyz5678', content: '# Other', title: null, user_id: null, edit_access: false });
 
-      const { result } = renderHook(() => useMarkdownState());
+      const { result } = renderMarkdownState();
       act(() => result.current.setMarkdownText('# Hello'));
       await act(() => result.current.onSave());
       expect(result.current.slug).toBe('new1234');
@@ -524,7 +545,7 @@ describe('useMarkdownState', () => {
 
     it('loads content directly when current doc is empty', async () => {
       const file = makeFile('notes.md', '# Title\n\nBody');
-      const { result } = renderHook(() => useMarkdownState());
+      const { result } = renderMarkdownState();
 
       await act(() => result.current.openMdFile(file, 'toolbar'));
 
@@ -538,7 +559,7 @@ describe('useMarkdownState', () => {
       vi.mocked(getSlugFromPath).mockReturnValue('abc1234');
       vi.mocked(fetchDoc).mockResolvedValueOnce({ slug: 'abc1234', content: '# Old', title: null, user_id: null, edit_access: false });
       const file = makeFile('new.md', '# New content');
-      const { result } = renderHook(() => useMarkdownState());
+      const { result } = renderMarkdownState();
       await waitFor(() => expect(result.current.isLoading).toBe(false));
 
       await act(() => result.current.openMdFile(file, 'toolbar'));
@@ -549,7 +570,7 @@ describe('useMarkdownState', () => {
     });
 
     it('shows guard when current doc is unsaved and non-empty', async () => {
-      const { result } = renderHook(() => useMarkdownState());
+      const { result } = renderMarkdownState();
       act(() => result.current.setMarkdownText('Existing content'));
 
       const file = makeFile('new.md', '# New');
@@ -560,7 +581,7 @@ describe('useMarkdownState', () => {
     });
 
     it('discard path: replaces content and clears slug', async () => {
-      const { result } = renderHook(() => useMarkdownState());
+      const { result } = renderMarkdownState();
       act(() => result.current.setMarkdownText('Existing content'));
 
       const file = makeFile('new.md', '# New content');
@@ -576,7 +597,7 @@ describe('useMarkdownState', () => {
     });
 
     it('cancel path: state unchanged, guard closed', async () => {
-      const { result } = renderHook(() => useMarkdownState());
+      const { result } = renderMarkdownState();
       act(() => result.current.setMarkdownText('Existing content'));
 
       const file = makeFile('new.md', '# New');
@@ -592,7 +613,7 @@ describe('useMarkdownState', () => {
       const file = makeFile('big.md', 'x');
       Object.defineProperty(file, 'size', { value: 2_000_000 });
 
-      const { result } = renderHook(() => useMarkdownState());
+      const { result } = renderMarkdownState();
 
       await act(() => result.current.openMdFile(file, 'toolbar'));
 

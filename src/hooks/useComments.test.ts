@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useComments } from './useComments';
+import type { RealtimeDocSyncResult } from '../realtime/useRealtimeDocSync';
 
 vi.mock('../api/commentsApi', () => ({
   fetchComments: vi.fn(),
@@ -10,6 +11,18 @@ vi.mock('../api/commentsApi', () => ({
 }));
 
 import { fetchComments, postComment, resolveComment, deleteComment } from '../api/commentsApi';
+
+const mockSync: RealtimeDocSyncResult = {
+  broadcastContent: vi.fn(),
+  broadcastCommentAdded: vi.fn(),
+  broadcastCommentUpdated: vi.fn(),
+  broadcastCommentDeleted: vi.fn(),
+  subscribeContent: vi.fn(() => () => undefined),
+  subscribeCommentAdded: vi.fn(() => () => undefined),
+  subscribeCommentUpdated: vi.fn(() => () => undefined),
+  subscribeCommentDeleted: vi.fn(() => () => undefined),
+  presenceCount: 0,
+};
 
 const mockComment = {
   id: 'c1',
@@ -35,7 +48,7 @@ describe('useComments', () => {
   });
 
   it('returns empty state when slug is null', () => {
-    const { result } = renderHook(() => useComments(null));
+    const { result } = renderHook(() => useComments(null, mockSync));
     expect(result.current.comments).toEqual([]);
     expect(result.current.isLoading).toBe(false);
     expect(result.current.error).toBeNull();
@@ -45,7 +58,7 @@ describe('useComments', () => {
   it('fetches comments on mount when slug is provided', async () => {
     vi.mocked(fetchComments).mockResolvedValueOnce([mockComment]);
 
-    const { result } = renderHook(() => useComments('doc123'));
+    const { result } = renderHook(() => useComments('doc123', mockSync));
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -57,7 +70,7 @@ describe('useComments', () => {
   it('derives unresolvedCount correctly', async () => {
     vi.mocked(fetchComments).mockResolvedValueOnce([mockComment, mockComment2]);
 
-    const { result } = renderHook(() => useComments('doc123'));
+    const { result } = renderHook(() => useComments('doc123', mockSync));
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -72,7 +85,7 @@ describe('useComments', () => {
     });
     vi.mocked(postComment).mockReturnValueOnce(slowPost);
 
-    const { result } = renderHook(() => useComments('doc123'));
+    const { result } = renderHook(() => useComments('doc123', mockSync));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     act(() => {
@@ -88,7 +101,7 @@ describe('useComments', () => {
     vi.mocked(fetchComments).mockResolvedValueOnce([]);
     vi.mocked(postComment).mockRejectedValueOnce(new Error('Server error'));
 
-    const { result } = renderHook(() => useComments('doc123'));
+    const { result } = renderHook(() => useComments('doc123', mockSync));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     await act(async () => {
@@ -107,7 +120,7 @@ describe('useComments', () => {
     });
     vi.mocked(resolveComment).mockReturnValueOnce(slowResolve);
 
-    const { result } = renderHook(() => useComments('doc123'));
+    const { result } = renderHook(() => useComments('doc123', mockSync));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     act(() => {
@@ -121,7 +134,7 @@ describe('useComments', () => {
     vi.mocked(fetchComments).mockResolvedValueOnce([mockComment]);
     vi.mocked(resolveComment).mockRejectedValueOnce(new Error('Network error'));
 
-    const { result } = renderHook(() => useComments('doc123'));
+    const { result } = renderHook(() => useComments('doc123', mockSync));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     await act(async () => {
@@ -137,7 +150,7 @@ describe('useComments', () => {
     const slowDelete = new Promise<void>((res) => setTimeout(res, 200));
     vi.mocked(deleteComment).mockReturnValueOnce(slowDelete);
 
-    const { result } = renderHook(() => useComments('doc123'));
+    const { result } = renderHook(() => useComments('doc123', mockSync));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     act(() => {
@@ -151,7 +164,7 @@ describe('useComments', () => {
     vi.mocked(fetchComments).mockResolvedValueOnce([mockComment]);
     vi.mocked(deleteComment).mockRejectedValueOnce(new Error('Forbidden'));
 
-    const { result } = renderHook(() => useComments('doc123'));
+    const { result } = renderHook(() => useComments('doc123', mockSync));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     await act(async () => {
@@ -165,7 +178,7 @@ describe('useComments', () => {
   it('sets error when fetchComments fails', async () => {
     vi.mocked(fetchComments).mockRejectedValueOnce(new Error('Fetch failed'));
 
-    const { result } = renderHook(() => useComments('doc123'));
+    const { result } = renderHook(() => useComments('doc123', mockSync));
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 

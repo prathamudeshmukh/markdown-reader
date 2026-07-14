@@ -1,10 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { getInitialMarkdownText } from '../utils/onboarding';
-import { getSlugFromPath } from '../utils/route';
 import { fetchDoc, saveDoc, updateDoc } from '../api/docsApi';
 import { addRecentDoc } from '../utils/recentDocs';
-import { useDocChannel } from '../realtime/useDocChannel';
-import type { Comment } from '../types/comments';
+import type { RealtimeDocSyncResult } from '../realtime/useRealtimeDocSync';
 import { getContentLengthBucket, getErrorType, track, type InteractionSource, type MdFileOpenSource } from '../telemetry';
 import { saveCreatorToken, loadCreatorToken, clearCreatorToken } from '../utils/creatorTokens';
 import { readMdFile, MdFileError } from '../utils/mdFileReader';
@@ -20,7 +18,6 @@ interface MarkdownState {
   isLoading: boolean;
   isSaving: boolean;
   error: string | null;
-  presenceCount: number;
 }
 
 const DEBOUNCE_MS = 250;
@@ -31,14 +28,13 @@ function getCollectionIdFromQuery(): string | null {
 }
 
 interface UseMarkdownStateOptions {
+  slug: string | null;
+  setSlug: (slug: string | null) => void;
+  sync: RealtimeDocSyncResult;
   userId?: string;
-  onCommentAdded?: (comment: Comment) => void;
-  onCommentUpdated?: (comment: Comment) => void;
-  onCommentDeleted?: (id: string) => void;
 }
 
-export function useMarkdownState({ userId, onCommentAdded, onCommentUpdated, onCommentDeleted }: UseMarkdownStateOptions = {}) {
-  const [slug, setSlug] = useState<string | null>(() => getSlugFromPath());
+export function useMarkdownState({ slug, setSlug, sync, userId }: UseMarkdownStateOptions) {
   const [collectionId, setCollectionId] = useState<string | null>(() =>
     slug ? null : getCollectionIdFromQuery(),
   );
@@ -54,7 +50,6 @@ export function useMarkdownState({ userId, onCommentAdded, onCommentUpdated, onC
         isLoading: true,
         isSaving: false,
         error: null,
-        presenceCount: 0,
       };
     }
     const forked = sessionStorage.getItem('openmark:fork');
@@ -69,7 +64,6 @@ export function useMarkdownState({ userId, onCommentAdded, onCommentUpdated, onC
         isLoading: false,
         isSaving: false,
         error: null,
-        presenceCount: 0,
       };
     }
     return {
@@ -81,19 +75,7 @@ export function useMarkdownState({ userId, onCommentAdded, onCommentUpdated, onC
       isLoading: false,
       isSaving: false,
       error: null,
-      presenceCount: 0,
     };
-  });
-
-  const handleRemoteContent = useCallback((content: string) => {
-    setState((prev) => ({ ...prev, markdownText: content }));
-  }, []);
-
-  const { broadcastContent, broadcastCommentAdded, broadcastCommentUpdated, broadcastCommentDeleted, presenceCount } = useDocChannel(slug, {
-    onRemoteContent: handleRemoteContent,
-    onCommentAdded,
-    onCommentUpdated,
-    onCommentDeleted,
   });
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -101,6 +83,16 @@ export function useMarkdownState({ userId, onCommentAdded, onCommentUpdated, onC
   const savedLocallyRef = useRef(false);
   const userIdRef = useRef<string | undefined>(userId);
   useEffect(() => { userIdRef.current = userId; }, [userId]);
+
+  // While a local edit is mid-debounce (the user just typed and the save
+  // hasn't fired yet), a remote broadcast is dropped rather than applied —
+  // otherwise it silently overwrites content the user is actively typing.
+  useEffect(() => {
+    return sync.subscribeContent((content) => {
+      if (debounceRef.current) return;
+      setState((prev) => ({ ...prev, markdownText: content }));
+    });
+  }, [sync]);
 
   useEffect(() => {
     track('app_opened', {
@@ -132,12 +124,12 @@ export function useMarkdownState({ userId, onCommentAdded, onCommentUpdated, onC
   const setMarkdownText = useCallback(
     (text: string) => {
       setState((prev) => ({ ...prev, markdownText: text }));
-      broadcastContent(text);
+      sync.broadcastContent(text);
 
       if (!slug) return;
 
       if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         // Read userId from ref so we always get the value current at execution
         // time, not the stale value captured when setMarkdownText was created.
         const currentUserId = userIdRef.current;
@@ -150,11 +142,19 @@ export function useMarkdownState({ userId, onCommentAdded, onCommentUpdated, onC
           const creatorToken = currentUserId && !prev.docUserId ? loadCreatorToken(slug) : null;
           const isClaim = !!creatorToken;
 
+          // Only clear debounceRef if no newer edit has been scheduled since this
+          // save started — otherwise a slow, now-stale save could mark the doc as
+          // "no local edit pending" while a fresher keystroke is still in flight.
+          const clearIfCurrent = () => {
+            if (debounceRef.current === timeoutId) debounceRef.current = null;
+          };
+
           updateDoc(slug, {
             content: text,
             ...(isClaim ? { claim: true, creatorToken } : {}),
           })
             .then(() => {
+              clearIfCurrent();
               if (isClaim && creatorToken) {
                 clearCreatorToken(slug);
                 setState((s) => ({ ...s, isSaving: false, docUserId: currentUserId ?? null }));
@@ -162,15 +162,17 @@ export function useMarkdownState({ userId, onCommentAdded, onCommentUpdated, onC
                 setState((s) => ({ ...s, isSaving: false }));
               }
             })
-            .catch((err: Error) =>
-              setState((s) => ({ ...s, isSaving: false, error: err.message })),
-            );
+            .catch((err: Error) => {
+              clearIfCurrent();
+              setState((s) => ({ ...s, isSaving: false, error: err.message }));
+            });
 
           return { ...prev, isSaving: true };
         });
       }, DEBOUNCE_MS);
+      debounceRef.current = timeoutId;
     },
-    [slug, broadcastContent],
+    [slug, sync],
   );
 
   const setTitle = useCallback(
@@ -220,9 +222,8 @@ export function useMarkdownState({ userId, onCommentAdded, onCommentUpdated, onC
       isLoading: true,
       isSaving: false,
       error: null,
-      presenceCount: 0,
     });
-  }, []);
+  }, [setSlug]);
 
   const onSave = useCallback(async (source: InteractionSource = 'button') => {
     if (state.markdownText.length === 0) return;
@@ -251,7 +252,7 @@ export function useMarkdownState({ userId, onCommentAdded, onCommentUpdated, onC
       track('doc_save_failed', { error_type: getErrorType(err) });
       setState((prev) => ({ ...prev, isSaving: false, error: (err as Error).message }));
     }
-  }, [state.markdownText, state.title, collectionId]);
+  }, [state.markdownText, state.title, collectionId, setSlug]);
 
   const [openMdFileGuardOpen, setOpenMdFileGuardOpen] = useState(false);
   const pendingMdFileRef = useRef<{ content: string; title: string } | null>(null);
@@ -271,9 +272,8 @@ export function useMarkdownState({ userId, onCommentAdded, onCommentUpdated, onC
       isLoading: false,
       isSaving: false,
       error: null,
-      presenceCount: 0,
     }));
-  }, []);
+  }, [setSlug]);
 
   const openMdFile = useCallback(async (file: File, _source: MdFileOpenSource) => {
     let result: { content: string; title: string };
@@ -332,5 +332,5 @@ export function useMarkdownState({ userId, onCommentAdded, onCommentUpdated, onC
     }
   }, [slug]);
 
-  return { ...state, slug, collectionId, presenceCount, isOwner, canEdit, setMarkdownText, setTitle, toggleMode, onSave, navigateToDoc, openMdFile, confirmOpenMdFile, openMdFileGuardOpen, setEditAccess, broadcastCommentAdded, broadcastCommentUpdated, broadcastCommentDeleted };
+  return { ...state, collectionId, isOwner, canEdit, setMarkdownText, setTitle, toggleMode, onSave, navigateToDoc, openMdFile, confirmOpenMdFile, openMdFileGuardOpen, setEditAccess };
 }
