@@ -8,6 +8,7 @@ import {
   applyList,
   applyLink,
   applyTable,
+  applyMermaidDiagram,
   type InsertionResult,
 } from '../utils/markdownInsertion';
 import { track } from '../telemetry';
@@ -125,6 +126,9 @@ export default function FormattingToolbar({
         break;
       case 'table':
         setTableOpen((v) => !v);
+        break;
+      case 'mermaid':
+        applyInsertion(applyMermaidDiagram(value, start));
         break;
     }
   }
@@ -382,6 +386,22 @@ export default function FormattingToolbar({
           </div>
         )}
       </div>
+
+      {/* Mermaid diagram */}
+      <button
+        type="button"
+        onClick={() => handleAction('mermaid')}
+        disabled={readOnly}
+        aria-label="Diagram"
+        title="Insert mermaid diagram"
+        className={TOOL_BTN}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="7" height="5" rx="1" /><rect x="14" y="3" width="7" height="5" rx="1" /><rect x="8.5" y="16" width="7" height="5" rx="1" />
+          <path d="M6.5 8v3a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2V8" /><path d="M12 13v3" />
+        </svg>
+        <span className={TOOL_LABEL}>Diagram</span>
+      </button>
     </div>
     </div>
   );

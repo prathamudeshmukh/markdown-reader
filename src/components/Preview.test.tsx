@@ -1,5 +1,12 @@
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('./MermaidDiagram', () => ({
+  default: (props: { source: string; theme: string }) => (
+    <div data-testid="mermaid-diagram" data-source={props.source} data-theme={props.theme} />
+  ),
+}));
+
 import Preview from './Preview';
 
 describe('Preview', () => {
@@ -46,6 +53,41 @@ describe('Preview', () => {
     render(<Preview content={content} />);
     expect(document.querySelector('script')).not.toBeInTheDocument();
     expect(document.querySelector('pre code')).toBeInTheDocument();
+  });
+
+  describe('mermaid diagrams', () => {
+    it('renders a ```mermaid fence as a MermaidDiagram instead of a highlighted code block', () => {
+      const content = '```mermaid\nflowchart TD\n  A --> B\n```';
+      render(<Preview content={content} />);
+
+      expect(screen.getByTestId('mermaid-diagram')).toBeInTheDocument();
+      expect(document.querySelector('pre code')).not.toBeInTheDocument();
+    });
+
+    it('passes the fenced source (without the trailing newline) to MermaidDiagram', () => {
+      const content = '```mermaid\nflowchart TD\n  A --> B\n```';
+      render(<Preview content={content} />);
+
+      expect(screen.getByTestId('mermaid-diagram')).toHaveAttribute(
+        'data-source',
+        'flowchart TD\n  A --> B',
+      );
+    });
+
+    it('passes the active preview theme through to MermaidDiagram', () => {
+      const content = '```mermaid\nflowchart TD\n  A --> B\n```';
+      render(<Preview content={content} theme="dracula" />);
+
+      expect(screen.getByTestId('mermaid-diagram')).toHaveAttribute('data-theme', 'dracula');
+    });
+
+    it('still renders non-mermaid fenced code blocks normally', () => {
+      const content = '```js\nconst x = 1;\n```';
+      render(<Preview content={content} />);
+
+      expect(screen.queryByTestId('mermaid-diagram')).not.toBeInTheDocument();
+      expect(document.querySelector('pre code')).toBeInTheDocument();
+    });
   });
 
   it('renders GFM tables', () => {

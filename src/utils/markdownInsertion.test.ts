@@ -8,6 +8,7 @@ import {
   applyList,
   applyLink,
   applyTable,
+  applyMermaidDiagram,
 } from './markdownInsertion';
 
 // ── applyBold ──────────────────────────────────────────────────────────────
@@ -189,6 +190,27 @@ describe('applyTable', () => {
 
   it('cursor placed at end of inserted table', () => {
     const result = applyTable('', 0, 2, 2);
+    expect(result.newCursorStart).toBe(result.newValue.length);
+    expect(result.newCursorEnd).toBe(result.newValue.length);
+  });
+});
+
+// ── applyMermaidDiagram ───────────────────────────────────────────────────
+
+describe('applyMermaidDiagram', () => {
+  it('inserts a fenced ```mermaid flowchart starter template', () => {
+    const result = applyMermaidDiagram('', 0);
+    expect(result.newValue).toBe('```mermaid\nflowchart TD\n    A --> B\n```');
+  });
+
+  it('inserts at cursor position in existing text', () => {
+    const result = applyMermaidDiagram('before\n', 7);
+    expect(result.newValue.startsWith('before\n')).toBe(true);
+    expect(result.newValue).toContain('```mermaid');
+  });
+
+  it('cursor placed at end of inserted template', () => {
+    const result = applyMermaidDiagram('', 0);
     expect(result.newCursorStart).toBe(result.newValue.length);
     expect(result.newCursorEnd).toBe(result.newValue.length);
   });

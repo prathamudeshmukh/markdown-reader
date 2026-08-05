@@ -139,6 +139,7 @@ describe('FormattingToolbar ribbon labels', () => {
     expect(screen.getByText('List')).toBeInTheDocument();
     expect(screen.getByText('Link')).toBeInTheDocument();
     expect(screen.getByText('Table')).toBeInTheDocument();
+    expect(screen.getByText('Diagram')).toBeInTheDocument();
   });
 
   it('toolbar uses a flat bar layout without a rounded-full pill', () => {
@@ -155,6 +156,22 @@ describe('FormattingToolbar Table button', () => {
     render(<FormattingToolbar {...baseProps} editorRef={makeRef()} />);
     fireEvent.click(screen.getByRole('button', { name: /table/i }));
     expect(screen.getByTestId('table-popover')).toBeInTheDocument();
+  });
+});
+
+describe('FormattingToolbar Diagram button', () => {
+  it('inserts a mermaid flowchart starter template at the cursor', () => {
+    const onTextChange = vi.fn();
+    render(
+      <FormattingToolbar
+        {...baseProps}
+        value=""
+        onTextChange={onTextChange}
+        editorRef={makeRef(0, 0)}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /diagram/i }));
+    expect(onTextChange).toHaveBeenCalledWith('```mermaid\nflowchart TD\n    A --> B\n```');
   });
 });
 

@@ -2,7 +2,16 @@ export type RouteKind = 'root' | 'doc';
 export type InteractionSource = 'button' | 'shortcut';
 export type MdFileOpenSource = 'toolbar' | 'drag_drop' | 'keyboard' | 'command_palette';
 export type ContentLengthBucket = 'empty' | 'xs' | 'sm' | 'md' | 'lg';
-export type ToolbarAction = 'bold' | 'italic' | 'code' | 'heading' | 'quote' | 'list' | 'link' | 'table';
+export type ToolbarAction =
+  | 'bold'
+  | 'italic'
+  | 'code'
+  | 'heading'
+  | 'quote'
+  | 'list'
+  | 'link'
+  | 'table'
+  | 'mermaid';
 
 export type TelemetryEventName =
   | 'app_opened'
@@ -31,7 +40,8 @@ export type TelemetryEventName =
   | 'comment_panel_opened'
   | 'comment_posted'
   | 'comment_resolved'
-  | 'comment_deleted';
+  | 'comment_deleted'
+  | 'diagram_render_failed';
 
 export interface TelemetrySharedProps {
   session_id: string;
@@ -115,4 +125,7 @@ export interface TelemetryPropsByEvent {
     resolved: boolean;
   };
   comment_deleted: Record<string, never>;
+  diagram_render_failed: {
+    error_type: string;
+  };
 }

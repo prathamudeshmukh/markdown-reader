@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('./hooks/useMarkdownState');
@@ -31,6 +31,13 @@ vi.mock('./components/QrModal', () => ({
   default: ({ onClose }: { onClose: () => void }) => (
     <div data-testid="qr-modal"><button onClick={onClose}>close-qr</button></div>
   ),
+}));
+
+const { mockWaitForPendingRenders } = vi.hoisted(() => ({
+  mockWaitForPendingRenders: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock('./diagrams/pendingDiagramRenders', () => ({
+  waitForPendingRenders: mockWaitForPendingRenders,
 }));
 
 import App from './App';
@@ -177,7 +184,7 @@ describe('App', () => {
   });
 
   describe('export PDF', () => {
-    it('calls window.print directly when already in preview mode', () => {
+    it('calls window.print once pending diagram renders settle when already in preview mode', async () => {
       const print = vi.fn();
       vi.stubGlobal('print', print);
       vi.mocked(useMarkdownState).mockReturnValue({
@@ -189,7 +196,8 @@ describe('App', () => {
       fireEvent.click(screen.getByRole('button', { name: 'File' }));
       fireEvent.click(screen.getByRole('button', { name: 'PDF' }));
       expect(track).toHaveBeenCalledWith('pdf_exported', { mode_at_export: 'preview' });
-      expect(print).toHaveBeenCalledOnce();
+      await waitFor(() => expect(print).toHaveBeenCalledOnce());
+      expect(mockWaitForPendingRenders).toHaveBeenCalledOnce();
     });
 
     it('switches to preview then calls window.print when in editor mode', async () => {
@@ -209,9 +217,32 @@ describe('App', () => {
       expect(track).toHaveBeenCalledWith('pdf_exported', { mode_at_export: 'editor' });
       expect(toggleMode).toHaveBeenCalledOnce();
       expect(print).not.toHaveBeenCalled();
-      vi.runAllTimers();
+      await vi.runAllTimersAsync();
       expect(print).toHaveBeenCalledOnce();
       vi.useRealTimers();
+    });
+
+    it('waits for in-flight diagram renders to settle before printing', async () => {
+      const print = vi.fn();
+      vi.stubGlobal('print', print);
+      let resolveRenders!: () => void;
+      mockWaitForPendingRenders.mockImplementationOnce(
+        () => new Promise<void>((resolve) => { resolveRenders = resolve; }),
+      );
+      vi.mocked(useMarkdownState).mockReturnValue({
+        ...baseState,
+        mode: 'preview',
+        markdownText: '# Hello',
+      });
+      render(<App />);
+      fireEvent.click(screen.getByRole('button', { name: 'File' }));
+      fireEvent.click(screen.getByRole('button', { name: 'PDF' }));
+
+      await Promise.resolve();
+      expect(print).not.toHaveBeenCalled();
+
+      resolveRenders();
+      await waitFor(() => expect(print).toHaveBeenCalledOnce());
     });
   });
 

@@ -38,10 +38,19 @@ import { pdfFileToMarkdown, PdfApiError } from './utils/pdfApiClient';
 import { readFeatureFlags } from './config/features';
 import { EMPTY_TREE } from './types/collections';
 import type { CreateCommentInput } from './types/comments';
+import { waitForPendingRenders } from './diagrams/pendingDiagramRenders';
 
 const FEATURES = readFeatureFlags();
 
 const PDF_IMPORT_UNKNOWN_ERROR = 'Failed to import PDF. Please try again.';
+
+// Bounds how long PDF export waits for in-flight mermaid diagram renders —
+// a broken/hung diagram render must not be able to block printing forever.
+const EXPORT_PDF_DIAGRAM_WAIT_MS = 3000;
+
+// Lets the editor->preview mode switch commit and mount before we check for
+// in-flight diagram renders (see handleExportPdf).
+const EXPORT_PDF_MODE_SWITCH_FLUSH_MS = 100;
 
 function isFinePointer(): boolean {
   return typeof window !== 'undefined' && window.matchMedia('(pointer: fine)').matches;
@@ -284,14 +293,14 @@ export default function App() {
     URL.revokeObjectURL(url);
   }
 
-  function handleExportPdf() {
+  async function handleExportPdf() {
     track('pdf_exported', { mode_at_export: mode });
     if (mode === 'editor') {
       toggleMode('button');
-      setTimeout(() => window.print(), 100);
-    } else {
-      window.print();
+      await new Promise((resolve) => setTimeout(resolve, EXPORT_PDF_MODE_SWITCH_FLUSH_MS));
     }
+    await waitForPendingRenders(EXPORT_PDF_DIAGRAM_WAIT_MS);
+    window.print();
   }
 
   const recentDocsState = useRecentDocs();

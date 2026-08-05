@@ -1,8 +1,9 @@
-import { useEffect, useRef, forwardRef } from 'react';
-import ReactMarkdown from 'react-markdown';
+import { isValidElement, useEffect, useRef, forwardRef, type ReactNode } from 'react';
+import ReactMarkdown, { type Components } from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import remarkGfm from 'remark-gfm';
+import MermaidDiagram from './MermaidDiagram';
 import type { PreviewThemeId } from '../themes/previewThemes';
 import type { Comment } from '../types/comments';
 
@@ -89,6 +90,21 @@ function applyHighlights(container: HTMLElement, comments: Comment[]): void {
       break;
     }
   }
+}
+
+function elementTextContent(node: ReactNode): string {
+  if (typeof node === 'string' || typeof node === 'number') return String(node);
+  if (Array.isArray(node)) return node.map(elementTextContent).join('');
+  if (isValidElement<{ children?: ReactNode }>(node)) return elementTextContent(node.props.children);
+  return '';
+}
+
+function mermaidSourceFromPreChildren(children: ReactNode): string | null {
+  const child = Array.isArray(children) ? children[0] : children;
+  if (!isValidElement<{ className?: string; children?: ReactNode }>(child)) return null;
+  const className = child.props.className ?? '';
+  if (!className.split(' ').includes('language-mermaid')) return null;
+  return elementTextContent(child.props.children).replace(/\n$/, '');
 }
 
 function findNearestBlockText(element: Element): string | null {
@@ -228,6 +244,16 @@ const Preview = forwardRef<HTMLDivElement, PreviewProps>(function Preview(
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           rehypePlugins={[rehypeHighlight, [rehypeSanitize, sanitizeSchema]]}
+          components={{
+            pre(preProps) {
+              const mermaidSource = mermaidSourceFromPreChildren(preProps.children);
+              if (mermaidSource !== null) {
+                return <MermaidDiagram source={mermaidSource} theme={theme} />;
+              }
+              const { node: _node, ...rest } = preProps;
+              return <pre {...rest} />;
+            },
+          } satisfies Components}
         >
           {content}
         </ReactMarkdown>

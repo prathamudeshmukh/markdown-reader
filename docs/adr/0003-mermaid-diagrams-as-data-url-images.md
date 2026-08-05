@@ -1,0 +1,5 @@
+# Mermaid diagrams render as `<img>` data-URL, not inline SVG
+
+Rendered mermaid output is embedded as `<img src="data:image/svg+xml;base64,...">`, not injected as live SVG DOM nodes. We rejected injecting mermaid's raw SVG string via `dangerouslySetInnerHTML` in a custom `react-markdown` component override, even though `securityLevel: 'strict'` (ADR-0002) makes that output safe — an `<img>` tag needs no exception carved into the `rehype-sanitize` pipeline (see CLAUDE.md `## Security`: "raw HTML passthrough is intentionally disabled"), keeping that policy exception-free. We also rejected extending the sanitize schema with an allowlisted SVG element/attribute set, since SVG's attribute surface is large and easy to mis-scope.
+
+The cost: diagrams are opaque images — no text selection inside the diagram, and any pan/zoom/interactivity has to be built around the `<img>` element (e.g. CSS transforms on a wrapper) rather than using mermaid's native SVG interactivity hooks. Per-theme coloring (theme mapping decision) must be baked in at render time via mermaid's `themeVariables`, since there's no live SVG to restyle after the fact.

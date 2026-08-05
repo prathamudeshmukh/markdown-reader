@@ -121,3 +121,13 @@ export function applyTable(
   const cursor = start + tableStr.length;
   return { newValue, newCursorStart: cursor, newCursorEnd: cursor };
 }
+
+const MERMAID_DIAGRAM_TEMPLATE = '```mermaid\nflowchart TD\n    A --> B\n```';
+
+export function applyMermaidDiagram(value: string, start: number): InsertionResult {
+  const before = value.slice(0, start);
+  const after = value.slice(start);
+  const newValue = before + MERMAID_DIAGRAM_TEMPLATE + after;
+  const cursor = start + MERMAID_DIAGRAM_TEMPLATE.length;
+  return { newValue, newCursorStart: cursor, newCursorEnd: cursor };
+}
