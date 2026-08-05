@@ -43,6 +43,14 @@ export async function renderMermaidToDataUrl(
     startOnLoad: false,
     securityLevel: 'strict',
     suppressErrorRendering: true,
+    // Mermaid's default HTML-labels mode renders multi-line node labels via
+    // <foreignObject><p>...<br>...</p></foreignObject>. <br> is unclosed
+    // HTML5 (valid there, invalid strict XML) — any label containing a line
+    // break makes the SVG fail to parse as image/svg+xml once embedded as an
+    // <img> data URL (ADR-0003), even though the same markup renders fine
+    // inline in a browser's lenient HTML parser. Plain SVG <tspan> labels
+    // don't have this problem and still honor explicit line breaks.
+    htmlLabels: false,
     ...getMermaidConfig(themeId),
   });
 

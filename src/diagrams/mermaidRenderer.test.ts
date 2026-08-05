@@ -33,6 +33,20 @@ describe('renderMermaidToDataUrl', () => {
     );
   });
 
+  it('disables HTML labels so multi-line node labels stay valid XML as an <img> data URL', async () => {
+    // Mermaid's default htmlLabels mode renders multi-line labels via
+    // <foreignObject><p>...<br>...</p></foreignObject>. <br> is unclosed
+    // HTML5 — valid in a browser's lenient inline-SVG HTML parser, but
+    // invalid strict XML, so the same markup fails to parse as
+    // image/svg+xml once embedded as an <img> data URL (ADR-0003). Caught
+    // via a real (non-mocked) diagram whose "Load Balancer\n1.2.3.4" label
+    // produced this exact "Opening and ending tag mismatch: br ... p" error.
+    mockRender.mockResolvedValue({ svg: '<svg></svg>' });
+    await renderMermaidToDataUrl('flowchart TD\nA --> B', 'default');
+
+    expect(mockInitialize).toHaveBeenCalledWith(expect.objectContaining({ htmlLabels: false }));
+  });
+
   it('renders the source and returns an svg+xml data URL', async () => {
     mockRender.mockResolvedValue({ svg: '<svg><text>hi</text></svg>' });
     const dataUrl = await renderMermaidToDataUrl('flowchart TD\nA --> B', 'default');
