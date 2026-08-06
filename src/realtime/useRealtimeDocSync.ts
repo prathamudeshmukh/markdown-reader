@@ -39,6 +39,10 @@ function useHandlerSet<T extends (...args: never[]) => void>() {
 export function useRealtimeDocSync(slug: string | null): RealtimeDocSyncResult {
   const [presenceCount, setPresenceCount] = useState(0);
   const channelRef = useRef<RealtimeChannel | null>(null);
+  // Stable per-tab key so a socket rejoin (heartbeat blip, tab wake) reuses the
+  // same presence entry instead of the server minting a new one, which briefly
+  // double-counted a single editor and made the presence pill flicker.
+  const presenceKeyRef = useRef(crypto.randomUUID());
 
   const content = useHandlerSet<(content: string) => void>();
   const commentAdded = useHandlerSet<(comment: Comment) => void>();
@@ -56,7 +60,7 @@ export function useRealtimeDocSync(slug: string | null): RealtimeDocSyncResult {
     }
 
     const channel = supabase
-      .channel(`doc:${slug}`)
+      .channel(`doc:${slug}`, { config: { presence: { key: presenceKeyRef.current } } })
       .on('broadcast', { event: 'content' }, (msg: { payload: { content: string } }) => {
         content.emit(msg.payload.content);
       })

@@ -22,10 +22,14 @@ interface MockChannel {
 }
 
 let mockChannel: MockChannel;
+let channelSpy: ReturnType<typeof vi.fn>;
 
 vi.mock('./supabaseRealtimeClient', () => ({
   getSupabaseClient: () => ({
-    channel: (_name: string) => mockChannel,
+    channel: (...args: unknown[]) => {
+      channelSpy(...args);
+      return mockChannel;
+    },
   }),
 }));
 
@@ -93,6 +97,7 @@ const comment: Comment = {
 describe('useRealtimeDocSync', () => {
   beforeEach(() => {
     mockChannel = makeMockChannel();
+    channelSpy = vi.fn();
   });
 
   it('does not subscribe when slug is null', () => {
@@ -130,6 +135,25 @@ describe('useRealtimeDocSync', () => {
     });
 
     expect(result.current.presenceCount).toBe(2);
+  });
+
+  it('joins with a stable, non-empty presence key across effect re-runs in the same session', () => {
+    const { rerender } = renderHook(({ slug }: { slug: string | null }) => useRealtimeDocSync(slug), {
+      initialProps: { slug: 'abc1234' as string | null },
+    });
+
+    const firstKey = (channelSpy.mock.calls[0]?.[1] as { config: { presence: { key: string } } })
+      .config.presence.key;
+    expect(firstKey).toBeTruthy();
+
+    // Force the effect to tear down and re-run (dep change), the same code path
+    // exercised whenever the underlying socket rejoins mid-session.
+    mockChannel = makeMockChannel();
+    rerender({ slug: 'xyz9876' });
+
+    const secondKey = (channelSpy.mock.calls.at(-1)?.[1] as { config: { presence: { key: string } } })
+      .config.presence.key;
+    expect(secondKey).toBe(firstKey);
   });
 
   describe('subscribeContent', () => {
