@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { getSupabaseClient } from './supabaseRealtimeClient';
 import type { Comment } from '../types/comments';
@@ -29,7 +29,14 @@ function useHandlerSet<T extends (...args: never[]) => void>() {
     handlersRef.current.forEach((handler) => handler(...args));
   }, []);
 
-  return { subscribe, emit };
+  // subscribe/emit are stable for the component's lifetime, but the object
+  // literal wrapping them is not — without memoizing it here, every render
+  // hands the channel-setup effect below a new identity for content/
+  // commentAdded/commentUpdated/commentDeleted, so the effect (which lists
+  // them as deps) tears down and rejoins the realtime channel on every
+  // render, not just when slug changes. That rejoin churn is what caused the
+  // presence pill to flicker on load.
+  return useMemo(() => ({ subscribe, emit }), [subscribe, emit]);
 }
 
 // One channel per doc slug, constructed once regardless of how many hooks need
@@ -108,15 +115,28 @@ export function useRealtimeDocSync(slug: string | null): RealtimeDocSyncResult {
     channelRef.current?.send({ type: 'broadcast', event: 'comment_deleted', payload: { id } });
   }, []);
 
-  return {
-    broadcastContent,
-    broadcastCommentAdded,
-    broadcastCommentUpdated,
-    broadcastCommentDeleted,
-    subscribeContent: content.subscribe,
-    subscribeCommentAdded: commentAdded.subscribe,
-    subscribeCommentUpdated: commentUpdated.subscribe,
-    subscribeCommentDeleted: commentDeleted.subscribe,
-    presenceCount,
-  };
+  return useMemo(
+    () => ({
+      broadcastContent,
+      broadcastCommentAdded,
+      broadcastCommentUpdated,
+      broadcastCommentDeleted,
+      subscribeContent: content.subscribe,
+      subscribeCommentAdded: commentAdded.subscribe,
+      subscribeCommentUpdated: commentUpdated.subscribe,
+      subscribeCommentDeleted: commentDeleted.subscribe,
+      presenceCount,
+    }),
+    [
+      broadcastContent,
+      broadcastCommentAdded,
+      broadcastCommentUpdated,
+      broadcastCommentDeleted,
+      content,
+      commentAdded,
+      commentUpdated,
+      commentDeleted,
+      presenceCount,
+    ],
+  );
 }

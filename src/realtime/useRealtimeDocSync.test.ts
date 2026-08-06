@@ -117,6 +117,19 @@ describe('useRealtimeDocSync', () => {
     expect(mockChannel.unsubscribe).toHaveBeenCalled();
   });
 
+  it('does not tear down and rejoin the channel on an unrelated re-render', () => {
+    const { rerender } = renderHook(() => useRealtimeDocSync('abc1234'));
+    const subscribeCalls = mockChannel.subscribe.mock.calls.length;
+    const unsubscribeCalls = mockChannel.unsubscribe.mock.calls.length;
+    const trackCalls = mockChannel.track.mock.calls.length;
+
+    rerender();
+
+    expect(mockChannel.unsubscribe.mock.calls.length).toBe(unsubscribeCalls);
+    expect(mockChannel.subscribe.mock.calls.length).toBe(subscribeCalls);
+    expect(mockChannel.track.mock.calls.length).toBe(trackCalls);
+  });
+
   it('broadcastContent is a no-op when slug is null', () => {
     const { result } = renderHook(() => useRealtimeDocSync(null));
     act(() => {
