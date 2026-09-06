@@ -1,5 +1,6 @@
 import { handleDocsRequest } from './src/api/docsRouter';
 import { handlePdfRequest } from './src/api/pdfRouter';
+import { handleImageRequest } from './src/api/imageRouter';
 import { handleCollectionsRequest } from './src/api/collectionsRouter';
 import { handleCommentsRequest } from './src/api/commentsRouter';
 import { handleApiKeysRequest } from './src/api/apiKeysRouter';
@@ -18,6 +19,8 @@ interface Env {
   SUPABASE_SERVICE_ROLE_KEY: string;
   PDF_BUCKET: R2Bucket;
   PDF2MARKDOWN_API_URL: string;
+  IMAGE_BUCKET: R2Bucket;
+  IMAGE_BUCKET_URL: string;
 }
 
 const OLD_HOST = 'app.prathamesh.cloud';
@@ -112,6 +115,10 @@ export default {
     // PDF routes — checked before docs API
     const pdfResponse = await handlePdfRequest(request, env);
     if (pdfResponse) return pdfResponse;
+
+    // Image upload route — checked before docs API
+    const imageResponse = await handleImageRequest(request, env);
+    if (imageResponse) return imageResponse;
 
     // API routes — checked before asset fallback
     const collectionsResponse = await handleCollectionsRequest(request, env);

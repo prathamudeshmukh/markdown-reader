@@ -1,5 +1,6 @@
 import { forwardRef } from 'react';
 import MarkdownDropZone from './MarkdownDropZone';
+import type { DropCoords } from '../hooks/useImageUpload';
 
 export type EditorHandle = HTMLTextAreaElement;
 
@@ -8,16 +9,18 @@ interface EditorProps {
   onChange: (value: string) => void;
   readOnly?: boolean;
   onDropFile?: (file: File) => void;
+  onDropImageFiles?: (files: File[], coords: DropCoords) => void;
   onDropRejected?: () => void;
 }
 
 const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
-  { value, onChange, readOnly, onDropFile, onDropRejected },
+  { value, onChange, readOnly, onDropFile, onDropImageFiles, onDropRejected },
   ref,
 ) {
   return (
     <MarkdownDropZone
       onFile={onDropFile ?? (() => {})}
+      onImageFiles={onDropImageFiles ?? (() => {})}
       onRejected={onDropRejected ?? (() => {})}
     >
       <div

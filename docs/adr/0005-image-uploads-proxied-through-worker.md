@@ -1,0 +1,3 @@
+# Image uploads are proxied through the Worker, not uploaded directly to R2 via presigned URLs
+
+An Image drop sends the file from the browser to the Worker as a multipart POST, which then writes it to the images bucket — the same shape as the existing PDF-to-R2 flow in `pdfRouter.ts`. We considered issuing presigned R2 PUT URLs so the browser could upload directly to R2, bypassing the Worker's bandwidth and CPU entirely, but this codebase has no R2 request-signing (S3-compatible) infrastructure yet, and building it purely for this feature wasn't worth the new surface area. Photo-sized uploads (≤10 MB) don't strain the Worker the way large PDFs might, so the existing proxy pattern was reused instead.

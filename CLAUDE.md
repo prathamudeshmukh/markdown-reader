@@ -149,12 +149,15 @@ SUPABASE_URL=...                # required for Worker → Supabase data access
 SUPABASE_ANON_KEY=...           # required for Worker → Supabase data access
 SUPABASE_SERVICE_ROLE_KEY=...   # required for comment deletion (verifies doc ownership server-side)
 PDF2MARKDOWN_API_URL=...        # required when PDF API route is used; external conversion service
+IMAGE_BUCKET_URL=...            # required for image drop uploads; public r2.dev base URL for the images bucket
 # PDF_BUCKET — R2 bucket binding configured in wrangler.toml (not an env var)
+# IMAGE_BUCKET — R2 bucket binding configured in wrangler.toml (not an env var)
 ```
 
 Missing `VITE_SUPABASE_*` vars → new docs cannot be saved, slug routes 404, realtime disabled.  
 Missing `SUPABASE_SERVICE_ROLE_KEY` → Worker refuses to start (validated in `worker.ts`).  
-Missing `PDF2MARKDOWN_API_URL` → PDF Worker route fails at conversion step (R2 temp file is still deleted).
+Missing `PDF2MARKDOWN_API_URL` → PDF Worker route fails at conversion step (R2 temp file is still deleted).  
+Missing `IMAGE_BUCKET_URL` → image upload route returns a broken/empty URL after a successful R2 write.
 
 ### Database migrations
 
