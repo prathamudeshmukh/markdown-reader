@@ -14,6 +14,10 @@ binding = "ASSETS"
 binding = "PDF_BUCKET"
 bucket_name = "openmark-pdf-temp"
 
+[[r2_buckets]]
+binding = "IMAGE_BUCKET"
+bucket_name = "openmark-images"
+
 [vars]
 PDF2MARKDOWN_API_URL = "https://pdf2html.templify.cloud"
 

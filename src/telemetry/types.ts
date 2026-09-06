@@ -2,6 +2,7 @@ export type RouteKind = 'root' | 'doc';
 export type InteractionSource = 'button' | 'shortcut';
 export type MdFileOpenSource = 'toolbar' | 'drag_drop' | 'keyboard' | 'command_palette';
 export type ContentLengthBucket = 'empty' | 'xs' | 'sm' | 'md' | 'lg';
+export type ImageUploadFailureReason = 'too_large' | 'invalid_type' | 'forbidden' | 'network_error' | 'server_error';
 export type ToolbarAction =
   | 'bold'
   | 'italic'
@@ -41,7 +42,9 @@ export type TelemetryEventName =
   | 'comment_posted'
   | 'comment_resolved'
   | 'comment_deleted'
-  | 'diagram_render_failed';
+  | 'diagram_render_failed'
+  | 'image_upload_succeeded'
+  | 'image_upload_failed';
 
 export interface TelemetrySharedProps {
   session_id: string;
@@ -127,5 +130,11 @@ export interface TelemetryPropsByEvent {
   comment_deleted: Record<string, never>;
   diagram_render_failed: {
     error_type: string;
+  };
+  image_upload_succeeded: {
+    file_size_bytes: number;
+  };
+  image_upload_failed: {
+    reason: ImageUploadFailureReason;
   };
 }

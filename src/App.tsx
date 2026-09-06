@@ -8,6 +8,7 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useRecentDocs } from './hooks/useRecentDocs';
 import { useCollections } from './hooks/useCollections';
 import { useComments } from './hooks/useComments';
+import { useImageUpload } from './hooks/useImageUpload';
 import Header from './components/Header';
 import BottomActionBar from './components/BottomActionBar';
 import Editor from './components/Editor';
@@ -69,7 +70,7 @@ export default function App() {
   const [slug, setSlug] = useState<string | null>(() => getSlugFromPath());
   const sync = useRealtimeDocSync(slug);
 
-  const { markdownText, title, docUserId, editAccess, isOwner, canEdit, mode, isLoading, isSaving, error, setMarkdownText, setTitle, toggleMode, onSave, navigateToDoc, openMdFile, confirmOpenMdFile, openMdFileGuardOpen, setEditAccess } =
+  const { markdownText, title, docUserId, editAccess, isOwner, canEdit, mode, isLoading, isSaving, error, setMarkdownText, setTitle, toggleMode, onSave, navigateToDoc, openMdFile, confirmOpenMdFile, openMdFileGuardOpen, setEditAccess, setError } =
     useMarkdownState({ slug, setSlug, sync, userId: user?.id });
 
   const [editAccessPending, setEditAccessPending] = useState(false);
@@ -82,6 +83,10 @@ export default function App() {
 
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const mdFileInputRef = useRef<HTMLInputElement>(null);
+
+  const markdownTextRef = useRef(markdownText);
+  useEffect(() => { markdownTextRef.current = markdownText; }, [markdownText]);
+  const { handleImageDrop } = useImageUpload({ slug, canEdit, markdownTextRef, editorRef, setMarkdownText, setError });
 
   const collectionsHook = useCollections();
   const collectionsTree = collectionsHook.state.status === 'ready'
@@ -576,6 +581,7 @@ export default function App() {
               onChange={setMarkdownText}
               readOnly={!canEdit}
               onDropFile={(file) => { void openMdFile(file, 'drag_drop'); }}
+              onDropImageFiles={handleImageDrop}
               onDropRejected={() => {}}
             />
           ) : (

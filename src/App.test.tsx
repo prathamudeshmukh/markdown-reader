@@ -71,6 +71,7 @@ const baseState = {
   canEdit: true,
   editAccess: false,
   setEditAccess: vi.fn(),
+  setError: vi.fn(),
 };
 
 describe('App', () => {

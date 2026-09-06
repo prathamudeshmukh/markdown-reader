@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { isImageFile } from '../utils/imageFile';
+import type { DropCoords } from '../hooks/useImageUpload';
 
 const MD_EXTENSIONS = ['.md', '.markdown'];
 
@@ -9,23 +11,31 @@ function isMdFile(file: File): boolean {
 
 interface MarkdownDropZoneProps {
   onFile: (file: File) => void;
+  onImageFiles: (files: File[], coords: DropCoords) => void;
   onRejected: () => void;
   children: React.ReactNode;
 }
 
-export default function MarkdownDropZone({ onFile, onRejected, children }: MarkdownDropZoneProps) {
+export default function MarkdownDropZone({ onFile, onImageFiles, onRejected, children }: MarkdownDropZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
+  // dragenter/dragleave fire in pairs as the pointer crosses from the zone
+  // onto a child element and back — a plain boolean toggle flickers the
+  // overlay off at that boundary. A counter only clears it once the net
+  // enter/leave count returns to zero.
+  const dragDepthRef = useRef(0);
 
   function handleDragEnter(e: React.DragEvent) {
     e.preventDefault();
     e.stopPropagation();
+    dragDepthRef.current += 1;
     setIsDragging(true);
   }
 
   function handleDragLeave(e: React.DragEvent) {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragging(false);
+    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+    if (dragDepthRef.current === 0) setIsDragging(false);
   }
 
   function handleDragOver(e: React.DragEvent) {
@@ -35,13 +45,21 @@ export default function MarkdownDropZone({ onFile, onRejected, children }: Markd
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
     e.stopPropagation();
+    dragDepthRef.current = 0;
     setIsDragging(false);
 
-    const file = e.dataTransfer.files[0];
-    if (!file) return;
+    const files = Array.from(e.dataTransfer.files);
+    const first = files[0];
+    if (!first) return;
 
-    if (isMdFile(file)) {
-      onFile(file);
+    if (isMdFile(first)) {
+      onFile(first);
+      return;
+    }
+
+    const images = files.filter(isImageFile);
+    if (images.length > 0) {
+      onImageFiles(images, { clientX: e.clientX, clientY: e.clientY });
     } else {
       onRejected();
     }
@@ -60,7 +78,7 @@ export default function MarkdownDropZone({ onFile, onRejected, children }: Markd
       {isDragging && (
         <div
           data-testid="md-drop-overlay"
-          className="absolute inset-0 z-50 flex items-center justify-center rounded-lg border-2 border-dashed"
+          className="absolute inset-0 z-50 flex items-center justify-center rounded-lg border-2 border-dashed pointer-events-none"
           style={{
             backgroundColor: 'color-mix(in srgb, var(--accent) 10%, transparent)',
             borderColor: 'var(--accent)',
@@ -74,7 +92,7 @@ export default function MarkdownDropZone({ onFile, onRejected, children }: Markd
               <line x1="12" y1="11" x2="12" y2="19" />
             </svg>
             <p className="text-sm font-medium" style={{ color: 'var(--accent)' }}>
-              Drop Markdown file
+              Drop Markdown or image file
             </p>
           </div>
         </div>

@@ -322,6 +322,10 @@ export function useMarkdownState({ slug, setSlug, sync, userId }: UseMarkdownSta
   const isOwner = !!userId && userId === state.docUserId;
   const canEdit = state.docUserId === null || isOwner || state.editAccess;
 
+  const setError = useCallback((message: string | null) => {
+    setState((prev) => ({ ...prev, error: message }));
+  }, []);
+
   const setEditAccess = useCallback(async (value: boolean) => {
     if (!slug) return;
     try {
@@ -332,5 +336,5 @@ export function useMarkdownState({ slug, setSlug, sync, userId }: UseMarkdownSta
     }
   }, [slug]);
 
-  return { ...state, collectionId, isOwner, canEdit, setMarkdownText, setTitle, toggleMode, onSave, navigateToDoc, openMdFile, confirmOpenMdFile, openMdFileGuardOpen, setEditAccess };
+  return { ...state, collectionId, isOwner, canEdit, setMarkdownText, setTitle, toggleMode, onSave, navigateToDoc, openMdFile, confirmOpenMdFile, openMdFileGuardOpen, setEditAccess, setError };
 }

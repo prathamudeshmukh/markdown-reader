@@ -165,6 +165,14 @@ describe('useMarkdownState', () => {
       expect(result.current.isSaving).toBe(false);
     });
 
+    it('setError updates and clears state.error', () => {
+      const { result } = renderMarkdownState();
+      act(() => result.current.setError('Save your document before adding images.'));
+      expect(result.current.error).toBe('Save your document before adding images.');
+      act(() => result.current.setError(null));
+      expect(result.current.error).toBeNull();
+    });
+
     it('toggleMode cycles editor → preview → editor', () => {
       const { result } = renderMarkdownState();
       expect(result.current.mode).toBe('editor');
