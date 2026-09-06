@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { uploadImage, ImageApiError } from './imageApiClient';
+import { setAuthToken } from './authToken';
 
 function makeFile(): File {
   return new File(['x'], 'photo.png', { type: 'image/png' });
@@ -8,6 +9,33 @@ function makeFile(): File {
 describe('uploadImage', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    setAuthToken(undefined);
+  });
+
+  it('attaches the bearer token so the Worker can verify doc ownership', async () => {
+    setAuthToken('jwt-123');
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(JSON.stringify({ url: 'x' }), { status: 201 }));
+
+    await uploadImage(makeFile(), 'abc1234');
+
+    const [, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    expect(init.headers).toMatchObject({ Authorization: 'Bearer jwt-123' });
+  });
+
+  it('sends no Authorization header when signed out', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(JSON.stringify({ url: 'x' }), { status: 201 }));
+
+    await uploadImage(makeFile(), 'abc1234');
+
+    const [, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    expect(init.headers).not.toHaveProperty('Authorization');
   });
 
   it('returns the url on success', async () => {

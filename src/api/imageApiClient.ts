@@ -1,3 +1,5 @@
+import { authHeaders } from './authToken';
+
 export type ImageApiErrorCode = 'INVALID_TYPE' | 'FORBIDDEN' | 'TOO_LARGE' | 'UPLOAD_FAILED' | 'NETWORK_ERROR';
 
 const USER_MESSAGES: Record<ImageApiErrorCode, string> = {
@@ -35,7 +37,15 @@ export async function uploadImage(file: File, slug: string): Promise<{ url: stri
 
   let response: Response;
   try {
-    response = await fetch('/api/images/upload', { method: 'POST', body: formData });
+    // No Content-Type here on purpose — the browser sets the multipart
+    // boundary itself. The bearer token is what lets the Worker match the
+    // caller against the doc's owner; without it, uploading to a doc you
+    // own (with edit_access off) is rejected as Forbidden.
+    response = await fetch('/api/images/upload', {
+      method: 'POST',
+      headers: { ...authHeaders() },
+      body: formData,
+    });
   } catch {
     throw new ImageApiError('NETWORK_ERROR');
   }
